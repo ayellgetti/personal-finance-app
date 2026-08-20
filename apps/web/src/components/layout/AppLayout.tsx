@@ -17,15 +17,18 @@ import {
   GraduationCap,
   CalendarClock,
   ClipboardList,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserMenu } from "@/components/UserMenu";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 export type ViewId =
   | "dashboard"
   | "setup"
+  | "profile"
   | "income"
   | "expenses"
   | "daily"
@@ -43,6 +46,7 @@ export type ViewId =
 export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; group: string }[] = [
   { id: "dashboard", label: "Net Worth", icon: LayoutDashboard, group: "Overview" },
   { id: "setup", label: "Quick Setup", icon: ClipboardList, group: "Overview" },
+  { id: "profile", label: "Profile", icon: UserRound, group: "Overview" },
   { id: "income", label: "Income", icon: Wallet, group: "Manage" },
   { id: "expenses", label: "Expenses", icon: Receipt, group: "Manage" },
   { id: "daily", label: "Daily Tracker", icon: CalendarClock, group: "Manage" },
@@ -157,6 +161,7 @@ export function AppLayout({
           <div className="flex shrink-0 items-center gap-2">
             {actions}
             <ThemeToggle />
+            <UserMenu onProfile={() => onSelect("profile")} />
           </div>
         </header>
 

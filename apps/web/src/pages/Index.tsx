@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AppLayout, ViewId } from "@/components/layout/AppLayout";
 import { SetupWizard } from "@/components/modules/SetupWizard";
+import { ProfileModule } from "@/components/modules/ProfileModule";
 import { Dashboard } from "@/components/modules/Dashboard";
 import { IncomeModule } from "@/components/modules/IncomeModule";
 import { ExpenseModule } from "@/components/modules/ExpenseModule";
@@ -15,6 +16,7 @@ import { ForecastEngine } from "@/components/modules/ForecastEngine";
 import { AIAdvisor } from "@/components/modules/AIAdvisor";
 import { LearningHubModule } from "@/components/modules/LearningHubModule";
 import { ReportModule } from "@/components/modules/ReportModule";
+import { useAuth } from "@/lib/auth/store";
 import { useFinance } from "@/lib/finance/store";
 import { generateReport } from "@/lib/finance/pdfReport";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ import { toast } from "sonner";
 const META: Record<ViewId, { title: string; description: string }> = {
   dashboard: { title: "Net Worth Dashboard", description: "Your complete financial picture at a glance" },
   setup: { title: "Quick Setup", description: "Add all your financial details in one guided flow" },
+  profile: { title: "Profile", description: "Manage your account and financial persona" },
   income: { title: "Income Management", description: "Track every source of money coming in" },
   expenses: { title: "Expense Management", description: "Understand where your money goes" },
   daily: { title: "Daily Expense Tracker", description: "Log spending and stay on budget every day" },
@@ -42,17 +45,25 @@ const META: Record<ViewId, { title: string; description: string }> = {
   report: { title: "Summary Report", description: "Generate a downloadable executive report" },
 };
 
-const ONBOARD_KEY = "ffp-onboarded";
+const onboardKey = (userId: string) => `ffp-onboarded:${userId}`;
 
 const Index = () => {
-  const [view, setView] = useState<ViewId>(() =>
-    typeof window !== "undefined" && !localStorage.getItem(ONBOARD_KEY) ? "setup" : "dashboard",
-  );
+  const { user } = useAuth();
+  const [view, setView] = useState<ViewId>(() => {
+    if (typeof window === "undefined" || !user) return "dashboard";
+    const legacy = localStorage.getItem("ffp-onboarded");
+    const key = onboardKey(user.id);
+    if (legacy && !localStorage.getItem(key)) {
+      localStorage.setItem(key, legacy);
+      localStorage.removeItem("ffp-onboarded");
+    }
+    return localStorage.getItem(key) ? "dashboard" : "setup";
+  });
   const { data, resetToSample, clearAll } = useFinance();
   const meta = META[view];
 
   const finishSetup = () => {
-    localStorage.setItem(ONBOARD_KEY, "1");
+    if (user) localStorage.setItem(onboardKey(user.id), "1");
     setView("dashboard");
   };
 
@@ -91,6 +102,7 @@ const Index = () => {
       <div key={view} className="animate-fade-in">
         {view === "dashboard" && <Dashboard onNavigate={setView} />}
         {view === "setup" && <SetupWizard onDone={finishSetup} />}
+        {view === "profile" && <ProfileModule />}
         {view === "income" && <IncomeModule />}
         {view === "expenses" && <ExpenseModule />}
         {view === "daily" && <DailyExpenseModule />}

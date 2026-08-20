@@ -10,8 +10,9 @@ import {
   Profile,
 } from "@/types/finance";
 import { sampleData, newId } from "./sampleData";
+import { useAuth } from "@/lib/auth/store";
 
-const STORAGE_KEY = "ffp-finance-data-v1";
+const LEGACY_STORAGE_KEY = "ffp-finance-data-v1";
 
 type Collections = "incomes" | "expenses" | "loans" | "investments" | "insurances" | "goals" | "dailyExpenses";
 
@@ -26,31 +27,81 @@ interface FinanceContextValue {
 
 const FinanceContext = createContext<FinanceContextValue | null>(null);
 
-function load(): FinanceData {
+function storageKey(userId: string) {
+  return `${LEGACY_STORAGE_KEY}:${userId}`;
+}
+
+function emptyForUser(name: string): FinanceData {
+  return {
+    ...JSON.parse(JSON.stringify(sampleData)),
+    profile: {
+      ...sampleData.profile,
+      name,
+    },
+    incomes: [],
+    expenses: [],
+    loans: [],
+    investments: [],
+    insurances: [],
+    goals: [],
+    dailyExpenses: [],
+  };
+}
+
+function loadForUser(userId: string, displayName: string): FinanceData {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<FinanceData>;
-      // merge with defaults so older saved data gains new fields
+    const scoped = localStorage.getItem(storageKey(userId));
+    if (scoped) {
+      const parsed = JSON.parse(scoped) as Partial<FinanceData>;
       return {
+        ...sampleData,
+        ...parsed,
+        profile: { ...sampleData.profile, ...(parsed.profile || {}) },
+        dailyExpenses: parsed.dailyExpenses ?? [],
+      };
+    }
+
+    // One-time migrate legacy shared data into the first logged-in account that needs it
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy) {
+      const parsed = JSON.parse(legacy) as Partial<FinanceData>;
+      const migrated: FinanceData = {
         ...sampleData,
         ...parsed,
         profile: { ...sampleData.profile, ...(parsed.profile || {}) },
         dailyExpenses: parsed.dailyExpenses ?? sampleData.dailyExpenses,
       };
+      localStorage.setItem(storageKey(userId), JSON.stringify(migrated));
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      return migrated;
     }
   } catch {
     /* ignore */
   }
-  return sampleData;
+  return emptyForUser(displayName);
 }
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<FinanceData>(load);
+  const { user } = useAuth();
+  const userId = user?.id ?? "guest";
+  const displayName = user?.name ?? sampleData.profile.name;
+  const [data, setData] = useState<FinanceData>(() =>
+    user ? loadForUser(user.id, user.name) : emptyForUser(displayName),
+  );
+
+  // Reload when the signed-in user changes
+  useEffect(() => {
+    if (!user) {
+      setData(emptyForUser(sampleData.profile.name));
+      return;
+    }
+    setData(loadForUser(user.id, user.name));
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }, [data]);
+    if (!user) return;
+    localStorage.setItem(storageKey(user.id), JSON.stringify(data));
+  }, [data, user]);
 
   const updateProfile = (p: Partial<Profile>) =>
     setData((d) => ({ ...d, profile: { ...d.profile, ...p } }));
