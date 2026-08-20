@@ -15,6 +15,7 @@ export { CategoriesModel, categoriesModel } from "./categories.model.js";
 export { BudgetModel, budgetModel } from "./personal-finance/budget.model.js";
 export { LoanModel, loanModel } from "./personal-finance/loan.model.js";
 export { InvestmentModel, investmentModel } from "./personal-finance/investment.model.js";
+export { InsuranceModel, insuranceModel } from "./personal-finance/insurance.model.js";
 export { FinancialProfileModel, financialProfileModel } from "./personal-finance/financial-profile.model.js";
 export { GoalModel, goalModel } from "./personal-finance/goal.model.js";
 export { PlannerModel, plannerModel } from "./planner.model.js";

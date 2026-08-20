@@ -33,7 +33,7 @@ const META: Record<ViewId, { title: string; description: string }> = {
   forecast: { title: "Smart Forecast Engine", description: "Project wealth across market scenarios" },
   advisor: { title: "AI Financial Advisor", description: "Personalised, actionable recommendations" },
   learn: { title: "Financial Learning Hub", description: "Learn concepts, then apply them to your money" },
-  report: { title: "Summary Report", description: "Generate a downloadable executive report" },
+  report: { title: "Summary Report", description: "AI summary and a downloadable executive report" },
 };
 
 const Index = () => {

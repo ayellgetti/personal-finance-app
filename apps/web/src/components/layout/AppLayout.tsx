@@ -16,7 +16,6 @@ import {
   GraduationCap,
   CalendarClock,
   ClipboardList,
-  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -45,7 +44,6 @@ export type ViewId =
 export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; group: string }[] = [
   { id: "dashboard", label: "Net Worth", icon: LayoutDashboard, group: "Overview" },
   { id: "setup", label: "Quick Setup", icon: ClipboardList, group: "Overview" },
-  { id: "profile", label: "Profile", icon: UserRound, group: "Overview" },
   { id: "income", label: "Income", icon: Wallet, group: "Manage" },
   { id: "expenses", label: "Expenses", icon: Receipt, group: "Manage" },
   { id: "loans", label: "Loans", icon: Landmark, group: "Manage" },
@@ -57,10 +55,10 @@ export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; gro
   { id: "forecast", label: "Forecast Engine", icon: LineChart, group: "Plan" },
   { id: "advisor", label: "AI Advisor", icon: Sparkles, group: "Plan" },
   { id: "learn", label: "Learning Hub", icon: GraduationCap, group: "Plan" },
-  { id: "report", label: "Summary Report", icon: FileText, group: "Plan" },
+  { id: "report", label: "Summary Report", icon: FileText, group: "Report" },
 ];
 
-const GROUPS = ["Overview", "Manage", "Plan"];
+const GROUPS = ["Overview", "Manage", "Report", "Plan"];
 
 function NavList({ active, onSelect }: { active: ViewId; onSelect: (id: ViewId) => void }) {
   const { user } = useAuth();
@@ -68,11 +66,14 @@ function NavList({ active, onSelect }: { active: ViewId; onSelect: (id: ViewId) 
 
   return (
     <nav className="flex flex-col gap-6 px-3 py-4">
-      {GROUPS.map((group) => (
+      {GROUPS.map((group) => {
+        const items = NAV.filter((n) => n.group === group && !(hideSetup && n.id === "setup"));
+        if (!items.length) return null;
+        return (
         <div key={group}>
           <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{group}</p>
           <div className="flex flex-col gap-1">
-            {NAV.filter((n) => n.group === group && !(hideSetup && n.id === "setup")).map((item) => {
+            {items.map((item) => {
               const Icon = item.icon;
               const isActive = active === item.id;
               return (
@@ -93,7 +94,8 @@ function NavList({ active, onSelect }: { active: ViewId; onSelect: (id: ViewId) 
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }

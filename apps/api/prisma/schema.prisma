@@ -37,6 +37,7 @@ model User {
   planners                   Planner[]
   loans                      Loan[]
   investments                Investment[]
+  insurances                 Insurance[]
   goals                      Goal[]
   financialProfile           FinancialProfile?
   transactions               Transaction[]
@@ -259,6 +260,27 @@ model Investment {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   deletedAt          DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Insurance {
+  id              String    @id @default(uuid())
+  userId          String
+  title           String?
+  type            String
+  coverageAmount  Float
+  annualPremium   Float
+  expiryDate      DateTime
+  isActive        Int       @default(1)
+  createdBy       Int?
+  updatedBy       Int?
+  deletedBy       Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

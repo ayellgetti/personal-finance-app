@@ -22,6 +22,8 @@ export const openApiDocument = {
     { name: "Budgets", description: "Authenticated user budgets" },
     { name: "Loans", description: "Authenticated user loans" },
     { name: "Investments", description: "Authenticated user investments" },
+    { name: "Insurances", description: "Authenticated user insurance policies" },
+    { name: "Setup", description: "One-shot financial onboarding in a single transaction" },
     { name: "Goals", description: "Authenticated user savings goals" },
     { name: "Planner", description: "Aggregated financial report for the current user" },
     {
@@ -432,6 +434,100 @@ export const openApiDocument = {
           remainingMonths: { type: "integer", minimum: 0, maximum: 600 },
           investmentAmount: { type: "number", minimum: 0 },
           monthDay: { type: "integer", minimum: 1, maximum: 31 },
+        },
+      },
+      Insurance: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          title: { type: "string", nullable: true, example: "HDFC Life Term" },
+          type: { type: "string", example: "Term Insurance" },
+          coverageAmount: { type: "number", example: 10000000 },
+          annualPremium: { type: "number", example: 18000 },
+          expiryDate: { type: "string", format: "date-time" },
+          isActive: { type: "integer", example: 1 },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      CreateInsuranceRequest: {
+        type: "object",
+        required: ["type", "coverageAmount", "annualPremium", "expiryDate"],
+        properties: {
+          title: { type: "string", nullable: true },
+          type: { type: "string", example: "Term Insurance" },
+          coverageAmount: { type: "number", minimum: 0 },
+          annualPremium: { type: "number", minimum: 0 },
+          expiryDate: { type: "string", format: "date", example: "2030-03-15" },
+        },
+      },
+      UpdateInsuranceRequest: {
+        type: "object",
+        minProperties: 1,
+        properties: {
+          title: { type: "string", nullable: true },
+          type: { type: "string", example: "Term Insurance" },
+          coverageAmount: { type: "number", minimum: 0 },
+          annualPremium: { type: "number", minimum: 0 },
+          expiryDate: { type: "string", format: "date" },
+        },
+      },
+      SetupIncomeRequest: {
+        type: "object",
+        required: ["subcategory", "title", "amount"],
+        properties: {
+          type: { type: "string", enum: ["income"] },
+          category: { type: "string", example: "income" },
+          subcategory: { type: "string", example: "salary" },
+          title: { type: "string", example: "Salary" },
+          description: { type: "string", nullable: true },
+          amount: { type: "number", minimum: 0 },
+          monthDay: { type: "integer", minimum: 1, maximum: 31, nullable: true },
+          weekDay: { type: "integer", minimum: 1, maximum: 7, nullable: true },
+          repeatCount: { type: "integer", minimum: 1, maximum: 31, nullable: true },
+        },
+      },
+      SetupExpenseRequest: {
+        type: "object",
+        required: ["subcategory", "title", "amount"],
+        properties: {
+          type: { type: "string", enum: ["expense"] },
+          category: { type: "string", example: "expense" },
+          subcategory: { type: "string", example: "groceries" },
+          title: { type: "string", example: "Groceries" },
+          description: { type: "string", nullable: true },
+          amount: { type: "number", minimum: 0 },
+          monthDay: { type: "integer", minimum: 1, maximum: 31, nullable: true },
+          weekDay: { type: "integer", minimum: 1, maximum: 7, nullable: true },
+          repeatCount: { type: "integer", minimum: 1, maximum: 31, nullable: true },
+        },
+      },
+      SetupRequest: {
+        type: "object",
+        required: ["profile"],
+        properties: {
+          profile: { $ref: "#/components/schemas/FinancialProfileRequest" },
+          incomes: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SetupIncomeRequest" },
+          },
+          expenses: {
+            type: "array",
+            items: { $ref: "#/components/schemas/SetupExpenseRequest" },
+          },
+          loans: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CreateLoanRequest" },
+          },
+          investments: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CreateInvestmentRequest" },
+          },
+          insurances: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CreateInsuranceRequest" },
+          },
         },
       },
       Goal: {
@@ -1616,6 +1712,185 @@ export const openApiDocument = {
           },
           "401": { $ref: "#/components/responses/Unauthorized" },
           "404": { $ref: "#/components/responses/EnvelopeError" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/insurances": {
+      get: {
+        tags: ["Insurances"],
+        summary: "List current user insurance policies",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 1 },
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, maximum: 100, default: 25 },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Paginated insurances",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Insurances"],
+        summary: "Create an insurance policy",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateInsuranceRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Insurance created",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/insurances/remove": {
+      post: {
+        tags: ["Insurances"],
+        summary: "Soft-delete an insurance policy",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RemoveByIdRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Insurance deactivated",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/insurances/{id}": {
+      get: {
+        tags: ["Insurances"],
+        summary: "Get an insurance policy by id",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Insurance",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+      patch: {
+        tags: ["Insurances"],
+        summary: "Update an insurance policy",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateInsuranceRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Updated insurance",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/setup": {
+      post: {
+        tags: ["Setup"],
+        summary: "Save financial setup in one transaction",
+        description:
+          "Upserts the financial profile and creates incomes (Budget), expenses (Budget), loans, investments, and insurances for the authenticated user. All writes succeed or none do. Also sets `quickStep` to 1.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/SetupRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Setup saved",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
           "422": { $ref: "#/components/responses/ValidationFailed" },
         },
       },

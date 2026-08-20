@@ -6,9 +6,11 @@ import { advisorRouter } from "../modules/personal-finance/advisor/advisor.route
 import { budgetRouter } from "../modules/personal-finance/budget/budget.route.js";
 import { financialProfileRouter } from "../modules/personal-finance/financial-profile/financial-profile.route.js";
 import { goalRouter } from "../modules/personal-finance/goal/goal.route.js";
+import { insuranceRouter } from "../modules/personal-finance/insurance/insurance.route.js";
 import { investmentRouter } from "../modules/personal-finance/investment/investment.route.js";
 import { loanRouter } from "../modules/personal-finance/loan/loan.route.js";
 import { plannerRouter } from "../modules/personal-finance/planner/planner.route.js";
+import { setupRouter } from "../modules/personal-finance/setup/setup.route.js";
 import { authRouter } from "../modules/shared/auth/auth.route.js";
 import { deviceRouter } from "../modules/shared/device/device.route.js";
 import { otpRouter } from "../modules/shared/otp/otp.route.js";
@@ -44,6 +46,8 @@ export class Route {
     app.use("/api/budgets", budgetRouter);
     app.use("/api/loans", loanRouter);
     app.use("/api/investments", investmentRouter);
+    app.use("/api/insurances", insuranceRouter);
+    app.use("/api/setup", setupRouter);
     app.use("/api/goals", goalRouter);
     app.use("/api/financial-profile", financialProfileRouter);
     app.use("/api/planner", plannerRouter);
