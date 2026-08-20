@@ -1,0 +1,488 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  firstName         String
+  lastName          String
+  dob               DateTime
+  gender            String
+  mobileNo          String   @unique
+  email             String   @unique
+  password          String
+  oldPasswords      String[] @default([])
+  avatar            String?
+  avatarBackground  String?
+  entryData         Json?
+  quickStep         Int      @default(0)
+  isActive          Int      @default(1)
+  createdBy         String?
+  updatedBy         String?
+  deletedBy         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+
+  refreshSessions            RefreshSession[]
+  failureLogs                FailureLog[]
+  sessions                   Session[]
+  contacts                   Contact[]
+  budgets                    Budget[]
+  planners                   Planner[]
+  loans                      Loan[]
+  investments                Investment[]
+  goals                      Goal[]
+  financialProfile           FinancialProfile?
+  transactions               Transaction[]
+  devices                    Device[]
+  sockets                    Socket[]
+  notifications              Notification[]
+  conversationMembers        ConversationMember[]
+  conversationMessages       ConversationMessage[]
+  conversationMessageStatus  ConversationMessageStatus[]
+}
+
+model FinancialProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  retirementAge  Int      @default(60)
+  dependents     Int      @default(0)
+  inflationRate  Float    @default(6)
+  employmentType String   @default("Salaried")
+  currency       String   @default("₹")
+  isActive       Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RefreshSession {
+  jti       String   @id
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model FailureLog {
+  id         String   @id @default(uuid())
+  requestId  String
+  method     String
+  path       String
+  statusCode Int
+  message    String
+  stack      String?
+  details    Json?
+  body       Json?
+  userId     String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  valid     Boolean  @default(true)
+  userAgent String?
+  isActive  Int      @default(1)
+  createdBy String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Otp {
+  id        String   @id @default(uuid())
+  mobileNo  String
+  no        Int
+  type      String
+  try       Int      @default(0)
+  isActive  Int      @default(1)
+  createdBy String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mobileNo, type])
+}
+
+model Contact {
+  id               String    @id @default(uuid())
+  userId           String
+  conversationId   String?
+  firstName        String
+  lastName         String?
+  dob              DateTime?
+  gender           String?
+  mobileNo         String
+  email            String?
+  avatar           String?
+  avatarBackground String?
+  isActive         Int       @default(1)
+  createdBy        Int?
+  updatedBy        Int?
+  deletedBy        Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([mobileNo])
+  @@index([conversationId])
+}
+
+model Constant {
+  id        String    @id @default(uuid())
+  column    String?
+  code      String?
+  value     String?
+  desc      String?
+  isActive  Int       @default(1)
+  createdBy Int?
+  updatedBy Int?
+  deletedBy Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([column])
+  @@index([code])
+}
+
+model Categories {
+  id          String   @id @default(uuid())
+  parentCode  String?
+  code        String   @unique
+  title       String
+  description String
+  icon        String
+  color       String
+  isActive    Int      @default(1)
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent        Categories?  @relation("CategoryTree", fields: [parentCode], references: [code], onDelete: SetNull)
+  subcategories Categories[] @relation("CategoryTree")
+
+  @@index([parentCode])
+}
+
+model Budget {
+  id          String    @id @default(uuid())
+  userId      String
+  type        String
+  category    String
+  subcategory String
+  title       String
+  description String?
+  amount      Float
+  monthDay    Int?
+  weekDay     Int?
+  repeatCount Int?
+  isActive    Int       @default(1)
+  createdBy   Int?
+  updatedBy   Int?
+  deletedBy   Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planners Planner[]
+
+  @@index([userId])
+}
+
+model Loan {
+  id                     String    @id @default(uuid())
+  userId                 String
+  title                  String?
+  type                   String
+  principalPendingAmount Float
+  roi                    Float
+  remainingMonths        Int
+  emiAmount              Float
+  emiDay                 Int
+  isActive               Int       @default(1)
+  createdBy              Int?
+  updatedBy              Int?
+  deletedBy              Int?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  deletedAt              DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Investment {
+  id                 String    @id @default(uuid())
+  userId             String
+  category           String
+  subcategory        String
+  title              String?
+  accumulatedAmount  Float
+  roi                Float
+  remainingMonths    Int
+  investmentAmount   Float
+  monthDay           Int
+  onHold             Int       @default(0)
+  isActive           Int       @default(1)
+  createdBy          Int?
+  updatedBy          Int?
+  deletedBy          Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Goal {
+  id              String    @id @default(uuid())
+  userId          String
+  category        String
+  subcategory     String
+  title           String
+  description     String?
+  targetAmount    Float
+  currentAmount   Float     @default(0)
+  remainingYears  Int
+  targetYear      Int
+  bornYear        Int?
+  currentAge      Int?
+  targetAge       Int?
+  isActive        Int       @default(1)
+  createdBy       Int?
+  updatedBy       Int?
+  deletedBy       Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Planner {
+  id              String    @id @default(uuid())
+  userId          String
+  budgetId        String
+  type            String
+  title           String
+  description     String?
+  principalAmount Float
+  amount          Float
+  rate            Float
+  tenure          Int
+  data            Json?
+  isActive        Int       @default(1)
+  createdBy       Int?
+  updatedBy       Int?
+  deletedBy       Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([budgetId])
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  data        Json
+  isActive    Int      @default(1)
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Device {
+  id         String   @id @default(uuid())
+  userId     String
+  device     String
+  deviceType String
+  os         String?
+  version    String?
+  token      String?
+  data       Json
+  isActive   Int      @default(1)
+  createdBy  String?
+  updatedBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sockets Socket[]
+
+  @@index([userId])
+}
+
+model Socket {
+  id        String   @id @default(uuid())
+  userId    String
+  socketId  String
+  deviceId  String?
+  isActive  Int      @default(1)
+  createdBy String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([socketId])
+  @@index([deviceId])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  recipientId String
+  read        Int      @default(0)
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId])
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  type      String
+  name      String?
+  isActive  Int      @default(1)
+  createdBy String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members        ConversationMember[]
+  messages       ConversationMessage[]
+  messageStatus  ConversationMessageStatus[]
+  contacts       Contact[]
+}
+
+model ConversationMember {
+  id             String   @id @default(uuid())
+  conversationId String
+  userId         String
+  isActive       Int      @default(1)
+  createdBy      String?
+  updatedBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model ConversationMessage {
+  id             String   @id @default(uuid())
+  conversationId String
+  userId         String
+  type           String
+  message        String
+  isActive       Int      @default(1)
+  createdBy      String?
+  updatedBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       ConversationMessageStatus[]
+
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model ConversationMessageStatus {
+  id                    String   @id @default(uuid())
+  conversationMessageId String
+  conversationId        String
+  userId                String
+  type                  String
+  isActive              Int      @default(1)
+  createdBy             String?
+  updatedBy             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  message      ConversationMessage @relation(fields: [conversationMessageId], references: [id], onDelete: Cascade)
+  conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationMessageId, userId, type])
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model Tradingview {
+  id        String   @id @default(uuid())
+  datetime  String?
+  timestamp BigInt?
+  timeframe String?
+  orderId   BigInt?
+  type      String?
+  exchange  String?
+  symbol    String?
+  price     Float?
+  volume    Float?
+  isActive  Int      @default(1)
+  createdBy String?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([symbol])
+  @@index([timestamp])
+}

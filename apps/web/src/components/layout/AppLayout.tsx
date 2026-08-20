@@ -13,7 +13,6 @@ import {
   FileText,
   Menu,
   Gem,
-  ShieldAlert,
   GraduationCap,
   CalendarClock,
   ClipboardList,
@@ -24,6 +23,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/lib/auth/store";
 
 export type ViewId =
   | "dashboard"
@@ -35,7 +35,6 @@ export type ViewId =
   | "loans"
   | "investments"
   | "insurance"
-  | "emergency"
   | "goals"
   | "freedom"
   | "forecast"
@@ -49,12 +48,11 @@ export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; gro
   { id: "profile", label: "Profile", icon: UserRound, group: "Overview" },
   { id: "income", label: "Income", icon: Wallet, group: "Manage" },
   { id: "expenses", label: "Expenses", icon: Receipt, group: "Manage" },
-  { id: "daily", label: "Daily Tracker", icon: CalendarClock, group: "Manage" },
   { id: "loans", label: "Loans", icon: Landmark, group: "Manage" },
   { id: "investments", label: "Investments", icon: TrendingUp, group: "Manage" },
   { id: "insurance", label: "Insurance", icon: ShieldCheck, group: "Manage" },
-  { id: "emergency", label: "Emergency Fund", icon: ShieldAlert, group: "Plan" },
-  { id: "goals", label: "Goals", icon: Target, group: "Plan" },
+  { id: "goals", label: "Goals", icon: Target, group: "Manage" },
+  { id: "daily", label: "Daily Tracker", icon: CalendarClock, group: "Plan" },
   { id: "freedom", label: "Freedom Calculator", icon: Rocket, group: "Plan" },
   { id: "forecast", label: "Forecast Engine", icon: LineChart, group: "Plan" },
   { id: "advisor", label: "AI Advisor", icon: Sparkles, group: "Plan" },
@@ -65,13 +63,16 @@ export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; gro
 const GROUPS = ["Overview", "Manage", "Plan"];
 
 function NavList({ active, onSelect }: { active: ViewId; onSelect: (id: ViewId) => void }) {
+  const { user } = useAuth();
+  const hideSetup = user?.quickStep === 1;
+
   return (
     <nav className="flex flex-col gap-6 px-3 py-4">
       {GROUPS.map((group) => (
         <div key={group}>
           <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{group}</p>
           <div className="flex flex-col gap-1">
-            {NAV.filter((n) => n.group === group).map((item) => {
+            {NAV.filter((n) => n.group === group && !(hideSetup && n.id === "setup")).map((item) => {
               const Icon = item.icon;
               const isActive = active === item.id;
               return (
@@ -148,9 +149,13 @@ export function AppLayout({
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <Brand />
-                <NavList active={active} onSelect={(id) => { onSelect(id); setMobileOpen(false); }} />
+              <SheetContent side="left" className="flex h-full w-72 flex-col gap-0 overflow-hidden p-0">
+                <div className="shrink-0">
+                  <Brand />
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                  <NavList active={active} onSelect={(id) => { onSelect(id); setMobileOpen(false); }} />
+                </div>
               </SheetContent>
             </Sheet>
             <div className="min-w-0">

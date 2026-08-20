@@ -1,29 +1,42 @@
+import { useAuth } from "@/lib/auth/store";
 import { useFinance } from "@/lib/finance/store";
+import { toAccountIdentity } from "@/lib/finance/profile";
 import {
   formatCurrency, formatPercent, monthlyIncome, monthlyExpenses, monthlyEMI,
   totalInvestments, totalLiabilities, netWorth, financialFreedom, analyzeGoal,
-  generateRecommendations, prepaymentStrategy,
+  prepaymentStrategy,
 } from "@/lib/finance/calculations";
 import { generateReport } from "@/lib/finance/pdfReport";
+import { useAdvisorReport } from "@/lib/finance/advisor";
+import { AdvisorPlanOfAction, AdvisorSummary } from "./AdvisorOutput";
 import { Panel, Badge } from "./shared";
 import { Button } from "@/components/ui/button";
-import { Download, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Download, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export function ReportModule() {
-  const { data } = useFinance();
+  const { user } = useAuth();
+  const { data, loading } = useFinance();
   const cur = data.profile.currency;
   const fi = financialFreedom(data);
-  const recs = generateRecommendations(data).slice(0, 5);
+  const query = useAdvisorReport(data);
   const goals = data.goals.map((g) => ({ g, a: analyzeGoal(data, g) }));
   const achievable = goals.filter((x) => x.a.status === "On Track");
   const atRisk = goals.filter((x) => x.a.status !== "On Track");
 
   const download = () => {
+    if (loading) {
+      toast.error("Wait for your saved data to load, then download");
+      return;
+    }
+    if (!query.data) {
+      toast.error("Wait for the summary report to load, then download");
+      return;
+    }
     try {
-      generateReport(data);
-      toast.success("Report downloaded as PDF");
-    } catch (e) {
+      generateReport(data, query.data, user ? toAccountIdentity(user) : null);
+      toast.success("Summary report downloaded as PDF");
+    } catch {
       toast.error("Could not generate report");
     }
   };
@@ -40,11 +53,29 @@ export function ReportModule() {
       <div className="flex flex-col gap-4 rounded-3xl bg-gradient-hero p-6 text-primary-foreground shadow-[var(--shadow-elevated)] md:flex-row md:items-center md:justify-between md:p-8">
         <div>
           <h2 className="font-display text-2xl font-bold">Executive Summary Report</h2>
-          <p className="text-sm text-primary-foreground/80">A complete snapshot of your path to financial freedom.</p>
+          <p className="text-sm text-primary-foreground/80">Snapshot of your position, plus an AI summary and plan of action.</p>
         </div>
-        <Button size="lg" variant="secondary" className="rounded-xl" onClick={download}>
-          <Download className="mr-2 h-5 w-5" /> Download PDF
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            className="rounded-xl"
+            onClick={() => void query.regenerate()}
+            disabled={query.isRegenerating}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${query.isRegenerating ? "animate-spin" : ""}`} />
+            Refresh AI
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            variant="secondary"
+            className="rounded-xl"
+            onClick={download}
+            disabled={loading || !query.data || query.isLoading}
+          >
+            <Download className="mr-2 h-5 w-5" /> Download PDF
+          </Button>
+        </div>
       </div>
 
       <Panel title="Current Position">
@@ -57,6 +88,15 @@ export function ReportModule() {
           <Stat label="Freedom Date" value={`${fi.fiDate.getFullYear()} · ${fi.yearsRemaining}y`} />
         </div>
       </Panel>
+
+      {query.data && (
+        <AdvisorSummary
+          advice={query.data.advice}
+          currency={cur}
+          source={query.data.source}
+          generatedAt={query.data.generatedAt}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Achievable Goals">
@@ -83,19 +123,13 @@ export function ReportModule() {
         </Panel>
       </div>
 
-      <Panel title="Top 5 Actions">
-        <div className="space-y-3">
-          {recs.map((r, i) => (
-            <div key={i} className="flex gap-3 rounded-xl border border-border bg-background/40 p-4">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-display text-sm font-bold text-primary">{i + 1}</span>
-              <div>
-                <p className="font-semibold">{r.title}</p>
-                <p className="text-sm text-muted-foreground">{r.detail}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Panel>
+      {query.isLoading && (
+        <Panel>
+          <p className="text-sm text-muted-foreground">Generating summary and plan of action…</p>
+        </Panel>
+      )}
+
+      {query.data && <AdvisorPlanOfAction advice={query.data.advice} currency={cur} />}
 
       <Panel title="Debt Payoff Sequence">
         <div className="space-y-2">

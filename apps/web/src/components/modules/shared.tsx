@@ -44,13 +44,15 @@ export function ItemRow({
   subtitle,
   badge,
   values,
+  actions,
   onDelete,
 }: {
   title: string;
   subtitle?: string;
   badge?: ReactNode;
   values: { label: string; value: string; emphasis?: boolean }[];
-  onDelete: () => void;
+  actions?: ReactNode;
+  onDelete?: () => void;
 }) {
   return (
     <div className="group flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-4 transition-colors hover:border-primary/40 sm:flex-row sm:items-center sm:justify-between">
@@ -68,14 +70,19 @@ export function ItemRow({
             <p className={v.emphasis ? "font-display font-bold" : "font-medium"}>{v.value}</p>
           </div>
         ))}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground opacity-60 transition hover:text-danger hover:opacity-100"
-          onClick={onDelete}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center">
+          {actions}
+          {onDelete && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground opacity-60 transition hover:text-danger hover:opacity-100"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

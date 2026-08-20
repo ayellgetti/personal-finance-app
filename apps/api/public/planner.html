@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Financial planner</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #16191f;
+        --line: #262b33;
+        --text: #e6e8ec;
+        --muted: #9aa1ad;
+        --danger: #e5674f;
+        --warn: #d9a441;
+        --good: #4faf7c;
+        --info: #5a8dd6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 32px 20px 64px;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+
+      main {
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      h2 {
+        margin: 32px 0 12px;
+        font-size: 16px;
+      }
+
+      p.muted,
+      span.muted {
+        color: var(--muted);
+      }
+
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 20px 0;
+      }
+
+      input,
+      button {
+        font: inherit;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--text);
+      }
+
+      button {
+        cursor: pointer;
+        border-color: var(--info);
+      }
+
+      button:disabled {
+        cursor: default;
+        opacity: 0.6;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: var(--panel);
+      }
+
+      .card .value {
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      .card.clickable {
+        cursor: pointer;
+      }
+
+      .card.clickable:hover {
+        border-color: var(--info);
+      }
+
+      .card .hint {
+        color: var(--info);
+        font-size: 11px;
+        margin-top: 8px;
+      }
+
+      .danger {
+        color: var(--danger);
+      }
+      .warn {
+        color: var(--warn);
+      }
+      .good {
+        color: var(--good);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      td.num,
+      th.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .bar {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--line);
+        overflow: hidden;
+      }
+
+      .bar > span {
+        display: block;
+        height: 100%;
+        background: var(--good);
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+
+      li b {
+        display: block;
+      }
+
+      .notice {
+        border: 1px solid var(--warn);
+        border-radius: 8px;
+        padding: 12px 14px;
+        margin: 20px 0;
+      }
+
+      svg {
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      #error {
+        color: var(--danger);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 20px 0;
+      }
+
+      .advisor-section {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+      }
+
+      .advisor-section h3 {
+        margin: 20px 0 8px;
+        font-size: 14px;
+      }
+
+      .severity-high {
+        color: var(--danger);
+      }
+
+      .severity-medium {
+        color: var(--warn);
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      @media print {
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
+
+        :root {
+          --bg: #ffffff;
+          --panel: #ffffff;
+          --line: #c8c8c8;
+          --text: #111111;
+          --muted: #4b4b4b;
+          --danger: #8a1c1c;
+          --warn: #705200;
+          --good: #175c35;
+          --info: #174d85;
+        }
+
+        * {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+
+        body {
+          padding: 0;
+          background: #ffffff;
+          color: #111111;
+          font-size: 10pt;
+        }
+
+        main {
+          max-width: none;
+        }
+
+        .no-print,
+        button,
+        .hint {
+          display: none !important;
+        }
+
+        #report,
+        #advisor-report,
+        #outflow-details {
+          display: block !important;
+        }
+
+        .card,
+        .notice,
+        table,
+        svg,
+        .advisor-section {
+          break-inside: avoid;
+        }
+
+        h1,
+        h2,
+        h3 {
+          break-after: avoid;
+        }
+
+        h2 {
+          margin-top: 20px;
+        }
+
+        svg {
+          background: #ffffff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Financial planner</h1>
+      <p class="muted" id="subtitle">Sign in to load your report.</p>
+
+      <form id="login" class="no-print">
+        <input id="email" type="email" placeholder="Email" autocomplete="username" required />
+        <input
+          id="password"
+          type="password"
+          placeholder="Password"
+          autocomplete="current-password"
+          required
+        />
+        <button type="submit">Load report</button>
+      </form>
+
+      <p id="error"></p>
+
+      <div id="actions" class="actions no-print" hidden>
+        <button id="generate-advice" type="button">Generate AI advice</button>
+        <button id="print-report" type="button">Print / Save PDF</button>
+        <span id="advisor-status" class="muted"></span>
+      </div>
+
+      <section id="report" hidden></section>
+      <section id="advisor-report" class="advisor-section" hidden></section>
+    </main>
+
+    <script>
+      const rupee = (value) =>
+        "\u20B9" +
+        Math.round(value).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
+      const lakh = (value) => (value / 100000).toFixed(2) + "L";
+
+      const el = (html) => {
+        const template = document.createElement("template");
+        template.innerHTML = html.trim();
+        return template.content;
+      };
+
+      const escapeHtml = (value) =>
+        String(value).replace(
+          /[&<>"']/g,
+          (char) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[char],
+        );
+
+      // A series that ends while still paying reads as "unfinished", so drop it to zero.
+      const withZeroTail = (series) => {
+        const last = series[series.length - 1];
+        if (!last || last.monthlyEmi === 0) {
+          return series;
+        }
+        return [...series, { year: last.year + 1, monthlyEmi: 0 }];
+      };
+
+      function lineChart(rawScheduled, rawAvalanche, rawSurplus) {
+        const scheduled = withZeroTail(rawScheduled);
+        const avalanche = withZeroTail(rawAvalanche);
+        const surplus = rawSurplus && rawSurplus.length ? withZeroTail(rawSurplus) : null;
+        const width = 960;
+        const height = 260;
+        const pad = { top: 34, right: 16, bottom: 32, left: 56 };
+        const years = Math.max(
+          scheduled.length,
+          avalanche.length,
+          surplus ? surplus.length : 0,
+        );
+        const max = Math.max(
+          ...scheduled.map((point) => point.monthlyEmi),
+          ...avalanche.map((point) => point.monthlyEmi),
+          ...(surplus ? surplus.map((point) => point.monthlyEmi) : []),
+          1,
+        );
+        const x = (index) =>
+          pad.left +
+          (index * (width - pad.left - pad.right)) / Math.max(1, years - 1);
+        const y = (value) =>
+          height - pad.bottom - (value / max) * (height - pad.top - pad.bottom);
+
+        const path = (points) =>
+          points
+            .map((point, index) => `${index ? "L" : "M"}${x(index)},${y(point.monthlyEmi)}`)
+            .join(" ");
+
+        const ticks = [0, max / 2, max]
+          .map(
+            (value) =>
+              `<line x1="${pad.left}" y1="${y(value)}" x2="${width - pad.right}" y2="${y(
+                value,
+              )}" stroke="#262b33" />
+               <text x="${pad.left - 8}" y="${y(value) + 4}" fill="#9aa1ad" font-size="11" text-anchor="end">${lakh(
+                 value,
+               )}</text>`,
+          )
+          .join("");
+
+        const labels = scheduled
+          .map((point, index) =>
+            index % 2 === 0
+              ? `<text x="${x(index)}" y="${height - 10}" fill="#9aa1ad" font-size="11" text-anchor="middle">Y${point.year}</text>`
+              : "",
+          )
+          .join("");
+
+        return `
+          <svg viewBox="0 0 ${width} ${height}" role="img"
+               aria-label="Monthly debt payment by year: scheduled minimum EMI versus avalanche">
+            ${ticks}${labels}
+            <path d="${path(scheduled)}" fill="none" stroke="#9aa1ad" stroke-width="2" />
+            <path d="${path(avalanche)}" fill="none" stroke="#4faf7c" stroke-width="2" />
+            ${surplus ? `<path d="${path(surplus)}" fill="none" stroke="#5a8dd6" stroke-width="2" />` : ""}
+            <text x="${pad.left}" y="14" fill="#9aa1ad" font-size="11">Monthly debt payment (\u20B9 lakh)</text>
+            <text x="${width - pad.right}" y="14" fill="#9aa1ad" font-size="11" text-anchor="end">
+              grey: scheduled \u00B7 green: recycle EMIs${surplus ? " \u00B7 blue: recycle + surplus" : ""}
+            </text>
+          </svg>`;
+      }
+
+      function render(report) {
+        const { cashflow, netWorth, goals, liabilityPlan, recommendations } = report;
+        const target = document.getElementById("report");
+        target.innerHTML = "";
+
+        target.append(
+          el(`
+          <div class="cards">
+            <div class="card">
+              <div class="value">${rupee(cashflow.income)}</div>
+              <div class="label">Income / month</div>
+            </div>
+            <div class="card clickable" id="outflow-card" role="button" tabindex="0" aria-expanded="false">
+              <div class="value danger">${rupee(cashflow.totalOutflow)}</div>
+              <div class="label">Committed outflow / month</div>
+              <div class="hint">Click for line items</div>
+            </div>
+            <div class="card">
+              <div class="value warn">${rupee(netWorth.liabilities)}</div>
+              <div class="label">Loans outstanding</div>
+            </div>
+            <div class="card">
+              <div class="value">${rupee(netWorth.investmentCorpus)}</div>
+              <div class="label">Investment corpus</div>
+            </div>
+            <div class="card">
+              <div class="value good">${liabilityPlan.debtFreeMonthWithSurplus} mo</div>
+              <div class="label">Debt-free: recycle EMIs + surplus</div>
+            </div>
+          </div>`),
+        );
+
+        const outflowLines = cashflow.outflowLines ?? [];
+        const bucketMeta = {
+          emi: { title: "Loan EMIs", total: cashflow.loanEmis },
+          living: { title: "Living expenses", total: cashflow.livingExpenses },
+          sip: { title: "Investments / SIP", total: cashflow.investments },
+        };
+        const outflowRows = ["emi", "living", "sip"]
+          .map((bucket) => {
+            const lines = outflowLines.filter((line) => line.bucket === bucket);
+            if (!lines.length) {
+              return "";
+            }
+            const meta = bucketMeta[bucket];
+            const body = lines
+              .map(
+                (line) => `
+                <tr>
+                  <td>${escapeHtml(line.label)}${line.note ? ` <span class="muted">${escapeHtml(line.note)}</span>` : ""}</td>
+                  <td class="num">${rupee(line.amount)}</td>
+                  <td class="num">${cashflow.totalOutflow ? ((line.amount / cashflow.totalOutflow) * 100).toFixed(1) : "0.0"}%</td>
+                </tr>`,
+              )
+              .join("");
+            return `
+              <tr>
+                <td><b>${meta.title}</b></td>
+                <td class="num"><b>${rupee(meta.total)}</b></td>
+                <td class="num"><b>${cashflow.totalOutflow ? ((meta.total / cashflow.totalOutflow) * 100).toFixed(1) : "0.0"}%</b></td>
+              </tr>
+              ${body}`;
+          })
+          .join("");
+
+        const outflowDetails = el(`
+          <div id="outflow-details" hidden>
+            <h2>Committed outflow line items</h2>
+            <table>
+              <thead>
+                <tr><th>Line</th><th class="num">Per month</th><th class="num">Share of outflow</th></tr>
+              </thead>
+              <tbody>
+                ${outflowRows}
+                <tr>
+                  <td><b>Total committed outflow</b></td>
+                  <td class="num"><b>${rupee(cashflow.totalOutflow)}</b></td>
+                  <td class="num"><b>100%</b></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>`);
+        target.append(outflowDetails);
+
+        const outflowCard = document.getElementById("outflow-card");
+        if (outflowCard) {
+          const toggleOutflow = () => {
+            const open = outflowDetails.hasAttribute("hidden");
+            outflowDetails.toggleAttribute("hidden");
+            outflowCard.setAttribute("aria-expanded", String(open));
+            outflowCard.querySelector(".hint").textContent = open
+              ? "Click to hide line items"
+              : "Click for line items";
+            if (open) {
+              outflowDetails.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+          };
+          outflowCard.addEventListener("click", toggleOutflow);
+          outflowCard.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              toggleOutflow();
+            }
+          });
+        }
+
+        if (cashflow.incomeRecorded) {
+          const gapTone = cashflow.surplus < 0 ? "danger" : "good";
+          target.append(
+            el(`
+            <div class="notice">
+              <b>Income is on file: ${rupee(cashflow.income)} / month</b>
+              <p class="muted" style="margin:6px 0 0">
+                Salary ${rupee(cashflow.salary)} plus rentals ${rupee(cashflow.rental)}.
+                After committed outflow of ${rupee(cashflow.totalOutflow)}, surplus is
+                <span class="${gapTone}">${rupee(cashflow.surplus)}</span>
+                (${cashflow.savingsRatePct}% of income).
+                ${cashflow.sipsOnHold ? ` SIPs of ${rupee(cashflow.pausedSip)} / month are on hold and not in outflow.` : ""}
+              </p>
+            </div>`),
+          );
+        } else {
+          target.append(
+            el(`
+            <div class="notice">
+              <b>Income is not on file.</b>
+              <p class="muted" style="margin:6px 0 0">
+                Living costs, EMIs, and SIPs already total ${rupee(cashflow.totalOutflow)} a month.
+                Savings rate cannot be certified until income is recorded.
+              </p>
+            </div>`),
+          );
+        }
+
+        target.append(
+          el(`
+          <h2>Monthly cash split</h2>
+          <table>
+            <thead>
+              <tr><th>Bucket</th><th class="num">Per month</th><th class="num">Share of outflow</th></tr>
+            </thead>
+            <tbody>
+              ${[
+                ["Income (salary + rental)", cashflow.income],
+                ["Loan EMIs", cashflow.loanEmis],
+                ["Living expenses", cashflow.livingExpenses],
+                ...(cashflow.investments
+                  ? [["Investments / SIP", cashflow.investments]]
+                  : cashflow.sipsOnHold
+                    ? [["Investments / SIP (on hold)", 0]]
+                    : []),
+                ["Surplus / gap", cashflow.surplus],
+              ]
+                .map(
+                  ([label, value]) => `
+                <tr>
+                  <td>${label}</td>
+                  <td class="num">${rupee(value)}</td>
+                  <td class="num">${cashflow.totalOutflow ? ((Math.abs(value) / cashflow.totalOutflow) * 100).toFixed(1) : "0.0"}%</td>
+                </tr>`,
+                )
+                .join("")}
+            </tbody>
+          </table>`),
+        );
+
+        target.append(
+          el(`
+          <h2>Lean FIRE progress</h2>
+          <div class="bar"><span style="width:${Math.min(100, goals.fireProgressPct)}%"></span></div>
+          <p class="muted">
+            ${rupee(goals.fireCorpus)} of ${rupee(goals.fireTarget)} (${goals.fireProgressPct}%).
+            At current SIPs the model projects ${rupee(goals.projectedCorpusAtFireYear)} by the target year,
+            leaving a gap of ${rupee(goals.fireGap)}. All goals together total ${rupee(goals.allGoalsTarget)}.
+          </p>`),
+        );
+
+        target.append(
+          el(`
+          <h2>EMI load: scheduled vs avalanche</h2>
+          ${lineChart(
+            liabilityPlan.scheduledEmiByYear,
+            liabilityPlan.avalancheEmiByYear,
+            liabilityPlan.surplusEmiByYear,
+          )}
+          <p class="muted">
+            Scheduled minimums keep debt alive for ${liabilityPlan.debtFreeMonthScheduled} months.
+            Recycling each finished EMI into the highest rate clears it in
+            ${liabilityPlan.debtFreeMonthAvalanche} months.
+            ${
+              liabilityPlan.surplusApplied
+                ? `Adding the ${rupee(liabilityPlan.surplusApplied)} monthly surplus as prepayment clears it in
+                   ${liabilityPlan.debtFreeMonthWithSurplus} months.`
+                : ""
+            }
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th class="num">Extra / month</th>
+                <th class="num">Debt-free month</th>
+                <th class="num">Months saved</th>
+                <th class="num">Interest saved</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(liabilityPlan.scenarios ?? [])
+                .map(
+                  (scenario) => `
+                <tr>
+                  <td>${escapeHtml(scenario.label)}</td>
+                  <td class="num">${rupee(scenario.monthlyExtra)}</td>
+                  <td class="num">${scenario.debtFreeMonth}</td>
+                  <td class="num">${scenario.monthsSavedVsScheduled}</td>
+                  <td class="num">${rupee(scenario.interestSavedVsScheduled)}</td>
+                </tr>`,
+                )
+                .join("")}
+            </tbody>
+          </table>
+          <p class="muted">
+            Investment resume milestone:
+            ${escapeHtml(liabilityPlan.investmentResumeMilestone?.trigger ?? "Review after expensive debt")}
+            (estimated month ${liabilityPlan.investmentResumeMilestone?.estimatedMonth ?? "—"}).
+          </p>`),
+        );
+
+        target.append(
+          el(`
+          <h2>Payoff order</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Loan</th><th class="num">ROI</th><th class="num">Principal</th>
+                <th class="num">EMI</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${liabilityPlan.avalanche
+                .map(
+                  (loan) => `
+                <tr>
+                  <td>${escapeHtml(loan.label)}</td>
+                  <td class="num">${loan.roi}%</td>
+                  <td class="num">${rupee(loan.principal)}</td>
+                  <td class="num">${rupee(loan.emi)}</td>
+                  <td class="muted">${escapeHtml(loan.action)}</td>
+                </tr>`,
+                )
+                .join("")}
+            </tbody>
+          </table>`),
+        );
+
+        target.append(
+          el(`
+          <h2>What to do next</h2>
+          <ul>
+            ${recommendations
+              .map(
+                (item) => `
+              <li>
+                <b>${escapeHtml(item.title)}</b>
+                <span class="muted">${escapeHtml(item.detail)}</span>
+              </li>`,
+              )
+              .join("")}
+          </ul>`),
+        );
+
+        target.hidden = false;
+        document.getElementById("login").hidden = true;
+        document.getElementById("subtitle").textContent =
+          "Generated " + new Date(report.generatedAt).toLocaleString();
+        document.getElementById("actions").hidden = false;
+      }
+
+      function renderAdvice(advice) {
+        const target = document.getElementById("advisor-report");
+        target.innerHTML = "";
+        target.append(
+          el(`
+            <h2>AI financial advisor</h2>
+            <div class="notice">
+              <b>Executive summary</b>
+              <p>${escapeHtml(advice.executiveSummary)}</p>
+            </div>
+
+            <h3>Immediate actions</h3>
+            <table>
+              <thead>
+                <tr><th class="num">Priority</th><th>Action</th><th>Why</th><th class="num">Monthly amount</th></tr>
+              </thead>
+              <tbody>
+                ${advice.immediateActions
+                  .sort((a, b) => a.priority - b.priority)
+                  .map(
+                    (item) => `
+                  <tr>
+                    <td class="num">${item.priority}</td>
+                    <td>${escapeHtml(item.action)}</td>
+                    <td class="muted">${escapeHtml(item.rationale)}</td>
+                    <td class="num">${item.monthlyAmount == null ? "—" : rupee(item.monthlyAmount)}</td>
+                  </tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+
+            <h3>Debt strategy</h3>
+            <p>${escapeHtml(advice.debtStrategy.summary)}</p>
+            <table>
+              <thead>
+                <tr><th class="num">Order</th><th>Loan</th><th>Action</th><th>Reason</th></tr>
+              </thead>
+              <tbody>
+                ${advice.debtStrategy.steps
+                  .sort((a, b) => a.order - b.order)
+                  .map(
+                    (step) => `
+                  <tr>
+                    <td class="num">${step.order}</td>
+                    <td>${escapeHtml(step.loan)}</td>
+                    <td>${escapeHtml(step.action)}</td>
+                    <td class="muted">${escapeHtml(step.reason)}</td>
+                  </tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+            <p class="muted">
+              Expected debt-free month cited by advisor:
+              ${advice.debtStrategy.expectedDebtFreeMonth}
+            </p>
+
+            <h3>Investment pause and resume</h3>
+            <p>
+              <b>Status: ${escapeHtml(advice.investmentStrategy.status)}</b><br />
+              Resume trigger: ${escapeHtml(advice.investmentStrategy.resumeTrigger)}<br />
+              Resume amount:
+              ${advice.investmentStrategy.monthlyAmountWhenResumed == null
+                ? "Review at milestone"
+                : rupee(advice.investmentStrategy.monthlyAmountWhenResumed)}
+            </p>
+            <p class="muted">${escapeHtml(advice.investmentStrategy.rationale)}</p>
+
+            <h3>EMI and prepayment tweaks</h3>
+            <table>
+              <thead>
+                <tr><th>Loan</th><th>Change</th><th class="num">Extra / month</th><th class="num">Months saved</th><th class="num">Interest saved</th><th>Caveat</th></tr>
+              </thead>
+              <tbody>
+                ${advice.emiTweaks
+                  .map(
+                    (item) => `
+                  <tr>
+                    <td>${escapeHtml(item.loan)}</td>
+                    <td>${escapeHtml(item.change)}</td>
+                    <td class="num">${rupee(item.monthlyExtra)}</td>
+                    <td class="num">${item.estimatedMonthsSaved ?? "—"}</td>
+                    <td class="num">${item.estimatedInterestSaved == null ? "—" : rupee(item.estimatedInterestSaved)}</td>
+                    <td class="muted">${escapeHtml(item.caveat)}</td>
+                  </tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>
+
+            <h3>Risk warnings</h3>
+            <ul>
+              ${advice.riskWarnings
+                .map(
+                  (item) => `
+                <li>
+                  <b class="severity-${escapeHtml(item.severity)}">${escapeHtml(item.title)}</b>
+                  <span class="muted">${escapeHtml(item.detail)}</span>
+                </li>`,
+                )
+                .join("")}
+            </ul>
+
+            <h3>Assumptions</h3>
+            <ul>
+              ${advice.assumptions
+                .map((item) => `<li>${escapeHtml(item)}</li>`)
+                .join("")}
+            </ul>
+
+            <div class="notice">
+              <b>Important</b>
+              <p class="muted">${escapeHtml(advice.disclaimer)}</p>
+            </div>
+          `),
+        );
+        target.hidden = false;
+      }
+
+      async function post(url, body, token) {
+        const response = await fetch(url, {
+          method: body ? "POST" : "GET",
+          headers: {
+            ...(body ? { "content-type": "application/json" } : {}),
+            ...(token ? { authorization: "Bearer " + token } : {}),
+          },
+          body: body ? JSON.stringify(body) : undefined,
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.status) {
+          throw new Error(payload.message || "Request failed");
+        }
+        return payload.data;
+      }
+
+      let accessToken = null;
+
+      document.getElementById("generate-advice").addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const status = document.getElementById("advisor-status");
+        const error = document.getElementById("error");
+        error.textContent = "";
+        status.textContent = "Generating advice…";
+        button.disabled = true;
+
+        try {
+          const result = await post("/api/advisor/report", {}, accessToken);
+          render(result.planner);
+          renderAdvice(result.advice);
+          status.textContent = "AI advice generated";
+          document.getElementById("advisor-report").scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        } catch (err) {
+          error.textContent = err.message;
+          status.textContent = "";
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      document.getElementById("print-report").addEventListener("click", () => {
+        window.print();
+      });
+
+      document.getElementById("login").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = event.target.querySelector("button");
+        const error = document.getElementById("error");
+        error.textContent = "";
+        button.disabled = true;
+
+        try {
+          const login = await post("/api/auth/login", {
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+          });
+          accessToken = login.accessToken;
+          const report = await post("/api/planner/report", null, accessToken);
+          render(report.report);
+        } catch (err) {
+          error.textContent = err.message;
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

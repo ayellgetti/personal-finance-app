@@ -1,13 +1,14 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import {
-  formatCurrency, formatPercent, totalLiabilities, monthlyEMI, monthlyIncome,
+  formatCurrency, formatPercent, totalLiabilities, monthlyEMI,
   debtToIncome, loanPayoffMonths, prepaymentStrategy,
 } from "@/lib/finance/calculations";
-import { LoanType } from "@/types/finance";
+import { Loan, LoanType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge } from "./shared";
 import { StatCard } from "@/components/StatCard";
-import { Landmark, Percent, CalendarClock, TrendingDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Landmark, Percent, CalendarClock, TrendingDown, Pencil } from "lucide-react";
 
 const TYPES: LoanType[] = ["Home Loan", "Personal Loan", "Business Loan", "Vehicle Loan", "Education Loan"];
 
@@ -18,21 +19,25 @@ function months(m: number) {
   return `${y ? `${y}y ` : ""}${mm}m`;
 }
 
+function loanFields(loan?: Loan, currency?: string): FieldDef[] {
+  return [
+    { name: "name", label: "Loan Name", type: "text", span: 2, defaultValue: loan?.name ?? "" },
+    { name: "type", label: "Loan Type", type: "select", options: TYPES, span: 2, defaultValue: loan?.type ?? TYPES[0] },
+    { name: "outstanding", label: "Outstanding Amount", type: "number", prefix: currency, defaultValue: loan?.outstanding ?? 0 },
+    { name: "interestRate", label: "Interest Rate (%)", type: "number", defaultValue: loan?.interestRate ?? 0 },
+    { name: "emi", label: "Monthly EMI", type: "number", prefix: currency, defaultValue: loan?.emi ?? 0 },
+    { name: "remainingTenure", label: "Remaining Tenure (months)", type: "number", defaultValue: loan?.remainingTenure ?? 0 },
+    { name: "emiDay", label: "Day of the Month", type: "number", defaultValue: loan?.emiDay ?? 5 },
+    { name: "prepaymentAllowed", label: "Prepayment Allowed", type: "switch", defaultValue: loan?.prepaymentAllowed ?? true },
+  ];
+}
+
 export function LoanModule() {
-  const { data, addItem, removeItem } = useFinance();
+  const { data, loading, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const dti = debtToIncome(data);
   const strategy = prepaymentStrategy(data);
-
-  const fields: FieldDef[] = [
-    { name: "name", label: "Loan Name", type: "text", span: 2 },
-    { name: "type", label: "Loan Type", type: "select", options: TYPES, span: 2 },
-    { name: "outstanding", label: "Outstanding Amount", type: "number", prefix: cur },
-    { name: "interestRate", label: "Interest Rate (%)", type: "number" },
-    { name: "emi", label: "Monthly EMI", type: "number", prefix: cur },
-    { name: "remainingTenure", label: "Remaining Tenure (months)", type: "number" },
-    { name: "prepaymentAllowed", label: "Prepayment Allowed", type: "switch" },
-  ];
+  const addFields = loanFields(undefined, cur);
 
   return (
     <div className="space-y-6">
@@ -43,21 +48,35 @@ export function LoanModule() {
         <StatCard label="Loans Active" value={String(data.loans.length)} icon={CalendarClock} accent="gold" />
       </div>
 
-      <Panel title="Loan Portfolio" action={<EntityDialog title="Add Loan" fields={fields} triggerLabel="Add Loan" onSubmit={(v) => addItem("loans", { id: newId(), ...v } as any)} />}>
+      <Panel title="Loan Portfolio" action={<EntityDialog title="Add Loan" fields={addFields} triggerLabel="Add Loan" onSubmit={(v) => addItem("loans", { id: newId(), ...v } as Loan)} />}>
         <div className="space-y-3">
-          {data.loans.length ? data.loans.map((l) => {
+          {loading ? (
+            <EmptyState message="Loading loans from your account…" />
+          ) : data.loans.length ? data.loans.map((l) => {
             const payoff = loanPayoffMonths(l.outstanding, l.interestRate, l.emi);
             return (
               <ItemRow
                 key={l.id}
                 title={l.name}
-                subtitle={`${l.type} · ${l.prepaymentAllowed ? "Prepayment OK" : "No prepayment"}`}
+                subtitle={`${l.type} · EMI on day ${l.emiDay || "—"} · ${l.prepaymentAllowed ? "Prepayment OK" : "No prepayment"}`}
                 badge={<Badge tone="danger">{formatPercent(l.interestRate)}</Badge>}
                 values={[
                   { label: "EMI", value: formatCurrency(l.emi, cur) },
                   { label: "Payoff", value: months(payoff) },
                   { label: "Outstanding", value: formatCurrency(l.outstanding, cur, true), emphasis: true },
                 ]}
+                actions={
+                  <EntityDialog
+                    title="Edit Loan"
+                    fields={loanFields(l, cur)}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="text-muted-foreground opacity-60 transition hover:text-foreground hover:opacity-100">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    }
+                    onSubmit={(v) => updateItem("loans", l.id, v)}
+                  />
+                }
                 onDelete={() => removeItem("loans", l.id)}
               />
             );

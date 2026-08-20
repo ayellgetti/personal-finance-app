@@ -140,6 +140,21 @@ export interface GoalAnalysis {
 }
 
 export function analyzeGoal(d: FinanceData, goal: Goal, assumedReturn = 11): GoalAnalysis {
+  if (goal.type === "Emergency Fund") {
+    const ef = emergencyFund(d);
+    const status: GoalAnalysis["status"] =
+      ef.status === "Green" ? "On Track" : ef.status === "Yellow" ? "At Risk" : "Off Track";
+    return {
+      goal: { ...goal, targetAmount: ef.recommendedTarget, currentSaved: ef.totalAvailable },
+      yearsLeft: Math.max(0.1, ef.monthsToComplete / 12),
+      inflationAdjustedTarget: ef.inflationAdjustedTarget,
+      projectedSavedValue: ef.totalAvailable,
+      monthlyRequired: ef.monthlyContribution,
+      fundingGap: ef.shortfall,
+      probability: ef.safetyScore,
+      status,
+    };
+  }
   const yearsLeft = Math.max(0.1, (new Date(goal.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365));
   const inflationAdjustedTarget = fvLumpSum(goal.targetAmount, d.profile.inflationRate, yearsLeft);
   const projectedSavedValue = fvLumpSum(goal.currentSaved, assumedReturn, yearsLeft);

@@ -60,7 +60,7 @@ export function FreedomCalculator() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Panel title="Assumptions" className="lg:col-span-1">
           <div className="space-y-4">
-            <Field label="Current Age" value={data.profile.age} onChange={(v) => updateProfile({ age: v })} />
+            <Field label="Current Age" value={data.profile.age} disabled />
             <Field label="Retirement Age" value={data.profile.retirementAge} onChange={(v) => updateProfile({ retirementAge: v })} />
             <Field label="Inflation Rate (%)" value={data.profile.inflationRate} onChange={(v) => updateProfile({ inflationRate: v })} />
             <Field label="Emergency Fund" value={data.profile.emergencyFund} onChange={(v) => updateProfile({ emergencyFund: v })} prefix={cur} />
@@ -102,13 +102,27 @@ export function FreedomCalculator() {
   );
 }
 
-function Field({ label, value, onChange, prefix }: { label: string; value: number; onChange: (v: number) => void; prefix?: string }) {
+function Field({
+  label, value, onChange, prefix, disabled,
+}: {
+  label: string;
+  value: number;
+  onChange?: (v: number) => void;
+  prefix?: string;
+  disabled?: boolean;
+}) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
       <div className="relative">
         {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{prefix}</span>}
-        <Input type="number" value={value} className={prefix ? "pl-7" : ""} onChange={(e) => onChange(Number(e.target.value))} />
+        <Input
+          type="number"
+          value={value}
+          className={prefix ? "pl-7" : ""}
+          disabled={disabled}
+          onChange={(e) => onChange?.(Number(e.target.value))}
+        />
       </div>
     </div>
   );

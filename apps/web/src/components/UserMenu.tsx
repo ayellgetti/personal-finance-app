@@ -29,9 +29,10 @@ export function UserMenu({ onProfile }: { onProfile: () => void }) {
   if (!user) return null;
 
   const handleLogout = () => {
-    logout();
-    toast.success("Signed out");
-    navigate("/login", { replace: true });
+    void logout().then(() => {
+      toast.success("Signed out");
+      navigate("/login", { replace: true });
+    });
   };
 
   return (

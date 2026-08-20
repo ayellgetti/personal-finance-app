@@ -1,0 +1,1 @@
+pnpm --filter api exec prisma studio

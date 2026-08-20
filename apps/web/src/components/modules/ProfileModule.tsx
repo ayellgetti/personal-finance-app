@@ -1,7 +1,8 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/store";
 import { useFinance } from "@/lib/finance/store";
 import { EmploymentType } from "@/types/finance";
+import { ageFromDob } from "@/lib/finance/profile";
 import { Panel } from "./shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,57 +26,83 @@ function initials(name: string) {
 
 export function ProfileModule() {
   const { user, updateAccount } = useAuth();
-  const { data, updateProfile } = useFinance();
+  const { data, loading, updateProfile } = useFinance();
 
   const [account, setAccount] = useState({
-    name: user?.name ?? "",
-    email: user?.email ?? "",
+    firstName: user?.firstName ?? "",
+    lastName: user?.lastName ?? "",
+  });
+
+  const [password, setPassword] = useState({
+    currentPassword: "",
     password: "",
     confirmPassword: "",
   });
 
   const [profile, setProfile] = useState({
-    name: data.profile.name,
-    age: data.profile.age,
     retirementAge: data.profile.retirementAge,
-    currency: data.profile.currency,
     inflationRate: data.profile.inflationRate,
     dependents: data.profile.dependents,
     employmentType: data.profile.employmentType,
   });
 
+  useEffect(() => {
+    if (loading) return;
+    setProfile({
+      retirementAge: data.profile.retirementAge,
+      inflationRate: data.profile.inflationRate,
+      dependents: data.profile.dependents,
+      employmentType: data.profile.employmentType,
+    });
+  }, [
+    loading,
+    data.profile.retirementAge,
+    data.profile.inflationRate,
+    data.profile.dependents,
+    data.profile.employmentType,
+  ]);
+
   if (!user) return null;
 
-  const saveAccount = (e: FormEvent) => {
+  const saveAccount = async (e: FormEvent) => {
     e.preventDefault();
-    if (account.password && account.password !== account.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-    const result = updateAccount({
-      name: account.name,
-      email: account.email,
-      password: account.password || undefined,
+    const result = await updateAccount({
+      firstName: account.firstName,
+      lastName: account.lastName,
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       toast.error(result.error);
       return;
     }
-    setAccount((a) => ({ ...a, password: "", confirmPassword: "" }));
-    if (account.name.trim() && account.name.trim() !== data.profile.name) {
-      updateProfile({ name: account.name.trim() });
-      setProfile((p) => ({ ...p, name: account.name.trim() }));
-    }
     toast.success("Account updated");
+  };
+
+  const savePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    if (password.password !== password.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (!password.currentPassword || !password.password) {
+      toast.error("Enter your current and new password");
+      return;
+    }
+    const result = await updateAccount({
+      currentPassword: password.currentPassword,
+      newPassword: password.password,
+    });
+    if (result.ok === false) {
+      toast.error(result.error);
+      return;
+    }
+    setPassword({ currentPassword: "", password: "", confirmPassword: "" });
+    toast.success("Password updated");
   };
 
   const saveFinanceProfile = (e: FormEvent) => {
     e.preventDefault();
     updateProfile({
-      name: profile.name.trim() || data.profile.name,
-      age: Number(profile.age) || data.profile.age,
       retirementAge: Number(profile.retirementAge) || data.profile.retirementAge,
-      currency: profile.currency.trim() || "₹",
       inflationRate: Number(profile.inflationRate) || 0,
       dependents: Number(profile.dependents) || 0,
       employmentType: profile.employmentType,
@@ -109,23 +136,51 @@ export function ProfileModule() {
       <Panel title="Account">
         <form onSubmit={saveAccount} className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="account-name">Display name</Label>
+            <Label htmlFor="account-first-name">First name</Label>
             <Input
-              id="account-name"
+              id="account-first-name"
               className="rounded-xl"
-              value={account.name}
-              onChange={(e) => setAccount((a) => ({ ...a, name: e.target.value }))}
+              value={account.firstName}
+              onChange={(e) => setAccount((a) => ({ ...a, firstName: e.target.value }))}
               required
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="account-last-name">Last name</Label>
+            <Input
+              id="account-last-name"
+              className="rounded-xl"
+              value={account.lastName}
+              onChange={(e) => setAccount((a) => ({ ...a, lastName: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="account-email">Email</Label>
             <Input
               id="account-email"
               type="email"
               className="rounded-xl"
-              value={account.email}
-              onChange={(e) => setAccount((a) => ({ ...a, email: e.target.value }))}
+              value={user.email}
+              disabled
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <Button type="submit" className="rounded-xl">Save account</Button>
+          </div>
+        </form>
+      </Panel>
+
+      <Panel title="Change password">
+        <form onSubmit={savePassword} className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="account-current-password">Current password</Label>
+            <Input
+              id="account-current-password"
+              type="password"
+              className="rounded-xl"
+              value={password.currentPassword}
+              onChange={(e) => setPassword((p) => ({ ...p, currentPassword: e.target.value }))}
               required
             />
           </div>
@@ -135,10 +190,10 @@ export function ProfileModule() {
               id="account-password"
               type="password"
               className="rounded-xl"
-              value={account.password}
-              onChange={(e) => setAccount((a) => ({ ...a, password: e.target.value }))}
-              placeholder="Leave blank to keep current"
-              minLength={6}
+              value={password.password}
+              onChange={(e) => setPassword((p) => ({ ...p, password: e.target.value }))}
+              minLength={8}
+              required
             />
           </div>
           <div className="space-y-2">
@@ -147,38 +202,24 @@ export function ProfileModule() {
               id="account-confirm"
               type="password"
               className="rounded-xl"
-              value={account.confirmPassword}
-              onChange={(e) => setAccount((a) => ({ ...a, confirmPassword: e.target.value }))}
-              placeholder="Confirm new password"
-              minLength={6}
+              value={password.confirmPassword}
+              onChange={(e) => setPassword((p) => ({ ...p, confirmPassword: e.target.value }))}
+              minLength={8}
+              required
             />
           </div>
           <div className="sm:col-span-2">
-            <Button type="submit" className="rounded-xl">Save account</Button>
+            <Button type="submit" className="rounded-xl">Update password</Button>
           </div>
         </form>
       </Panel>
 
       <Panel title="Financial profile">
         <form onSubmit={saveFinanceProfile} className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="profile-name">Name used in plans</Label>
-            <Input
-              id="profile-name"
-              className="rounded-xl"
-              value={profile.name}
-              onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))}
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="profile-age">Age</Label>
-            <Input
-              id="profile-age"
-              type="number"
-              className="rounded-xl"
-              value={profile.age}
-              onChange={(e) => setProfile((p) => ({ ...p, age: Number(e.target.value) }))}
-            />
+            <Input id="profile-age" type="number" className="rounded-xl" value={ageFromDob(user.dob)} disabled />
+            <p className="text-xs text-muted-foreground">Calculated from your date of birth.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="profile-retire">Retirement age</Label>
@@ -188,15 +229,6 @@ export function ProfileModule() {
               className="rounded-xl"
               value={profile.retirementAge}
               onChange={(e) => setProfile((p) => ({ ...p, retirementAge: Number(e.target.value) }))}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="profile-currency">Currency</Label>
-            <Input
-              id="profile-currency"
-              className="rounded-xl"
-              value={profile.currency}
-              onChange={(e) => setProfile((p) => ({ ...p, currency: e.target.value }))}
             />
           </div>
           <div className="space-y-2">
@@ -219,7 +251,7 @@ export function ProfileModule() {
               onChange={(e) => setProfile((p) => ({ ...p, dependents: Number(e.target.value) }))}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label>Employment</Label>
             <Select
               value={profile.employmentType}
@@ -236,7 +268,7 @@ export function ProfileModule() {
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Button type="submit" className="rounded-xl">Save financial profile</Button>
+            <Button type="submit" className="rounded-xl" disabled={loading}>Save financial profile</Button>
           </div>
         </form>
       </Panel>

@@ -1,6 +1,20 @@
-import { FinanceData } from "@/types/finance";
+import { EMERGENCY_FUND_GOAL_ID, FinanceData, Goal } from "@/types/finance";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+export function createEmergencyFundGoal(currentSaved = 0, targetAmount = 0): Goal {
+  const targetDate = new Date();
+  targetDate.setFullYear(targetDate.getFullYear() + 1);
+  return {
+    id: EMERGENCY_FUND_GOAL_ID,
+    name: "Emergency Fund",
+    type: "Emergency Fund",
+    targetAmount,
+    currentSaved,
+    targetDate: targetDate.toISOString().slice(0, 10),
+    priority: "High",
+  };
+}
 
 export const sampleData: FinanceData = {
   profile: {
@@ -40,9 +54,9 @@ export const sampleData: FinanceData = {
     { id: uid(), name: "Goa Trip", category: "Travel", amount: 85000, recurring: false, date: "2024-05-10" },
   ],
   loans: [
-    { id: uid(), name: "HDFC Home Loan", type: "Home Loan", outstanding: 4200000, interestRate: 8.5, emi: 42000, remainingTenure: 168, prepaymentAllowed: true },
-    { id: uid(), name: "Car Loan", type: "Vehicle Loan", outstanding: 480000, interestRate: 9.2, emi: 14500, remainingTenure: 38, prepaymentAllowed: true },
-    { id: uid(), name: "Personal Loan", type: "Personal Loan", outstanding: 220000, interestRate: 13.5, emi: 11200, remainingTenure: 22, prepaymentAllowed: true },
+    { id: uid(), name: "HDFC Home Loan", type: "Home Loan", outstanding: 4200000, interestRate: 8.5, emi: 42000, remainingTenure: 168, emiDay: 10, prepaymentAllowed: true },
+    { id: uid(), name: "Car Loan", type: "Vehicle Loan", outstanding: 480000, interestRate: 9.2, emi: 14500, remainingTenure: 38, emiDay: 5, prepaymentAllowed: true },
+    { id: uid(), name: "Personal Loan", type: "Personal Loan", outstanding: 220000, interestRate: 13.5, emi: 11200, remainingTenure: 22, emiDay: 5, prepaymentAllowed: true },
   ],
   investments: [
     { id: uid(), name: "Index Mutual Funds", type: "Mutual Funds", currentValue: 1850000, monthlySip: 35000, expectedReturn: 12, horizon: 20 },
@@ -60,6 +74,7 @@ export const sampleData: FinanceData = {
     { id: uid(), name: "Car Insurance", type: "Car Insurance", coverage: 800000, annualPremium: 18000, expiryDate: "2025-08-15" },
   ],
   goals: [
+    createEmergencyFundGoal(480000, 0),
     { id: uid(), name: "Retirement Corpus", type: "Retirement", targetAmount: 60000000, targetDate: "2049-01-01", priority: "High", currentSaved: 6380000 },
     { id: uid(), name: "Kids Higher Education", type: "Child Education", targetAmount: 8000000, targetDate: "2034-06-01", priority: "High", currentSaved: 1200000 },
     { id: uid(), name: "Dream Villa", type: "Dream Home", targetAmount: 12000000, targetDate: "2032-01-01", priority: "Medium", currentSaved: 1850000 },

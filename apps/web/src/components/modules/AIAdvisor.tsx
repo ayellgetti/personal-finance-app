@@ -1,36 +1,43 @@
 import { useFinance } from "@/lib/finance/store";
-import { generateRecommendations, emergencyFundRecommendations, healthScore } from "@/lib/finance/calculations";
-import { Panel, Badge } from "./shared";
+import { healthScore } from "@/lib/finance/calculations";
+import { useAdvisorReport } from "@/lib/finance/advisor";
+import { AdvisorPlanOfAction } from "./AdvisorOutput";
+import { Panel } from "./shared";
 import { HealthGauge } from "./HealthGauge";
-import { Sparkles, Lightbulb, TrendingUp, Shield, Coins, PiggyBank, Landmark, ShieldAlert } from "lucide-react";
-
-const CAT_ICON: Record<string, typeof Sparkles> = {
-  Debt: Landmark,
-  Expenses: Coins,
-  Savings: PiggyBank,
-  Investments: TrendingUp,
-  Safety: Shield,
-  Insurance: Shield,
-  "Emergency Fund": ShieldAlert,
-};
+import { Button } from "@/components/ui/button";
+import { Sparkles, RefreshCw } from "lucide-react";
 
 export function AIAdvisor() {
   const { data } = useFinance();
-  const recs = [...emergencyFundRecommendations(data), ...generateRecommendations(data)];
   const hs = healthScore(data);
+  const query = useAdvisorReport(data);
+  const advice = query.data?.advice;
 
   return (
     <div className="space-y-6">
       <div className="relative overflow-hidden rounded-3xl bg-gradient-hero p-6 text-primary-foreground shadow-[var(--shadow-elevated)] md:p-8">
         <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-accent/30 blur-3xl" />
-        <div className="relative flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-background/15 backdrop-blur-sm">
-            <Sparkles className="h-7 w-7" />
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-background/15 backdrop-blur-sm">
+              <Sparkles className="h-7 w-7" />
+            </div>
+            <div>
+              <h2 className="font-display text-2xl font-bold">AI Financial Advisor</h2>
+              <p className="text-sm text-primary-foreground/80">
+                Plan of action from the combined rule engine and OpenAI advisor prompt.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-display text-2xl font-bold">AI Financial Advisor</h2>
-            <p className="text-sm text-primary-foreground/80">{recs.length} personalised actions analysed from your complete financial picture.</p>
-          </div>
+          <Button
+            variant="secondary"
+            className="rounded-xl"
+            onClick={() => void query.regenerate()}
+            disabled={query.isRegenerating}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${query.isRegenerating ? "animate-spin" : ""}`} />
+            {query.isRegenerating ? "Generating…" : "Refresh plan"}
+          </Button>
         </div>
       </div>
 
@@ -55,25 +62,18 @@ export function AIAdvisor() {
           </div>
         </Panel>
 
-        <div className="space-y-4 lg:col-span-2">
-          {recs.map((r, i) => {
-            const Icon = CAT_ICON[r.category] ?? Lightbulb;
-            return (
-              <div key={i} className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-elevated)]">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-display font-semibold">{r.title}</p>
-                    <Badge tone={r.impact === "High" ? "danger" : r.impact === "Medium" ? "gold" : "muted"}>{r.impact} impact</Badge>
-                    <Badge tone="primary">{r.category}</Badge>
-                  </div>
-                  <p className="mt-1.5 text-sm text-muted-foreground">{r.detail}</p>
-                </div>
-              </div>
-            );
-          })}
+        <div className="lg:col-span-2">
+          {query.isError && (
+            <Panel>
+              <p className="text-sm text-danger">Could not generate a plan. Check that you are signed in, then try again.</p>
+            </Panel>
+          )}
+          {query.isLoading && (
+            <Panel>
+              <p className="text-sm text-muted-foreground">Building your plan of action…</p>
+            </Panel>
+          )}
+          {advice && <AdvisorPlanOfAction advice={advice} currency={data.profile.currency} />}
         </div>
       </div>
     </div>

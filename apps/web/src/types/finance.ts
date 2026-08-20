@@ -59,6 +59,7 @@ export interface Loan {
   interestRate: number; // % annual
   emi: number;
   remainingTenure: number; // months
+  emiDay: number; // day of the month EMI is due (1–31)
   prepaymentAllowed: boolean;
 }
 
@@ -102,6 +103,7 @@ export interface Insurance {
 }
 
 export type GoalType =
+  | "Emergency Fund"
   | "Dream Home"
   | "Dream Car"
   | "Child Education"
@@ -110,6 +112,18 @@ export type GoalType =
   | "International Vacation"
   | "Business Expansion"
   | "Custom Goal";
+
+export const EMERGENCY_FUND_GOAL_ID = "emergency-fund";
+export const USER_GOAL_TYPES: GoalType[] = [
+  "Dream Home",
+  "Dream Car",
+  "Child Education",
+  "Child Marriage",
+  "Retirement",
+  "International Vacation",
+  "Business Expansion",
+  "Custom Goal",
+];
 
 export type Priority = "High" | "Medium" | "Low";
 

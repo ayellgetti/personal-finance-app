@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFinance, newId } from "@/lib/finance/store";
-import { FinanceData } from "@/types/finance";
+import { useAuth } from "@/lib/auth/store";
+import { ageFromDob } from "@/lib/finance/profile";
+import { EmploymentType, FinanceData } from "@/types/finance";
 import { FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge } from "./shared";
 import { Button } from "@/components/ui/button";
@@ -10,14 +12,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import {
   Plus, Check, ChevronLeft, ChevronRight, User, Wallet, Receipt, Landmark,
-  TrendingUp, ShieldCheck, Target, PartyPopper,
+  TrendingUp, ShieldCheck, PartyPopper,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type Collection = "incomes" | "expenses" | "loans" | "investments" | "insurances" | "goals";
+type Collection = "incomes" | "expenses" | "loans" | "investments" | "insurances";
 
 interface EntityStep {
   key: Collection;
@@ -30,29 +32,38 @@ interface EntityStep {
 const fmt = (n: number, cur: string) =>
   `${cur}${Number(n || 0).toLocaleString("en-IN")}`;
 
-export function SetupWizard({ onDone }: { onDone: () => void }) {
-  const { data, addItem, updateProfile } = useFinance();
+export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: () => void }) {
+  const { user } = useAuth();
+  const { data, loading, addItem, removeItem, updateProfile } = useFinance();
   const cur = data.profile.currency;
+  const accountName = user?.name ?? data.profile.name;
+  const accountAge = user ? ageFromDob(user.dob) : data.profile.age;
 
-  // Local profile draft
   const [profile, setProfile] = useState({
-    name: data.profile.name,
-    age: data.profile.age,
     retirementAge: data.profile.retirementAge,
     currency: data.profile.currency,
     inflationRate: data.profile.inflationRate,
     dependents: data.profile.dependents,
     employmentType: data.profile.employmentType,
-    monthlyEssentialExpenses: data.profile.monthlyEssentialExpenses,
-    liquidAssets: data.profile.liquidAssets,
-    emergencyFund: data.profile.emergencyFund,
-    dailyBudget: data.profile.dailyBudget,
   });
 
-  // Staged items per collection (not yet committed)
-  const [staged, setStaged] = useState<Record<Collection, any[]>>({
-    incomes: [], expenses: [], loans: [], investments: [], insurances: [], goals: [],
-  });
+  useEffect(() => {
+    if (loading) return;
+    setProfile({
+      retirementAge: data.profile.retirementAge,
+      currency: data.profile.currency,
+      inflationRate: data.profile.inflationRate,
+      dependents: data.profile.dependents,
+      employmentType: data.profile.employmentType,
+    });
+  }, [
+    loading,
+    data.profile.retirementAge,
+    data.profile.currency,
+    data.profile.inflationRate,
+    data.profile.dependents,
+    data.profile.employmentType,
+  ]);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -88,6 +99,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
         { name: "interestRate", label: "Interest Rate (%)", type: "number" },
         { name: "emi", label: "EMI", type: "number", prefix: cur },
         { name: "remainingTenure", label: "Tenure (months)", type: "number" },
+        { name: "emiDay", label: "Day of the Month", type: "number", defaultValue: 5 },
         { name: "prepaymentAllowed", label: "Prepayment Allowed", type: "switch" },
       ],
       summary: (l, c) => ({ title: l.name, badge: l.type, value: `${fmt(l.emi, c)}/mo` }),
@@ -115,39 +127,29 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
       ],
       summary: (ins, c) => ({ title: ins.name, badge: ins.type, value: fmt(ins.coverage, c) }),
     },
-    {
-      key: "goals", label: "Goals", icon: Target,
-      fields: [
-        { name: "name", label: "Goal Name", type: "text", span: 2 },
-        { name: "type", label: "Goal Type", type: "select", span: 2, options: ["Dream Home", "Dream Car", "Child Education", "Child Marriage", "Retirement", "International Vacation", "Business Expansion", "Custom Goal"] },
-        { name: "targetAmount", label: "Target Amount", type: "number", prefix: cur },
-        { name: "currentSaved", label: "Already Saved", type: "number", prefix: cur },
-        { name: "priority", label: "Priority", type: "select", options: ["High", "Medium", "Low"] },
-        { name: "targetDate", label: "Target Date", type: "date", defaultValue: today },
-      ],
-      summary: (g, c) => ({ title: g.name, badge: g.priority, value: fmt(g.targetAmount, c) }),
-    },
   ];
 
-  // Steps: 0 = profile, 1..6 = entities, 7 = review
-  const totalSteps = ENTITY_STEPS.length + 2;
+  const STEPS = [
+    { id: "profile", label: "Profile", icon: User },
+    ...ENTITY_STEPS.map((s) => ({ id: s.key, label: s.label, icon: s.icon })),
+    { id: "review", label: "Review", icon: PartyPopper },
+  ];
+
+  const totalSteps = STEPS.length;
   const [step, setStep] = useState(0);
   const isProfile = step === 0;
   const isReview = step === totalSteps - 1;
   const entityStep = !isProfile && !isReview ? ENTITY_STEPS[step - 1] : null;
 
-  const addStaged = (key: Collection, item: any) =>
-    setStaged((s) => ({ ...s, [key]: [...s[key], { id: newId(), ...item }] }));
-  const removeStaged = (key: Collection, id: string) =>
-    setStaged((s) => ({ ...s, [key]: s[key].filter((x) => x.id !== id) }));
-
   const finish = () => {
-    updateProfile(profile as any);
-    (Object.keys(staged) as Collection[]).forEach((key) => {
-      staged[key].forEach((item) => addItem(key, item as FinanceData[typeof key][number]));
+    updateProfile({
+      retirementAge: Number(profile.retirementAge) || data.profile.retirementAge,
+      currency: profile.currency.trim() || "₹",
+      inflationRate: Number(profile.inflationRate) || 0,
+      dependents: Number(profile.dependents) || 0,
+      employmentType: profile.employmentType as EmploymentType,
     });
-    const count = Object.values(staged).reduce((s, arr) => s + arr.length, 0);
-    toast.success(`Setup complete — ${count} item${count === 1 ? "" : "s"} added`);
+    toast.success("Setup saved");
     onDone();
   };
 
@@ -155,15 +157,40 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
   const StepIcon = stepIcon;
   const stepTitle = isProfile ? "Your Profile" : isReview ? "Review & Finish" : entityStep!.label;
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <Panel>
+          <p className="text-sm text-muted-foreground">Loading your saved details from the server…</p>
+        </Panel>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* Progress */}
-      <div>
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-medium">Step {step + 1} of {totalSteps}</span>
-          <span className="text-muted-foreground">{Math.round(((step + 1) / totalSteps) * 100)}%</span>
-        </div>
-        <Progress value={((step + 1) / totalSteps) * 100} className="h-2" />
+      <div className="flex flex-wrap gap-2">
+        {STEPS.map((item, index) => {
+          const Icon = item.icon;
+          const current = index === step;
+          const done = index < step;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setStep(index)}
+              className={cn(
+                "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                current && "border-primary bg-primary text-primary-foreground",
+                done && !current && "border-primary/30 bg-primary/10 text-primary",
+                !current && !done && "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span>{index + 1}. {item.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       <Panel>
@@ -175,40 +202,46 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
             <h3 className="font-display text-lg font-semibold">{stepTitle}</h3>
             <p className="text-sm text-muted-foreground">
               {isProfile
-                ? "Tell us a bit about yourself"
+                ? "Retirement, dependents, and inflation are saved to your financial profile"
                 : isReview
-                ? "Confirm everything you entered, then save"
-                : `Add as many ${entityStep!.label.toLowerCase()} entries as you like`}
+                ? "Confirm everything, then save"
+                : `Your saved ${entityStep!.label.toLowerCase()} from the server. Add more if needed.`}
             </p>
           </div>
         </div>
 
-        {isProfile && <ProfileForm profile={profile} setProfile={setProfile} cur={cur} />}
+        {isProfile && (
+          <ProfileForm
+            profile={{ ...profile, name: accountName, age: accountAge }}
+            setProfile={setProfile}
+          />
+        )}
 
         {entityStep && (
           <EntitySection
             key={entityStep.key}
             stepDef={entityStep}
-            items={staged[entityStep.key]}
+            items={data[entityStep.key]}
             cur={cur}
-            onAdd={(v) => addStaged(entityStep.key, v)}
-            onRemove={(id) => removeStaged(entityStep.key, id)}
+            onAdd={(v) => void addItem(entityStep.key, { id: newId(), ...v } as FinanceData[typeof entityStep.key][number])}
+            onRemove={(id) => void removeItem(entityStep.key, id)}
           />
         )}
 
         {isReview && (
           <div className="space-y-3">
-            <ReviewRow label="Profile" value={`${profile.name}, age ${profile.age} · ${profile.employmentType}`} />
+            <ReviewRow label="Profile" value={`${accountName}, age ${accountAge} · retire at ${profile.retirementAge} · ${profile.employmentType}`} />
+            <ReviewRow label="Dependents" value={String(profile.dependents)} />
+            <ReviewRow label="Inflation" value={`${profile.inflationRate}%`} />
             {ENTITY_STEPS.map((s) => (
-              <ReviewRow key={s.key} label={s.label} value={`${staged[s.key].length} added`} />
+              <ReviewRow key={s.key} label={s.label} value={`${data[s.key].length} saved`} />
             ))}
           </div>
         )}
       </Panel>
 
-      {/* Footer nav */}
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" onClick={onDone}>Skip for now</Button>
+        <Button variant="ghost" onClick={onSkip ?? onDone}>Skip for now</Button>
         <div className="flex gap-2">
           {step > 0 && (
             <Button variant="outline" className="gap-1 rounded-xl" onClick={() => setStep((s) => s - 1)}>
@@ -239,15 +272,15 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ProfileForm({ profile, setProfile, cur }: { profile: any; setProfile: (p: any) => void; cur: string }) {
+function ProfileForm({ profile, setProfile }: { profile: any; setProfile: (p: any) => void }) {
   const set = (k: string, v: any) => setProfile((p: any) => ({ ...p, [k]: v }));
   return (
     <div className="grid grid-cols-2 gap-4">
       <Field label="Full Name" span={2}>
-        <Input value={profile.name} onChange={(e) => set("name", e.target.value)} />
+        <Input value={profile.name} disabled />
       </Field>
       <Field label="Age">
-        <Input type="number" value={profile.age} onChange={(e) => set("age", Number(e.target.value))} />
+        <Input type="number" value={profile.age} disabled />
       </Field>
       <Field label="Retirement Age">
         <Input type="number" value={profile.retirementAge} onChange={(e) => set("retirementAge", Number(e.target.value))} />
@@ -267,18 +300,6 @@ function ProfileForm({ profile, setProfile, cur }: { profile: any; setProfile: (
       </Field>
       <Field label="Inflation Rate (%)">
         <Input type="number" value={profile.inflationRate} onChange={(e) => set("inflationRate", Number(e.target.value))} />
-      </Field>
-      <Field label={`Monthly Essential Expenses (${cur})`}>
-        <Input type="number" value={profile.monthlyEssentialExpenses} onChange={(e) => set("monthlyEssentialExpenses", Number(e.target.value))} />
-      </Field>
-      <Field label={`Current Emergency Fund (${cur})`}>
-        <Input type="number" value={profile.emergencyFund} onChange={(e) => set("emergencyFund", Number(e.target.value))} />
-      </Field>
-      <Field label={`Liquid Assets (${cur})`}>
-        <Input type="number" value={profile.liquidAssets} onChange={(e) => set("liquidAssets", Number(e.target.value))} />
-      </Field>
-      <Field label={`Monthly Daily Budget (${cur})`}>
-        <Input type="number" value={profile.dailyBudget} onChange={(e) => set("dailyBudget", Number(e.target.value))} />
       </Field>
     </div>
   );
@@ -372,7 +393,7 @@ function EntitySection({
               onDelete={() => onRemove(item.id)}
             />
           );
-        }) : <EmptyState message={`No ${stepDef.label.toLowerCase()} added yet — optional, you can skip`} />}
+        }) : <EmptyState message={`No ${stepDef.label.toLowerCase()} saved yet — optional, you can skip`} />}
       </div>
     </div>
   );

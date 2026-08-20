@@ -1,41 +1,125 @@
 import { FormEvent, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Gem, Loader2 } from "lucide-react";
-import { useAuth } from "@/lib/auth/store";
+import { useAuth, type SignupDraft } from "@/lib/auth/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 type Mode = "login" | "signup";
+type SignupStep = "details" | "otp";
+
+const emptyDraft: SignupDraft = {
+  firstName: "",
+  lastName: "",
+  dob: "",
+  gender: "",
+  mobileNo: "",
+  email: "",
+  password: "",
+};
 
 export default function Login() {
-  const { user, login, signup } = useAuth();
+  const { user, login, requestSignupOtp, resendSignupOtp, completeSignup } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("login");
-  const [name, setName] = useState("");
+  const [signupStep, setSignupStep] = useState<SignupStep>("details");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [draft, setDraft] = useState<SignupDraft>(emptyDraft);
+  const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (user) return <Navigate to="/" replace />;
 
-  const onSubmit = (e: FormEvent) => {
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setSignupStep("details");
+    setOtp("");
+  };
+
+  const patchDraft = (patch: Partial<SignupDraft>) => {
+    setDraft((current) => ({ ...current, ...patch }));
+  };
+
+  const sendOtp = async () => {
+    const result = await requestSignupOtp(draft);
+    if (result.ok === false) {
+      toast.error(result.error);
+      return false;
+    }
+    if (result.otp) {
+      toast.message(`Dev OTP: ${result.otp}`);
+    } else {
+      toast.success("OTP sent to your mobile number");
+    }
+    setSignupStep("otp");
+    return true;
+  };
+
+  const onLogin = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const result =
-      mode === "login"
-        ? login(email, password)
-        : signup(name, email, password);
+    const result = await login(email, password);
     setBusy(false);
-
-    if (!result.ok) {
+    if (result.ok === false) {
       toast.error(result.error);
       return;
     }
-
-    toast.success(mode === "login" ? "Welcome back" : "Account created");
+    toast.success("Welcome back");
     navigate("/", { replace: true });
+  };
+
+  const onSignupDetails = async (e: FormEvent) => {
+    e.preventDefault();
+    if (draft.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setBusy(true);
+    await sendOtp();
+    setBusy(false);
+  };
+
+  const onVerifyAndRegister = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const result = await completeSignup(draft, otp);
+    setBusy(false);
+    if (result.ok === false) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Account created");
+    navigate("/", { replace: true });
+  };
+
+  const onResend = async () => {
+    setBusy(true);
+    const result = await resendSignupOtp(draft.mobileNo);
+    setBusy(false);
+    if (result.ok === false) {
+      toast.error(result.error);
+      return;
+    }
+    if (result.otp) {
+      toast.message(`Dev OTP: ${result.otp}`);
+    } else {
+      toast.success("A new OTP was sent");
+    }
   };
 
   return (
@@ -52,7 +136,11 @@ export default function Login() {
           </div>
           <h1 className="font-display text-3xl font-bold tracking-tight">Freedom Planner</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {mode === "login" ? "Sign in to your wealth workspace" : "Create your account to get started"}
+            {mode === "login"
+              ? "Sign in to your wealth workspace"
+              : signupStep === "otp"
+                ? `Enter the OTP sent to ${draft.mobileNo}`
+                : "Create your account to get started"}
           </p>
         </div>
 
@@ -60,7 +148,7 @@ export default function Login() {
           <div className="mb-6 grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
             <button
               type="button"
-              onClick={() => setMode("login")}
+              onClick={() => switchMode("login")}
               className={`rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
                 mode === "login"
                   ? "bg-card text-foreground shadow-sm"
@@ -71,7 +159,7 @@ export default function Login() {
             </button>
             <button
               type="button"
-              onClick={() => setMode("signup")}
+              onClick={() => switchMode("signup")}
               className={`rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
                 mode === "signup"
                   ? "bg-card text-foreground shadow-sm"
@@ -82,59 +170,175 @@ export default function Login() {
             </button>
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-4">
-            {mode === "signup" && (
+          {mode === "login" ? (
+            <form onSubmit={onLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full name</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
                   className="rounded-xl"
-                  autoComplete="name"
+                  autoComplete="email"
                   required
                 />
               </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="rounded-xl"
-                autoComplete="email"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
-                className="rounded-xl"
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                required
-                minLength={mode === "signup" ? 6 : undefined}
-              />
-            </div>
-
-            <Button type="submit" className="mt-2 w-full rounded-xl" disabled={busy}>
-              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "login" ? "Sign in" : "Create account"}
-            </Button>
-          </form>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  className="rounded-xl"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+              <Button type="submit" className="mt-2 w-full rounded-xl" disabled={busy}>
+                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign in
+              </Button>
+            </form>
+          ) : signupStep === "details" ? (
+            <form onSubmit={onSignupDetails} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First name</Label>
+                  <Input
+                    id="firstName"
+                    value={draft.firstName}
+                    onChange={(e) => patchDraft({ firstName: e.target.value })}
+                    className="rounded-xl"
+                    autoComplete="given-name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last name</Label>
+                  <Input
+                    id="lastName"
+                    value={draft.lastName}
+                    onChange={(e) => patchDraft({ lastName: e.target.value })}
+                    className="rounded-xl"
+                    autoComplete="family-name"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="dob">Date of birth</Label>
+                  <Input
+                    id="dob"
+                    type="date"
+                    value={draft.dob}
+                    onChange={(e) => patchDraft({ dob: e.target.value })}
+                    className="rounded-xl"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Gender</Label>
+                  <Select value={draft.gender} onValueChange={(value) => patchDraft({ gender: value })}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mobileNo">Mobile number</Label>
+                <Input
+                  id="mobileNo"
+                  value={draft.mobileNo}
+                  onChange={(e) => patchDraft({ mobileNo: e.target.value })}
+                  placeholder="9876543210"
+                  className="rounded-xl"
+                  autoComplete="tel"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email</Label>
+                <Input
+                  id="signup-email"
+                  type="email"
+                  value={draft.email}
+                  onChange={(e) => patchDraft({ email: e.target.value })}
+                  placeholder="you@example.com"
+                  className="rounded-xl"
+                  autoComplete="email"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  value={draft.password}
+                  onChange={(e) => patchDraft({ password: e.target.value })}
+                  placeholder="At least 8 characters"
+                  className="rounded-xl"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                />
+              </div>
+              <Button type="submit" className="mt-2 w-full rounded-xl" disabled={busy || !draft.gender}>
+                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send OTP
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={onVerifyAndRegister} className="space-y-5">
+              <div className="flex justify-center">
+                <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                  <InputOTPGroup>
+                    {Array.from({ length: 6 }, (_, index) => (
+                      <InputOTPSlot key={index} index={index} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <Button type="submit" className="w-full rounded-xl" disabled={busy || otp.length !== 6}>
+                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verify OTP and create account
+              </Button>
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setSignupStep("details");
+                    setOtp("");
+                  }}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="font-medium text-primary hover:underline"
+                  disabled={busy}
+                  onClick={() => void onResend()}
+                >
+                  Resend OTP
+                </button>
+              </div>
+            </form>
+          )}
 
           <p className="mt-5 text-center text-xs text-muted-foreground">
-            Local accounts only — data stays in this browser.
+            Accounts are created on the API after mobile OTP verification.
           </p>
         </div>
       </div>

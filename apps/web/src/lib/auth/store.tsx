@@ -2,159 +2,251 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import { api, ApiError } from "@/lib/api";
+import {
+  clearSession,
+  getAccessToken,
+  getRefreshToken,
+  persistSession,
+  readStoredUser,
+  subscribeAuth,
+  updateStoredUser,
+  type AuthSession,
+  type StoredUser,
+} from "@/lib/auth/session";
 
-const USERS_KEY = "ffp-users-v1";
-const SESSION_KEY = "ffp-session-v1";
+export { getAccessToken, getRefreshToken } from "@/lib/auth/session";
 
-export interface AuthUser {
-  id: string;
-  name: string;
+export type ApiUser = StoredUser;
+
+export type PublicUser = ApiUser & { name: string };
+
+export type SignupDraft = {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  gender: string;
+  mobileNo: string;
   email: string;
   password: string;
-  createdAt: string;
-}
+};
 
-export type PublicUser = Omit<AuthUser, "password">;
+type AuthResult = { ok: true } | { ok: false; error: string };
+
+type OtpResult = { ok: true; otp?: number } | { ok: false; error: string };
 
 interface AuthContextValue {
   user: PublicUser | null;
-  login: (email: string, password: string) => { ok: true } | { ok: false; error: string };
-  signup: (name: string, email: string, password: string) => { ok: true } | { ok: false; error: string };
-  logout: () => void;
-  updateAccount: (updates: { name?: string; email?: string; password?: string }) =>
-    | { ok: true }
-    | { ok: false; error: string };
+  login: (email: string, password: string) => Promise<AuthResult>;
+  requestSignupOtp: (draft: SignupDraft) => Promise<OtpResult>;
+  resendSignupOtp: (mobileNo: string) => Promise<OtpResult>;
+  completeSignup: (draft: SignupDraft, otp: string) => Promise<AuthResult>;
+  logout: () => Promise<void>;
+  updateAccount: (updates: {
+    firstName?: string;
+    lastName?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }) => Promise<AuthResult>;
+  completeQuickSetup: () => Promise<AuthResult>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function uid() {
-  return Math.random().toString(36).slice(2, 12);
+function toPublic(user: ApiUser): PublicUser {
+  return {
+    ...user,
+    name: `${user.firstName} ${user.lastName}`.trim(),
+  };
 }
 
-function toPublic(user: AuthUser): PublicUser {
-  const { password: _password, ...rest } = user;
-  return rest;
+function loadUser(): PublicUser | null {
+  const user = readStoredUser();
+  return user ? toPublic(user) : null;
 }
 
-function loadUsers(): AuthUser[] {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    if (raw) return JSON.parse(raw) as AuthUser[];
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
-
-function saveUsers(users: AuthUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-function loadSession(): PublicUser | null {
-  try {
-    const id = localStorage.getItem(SESSION_KEY);
-    if (!id) return null;
-    const user = loadUsers().find((u) => u.id === id);
-    return user ? toPublic(user) : null;
-  } catch {
-    return null;
-  }
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError) return error.message;
+  if (error instanceof Error) return error.message;
+  return fallback;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<PublicUser | null>(() => loadSession());
+  const [user, setUser] = useState<PublicUser | null>(() => loadUser());
 
-  const login = useCallback((email: string, password: string) => {
-    const normalized = email.trim().toLowerCase();
-    if (!normalized || !password) {
-      return { ok: false as const, error: "Email and password are required" };
-    }
-    const match = loadUsers().find(
-      (u) => u.email === normalized && u.password === password,
-    );
-    if (!match) {
-      return { ok: false as const, error: "Invalid email or password" };
-    }
-    localStorage.setItem(SESSION_KEY, match.id);
-    setUser(toPublic(match));
-    return { ok: true as const };
+  useEffect(() => subscribeAuth(() => setUser(loadUser())), []);
+
+  const applySession = useCallback((session: AuthSession) => {
+    persistSession(session);
+    setUser(toPublic(session.user));
   }, []);
 
-  const signup = useCallback((name: string, email: string, password: string) => {
-    const trimmedName = name.trim();
-    const normalized = email.trim().toLowerCase();
-    if (!trimmedName) return { ok: false as const, error: "Name is required" };
-    if (!normalized || !normalized.includes("@")) {
-      return { ok: false as const, error: "Enter a valid email" };
+  const login = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    try {
+      const session = await api<AuthSession>("/api/auth/login", {
+        method: "POST",
+        body: { email, password },
+      });
+      applySession(session);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "Unable to sign in") };
     }
-    if (password.length < 6) {
-      return { ok: false as const, error: "Password must be at least 6 characters" };
+  }, [applySession]);
+
+  const requestSignupOtp = useCallback(async (draft: SignupDraft): Promise<OtpResult> => {
+    try {
+      const result = await api<{ otp?: number }>("/api/otp/generate", {
+        method: "POST",
+        body: { mobileNo: draft.mobileNo, type: "register" },
+      });
+      return { ok: true, otp: result.otp };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "Unable to send OTP") };
     }
-    const users = loadUsers();
-    if (users.some((u) => u.email === normalized)) {
-      return { ok: false as const, error: "An account with this email already exists" };
-    }
-    const next: AuthUser = {
-      id: uid(),
-      name: trimmedName,
-      email: normalized,
-      password,
-      createdAt: new Date().toISOString(),
-    };
-    saveUsers([...users, next]);
-    localStorage.setItem(SESSION_KEY, next.id);
-    setUser(toPublic(next));
-    return { ok: true as const };
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(SESSION_KEY);
-    setUser(null);
+  const resendSignupOtp = useCallback(async (mobileNo: string): Promise<OtpResult> => {
+    try {
+      const result = await api<{ otp?: number }>("/api/otp/resend", {
+        method: "POST",
+        body: { mobileNo, type: "register" },
+      });
+      return { ok: true, otp: result.otp };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "Unable to resend OTP") };
+    }
+  }, []);
+
+  const completeSignup = useCallback(
+    async (draft: SignupDraft, otp: string): Promise<AuthResult> => {
+      const no = Number(otp);
+      if (!Number.isInteger(no) || otp.length !== 6) {
+        return { ok: false, error: "Enter the 6-digit OTP" };
+      }
+
+      try {
+        await api("/api/otp/verify", {
+          method: "POST",
+          body: { mobileNo: draft.mobileNo, type: "register", no },
+        });
+      } catch (error) {
+        return { ok: false, error: errorMessage(error, "OTP verification failed") };
+      }
+
+      try {
+        const session = await api<AuthSession>("/api/auth/register", {
+          method: "POST",
+          body: { ...draft, no },
+        });
+        applySession(session);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: errorMessage(error, "Unable to create account") };
+      }
+    },
+    [applySession],
+  );
+
+  const logout = useCallback(async () => {
+    const refreshToken = getRefreshToken();
+    try {
+      if (refreshToken) {
+        await api("/api/auth/logout", {
+          method: "POST",
+          body: { refreshToken },
+        });
+      }
+    } catch {
+      // Client session is cleared even if the server session is already gone.
+    } finally {
+      clearSession();
+      setUser(null);
+    }
   }, []);
 
   const updateAccount = useCallback(
-    (updates: { name?: string; email?: string; password?: string }) => {
-      if (!user) return { ok: false as const, error: "Not signed in" };
-      const users = loadUsers();
-      const idx = users.findIndex((u) => u.id === user.id);
-      if (idx < 0) return { ok: false as const, error: "Account not found" };
-
-      const current = users[idx];
-      const nextName = updates.name?.trim() ?? current.name;
-      const nextEmail = updates.email?.trim().toLowerCase() ?? current.email;
-      const nextPassword = updates.password?.length ? updates.password : current.password;
-
-      if (!nextName) return { ok: false as const, error: "Name is required" };
-      if (!nextEmail.includes("@")) return { ok: false as const, error: "Enter a valid email" };
-      if (updates.password !== undefined && updates.password.length > 0 && updates.password.length < 6) {
-        return { ok: false as const, error: "Password must be at least 6 characters" };
+    async (updates: {
+      firstName?: string;
+      lastName?: string;
+      currentPassword?: string;
+      newPassword?: string;
+    }): Promise<AuthResult> => {
+      if (!getAccessToken() && !getRefreshToken()) {
+        return { ok: false, error: "Not signed in" };
       }
-      if (users.some((u) => u.email === nextEmail && u.id !== current.id)) {
-        return { ok: false as const, error: "That email is already in use" };
-      }
+      if (!user) return { ok: false, error: "Not signed in" };
 
-      const updated: AuthUser = {
-        ...current,
-        name: nextName,
-        email: nextEmail,
-        password: nextPassword,
-      };
-      users[idx] = updated;
-      saveUsers(users);
-      setUser(toPublic(updated));
-      return { ok: true as const };
+      try {
+        if (updates.firstName || updates.lastName) {
+          const result = await api<{ user: ApiUser }>("/api/users/me", {
+            method: "PATCH",
+            body: {
+              ...(updates.firstName ? { firstName: updates.firstName } : {}),
+              ...(updates.lastName ? { lastName: updates.lastName } : {}),
+            },
+          });
+          updateStoredUser(result.user);
+          setUser(toPublic(result.user));
+        }
+
+        if (updates.newPassword) {
+          if (!updates.currentPassword) {
+            return { ok: false, error: "Current password is required" };
+          }
+          const result = await api<{ user: ApiUser }>("/api/users/me/password", {
+            method: "POST",
+            body: {
+              currentPassword: updates.currentPassword,
+              newPassword: updates.newPassword,
+            },
+          });
+          updateStoredUser(result.user);
+          setUser(toPublic(result.user));
+        }
+
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: errorMessage(error, "Unable to update account") };
+      }
     },
     [user],
   );
 
+  const completeQuickSetup = useCallback(async (): Promise<AuthResult> => {
+    if (!getAccessToken() && !getRefreshToken()) {
+      return { ok: false, error: "Not signed in" };
+    }
+    try {
+      const result = await api<{ user: ApiUser }>("/api/users/me", {
+        method: "PATCH",
+        body: { quickStep: 1 },
+      });
+      updateStoredUser(result.user);
+      setUser(toPublic(result.user));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "Unable to save setup progress") };
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ user, login, signup, logout, updateAccount }),
-    [user, login, signup, logout, updateAccount],
+    () => ({
+      user,
+      login,
+      requestSignupOtp,
+      resendSignupOtp,
+      completeSignup,
+      logout,
+      updateAccount,
+      completeQuickSetup,
+    }),
+    [user, login, requestSignupOtp, resendSignupOtp, completeSignup, logout, updateAccount, completeQuickSetup],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
