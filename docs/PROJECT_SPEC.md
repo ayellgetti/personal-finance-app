@@ -446,7 +446,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | Area | Behavior |
 | --- | --- |
 | Auth | OTP register, login, refresh, profile |
-| Onboarding | Setup wizard → profile + income + expenses + loans + investments + insurance + required emergency fund + required FIRE path (Lean, Fat, or Coast) + other goals |
+| Onboarding | Setup wizard → profile + income + expenses + loans + investments + insurance + required emergency fund + required FIRE path (Lean, Fat, or Coast) + other goals. Public walkthrough: `/guide` (Arjun Mehta sample, screenshot-style screens and advisor suggestions). |
 | Cash flow | Recurring `Budget` income/expense |
 | Debt | Loans: principal, ROI, tenure, EMI, EMI day |
 | Investments | Corpus, contribution, ROI, remaining months, hold |
@@ -478,11 +478,12 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 ### UX
 
 1. Sign up / log in  
-2. Quick setup (`User.quickStep`)  
-3. Dashboard  
-4. Manage: income, expenses, loans, investments, insurance, goals  
-5. Plan: daily tracker, freedom calculator, forecast, AI advisor, learning hub  
-6. Report + PDF  
+2. Optional getting-started guide (`/guide`) — Arjun Mehta sample walkthrough with screenshot-style screens  
+3. Quick setup (`User.quickStep`)  
+4. Dashboard  
+5. Manage: income, expenses, loans, investments, insurance, goals  
+6. Plan: daily tracker, freedom calculator, forecast, AI advisor, learning hub  
+7. Report + PDF  
 
 Dark theme by default. Nav: Overview / Manage / Plan / Report.
 

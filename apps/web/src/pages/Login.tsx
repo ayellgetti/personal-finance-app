@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Gem, Loader2 } from "lucide-react";
 import { useAuth, type SignupDraft } from "@/lib/auth/store";
 import { Button } from "@/components/ui/button";
@@ -339,6 +339,11 @@ export default function Login() {
 
           <p className="mt-5 text-center text-xs text-muted-foreground">
             Accounts are created on the API after mobile OTP verification.
+          </p>
+          <p className="mt-3 text-center text-sm">
+            <Link to="/guide" className="font-medium text-primary hover:underline">
+              See how it works with the Arjun Mehta sample
+            </Link>
           </p>
         </div>
       </div>

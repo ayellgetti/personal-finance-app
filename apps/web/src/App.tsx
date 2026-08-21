@@ -9,6 +9,7 @@ import { FinanceProvider } from "@/lib/finance/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
+import Guide from "./pages/Guide.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,8 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/guide" element={<Guide />} />
+                <Route path="/guide.html" element={<Guide />} />
                 <Route
                   path="/"
                   element={

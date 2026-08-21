@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How Freedom Planner works — Arjun Mehta walkthrough</title>
+    <meta
+      name="description"
+      content="A first-user guide to Freedom Planner. See how sample household Arjun Mehta’s numbers become a dashboard, forecast, and a concrete plan of action."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        var theme = "dark";
+        try {
+          var stored = localStorage.getItem("theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+          else if (window.parent && window.parent !== window) {
+            var parentHtml = window.parent.document.documentElement;
+            if (parentHtml.classList.contains("light")) theme = "light";
+            else if (parentHtml.classList.contains("dark")) theme = "dark";
+          }
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4faf7;
+        --card: #ffffff;
+        --line: #d5e4dc;
+        --text: #152028;
+        --muted: #5b6f78;
+        --primary: #1c9b6a;
+        --primary-2: #178a5d;
+        --ok: #178a5d;
+        --warn: #c47b10;
+        --danger: #c43c3c;
+        --header-bg: rgba(255, 255, 255, 0.88);
+        --toc-hover: #e8f4ee;
+        --shot-bg: #ffffff;
+        --chrome-bg: #eef4f1;
+        --side-bg: #f3f8f5;
+        --side-g: #6d838c;
+        --n-bg: #e3f3eb;
+        --pill-bg: #f7fbf9;
+        --track-bg: #e2ece7;
+        --rec-bg: #f7fbf9;
+        --note-bg: #e8f6ee;
+        --note-line: #b7e0c8;
+        --note-text: #1a3d2e;
+        --high-bg: rgba(196, 60, 60, 0.12);
+        --high-fg: #b42323;
+        --med-bg: rgba(196, 123, 16, 0.14);
+        --med-fg: #9a620c;
+        --low-bg: rgba(23, 138, 93, 0.12);
+        --low-fg: #146c4a;
+        --shadow: 0 18px 48px -18px rgba(21, 32, 40, 0.18);
+        --hero: linear-gradient(135deg, #142833 0%, #1a4a42 100%);
+      }
+
+      html.dark {
+        color-scheme: dark;
+        --bg: #0b161c;
+        --card: #14242c;
+        --line: #234048;
+        --text: #e8f2ee;
+        --muted: #8aa0aa;
+        --primary: #1c9b6a;
+        --primary-2: #2bb57e;
+        --ok: #34c98a;
+        --warn: #f0a429;
+        --danger: #e24b4b;
+        --header-bg: rgba(11, 22, 28, 0.82);
+        --toc-hover: #1a2d34;
+        --shot-bg: #0e1a20;
+        --chrome-bg: #0a1419;
+        --side-bg: #101c22;
+        --side-g: #6d838c;
+        --n-bg: #1a3a34;
+        --pill-bg: #122028;
+        --track-bg: #1a2c33;
+        --rec-bg: #122028;
+        --note-bg: #173128;
+        --note-line: #2a5c48;
+        --note-text: #d7efe4;
+        --high-bg: rgba(226, 75, 75, 0.18);
+        --high-fg: #ff8b8b;
+        --med-bg: rgba(240, 164, 41, 0.16);
+        --med-fg: #f0a429;
+        --low-bg: rgba(52, 201, 138, 0.16);
+        --low-fg: #34c98a;
+        --shadow: 0 18px 48px -18px rgba(8, 24, 28, 0.55);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+      }
+      h1, h2, h3, .display { font-family: Sora, Inter, sans-serif; letter-spacing: -0.02em; }
+      a { color: var(--primary-2); }
+      img { max-width: 100%; }
+
+      .wrap { width: min(1040px, calc(100% - 32px)); margin: 0 auto; }
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(16px);
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .top-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 0;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+      .gem {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, #1c9b6a, #2bb57e);
+        box-shadow: 0 0 24px -6px rgba(43, 181, 126, 0.7);
+        font-size: 16px;
+      }
+      .brand strong { display: block; font-size: 15px; }
+      .brand span { font-size: 12px; color: var(--muted); }
+      nav.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+      nav.toc a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 10px;
+        border-radius: 999px;
+      }
+      nav.toc a:hover { color: var(--text); background: var(--toc-hover); }
+      .header-actions { display: flex; align-items: center; gap: 8px; }
+      .theme-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 16px;
+        display: grid;
+        place-items: center;
+      }
+      html.dark .theme-btn .sun { display: none; }
+      html:not(.dark) .theme-btn .moon { display: none; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: linear-gradient(135deg, #1c9b6a, #2bb57e);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 14px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        border: 0;
+        cursor: pointer;
+      }
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--text);
+      }
+
+      .hero {
+        margin: 36px 0 28px;
+        padding: 36px 32px;
+        border-radius: 28px;
+        background: var(--hero);
+        box-shadow: var(--shadow);
+        color: #e8f2ee;
+      }
+      .kicker {
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        font-weight: 700;
+        color: #b7d8cc;
+        margin: 0 0 10px;
+      }
+      .hero h1 { font-size: clamp(28px, 4vw, 42px); margin: 0 0 12px; color: #fff; }
+      .hero p { margin: 0; max-width: 62ch; color: #d5e6e0; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+      .hero .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+
+      section { margin: 48px 0; }
+      section h2 { font-size: 26px; margin: 0 0 8px; }
+      .lede { color: var(--muted); margin: 0 0 22px; max-width: 70ch; }
+
+      .grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+      }
+      .card h3 { margin: 0 0 8px; font-size: 16px; }
+      .card p { margin: 0; color: var(--muted); font-size: 14px; }
+      .stat { font-family: Sora, sans-serif; font-size: 22px; font-weight: 700; color: var(--text); }
+      .muted { color: var(--muted); }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .bad { color: var(--danger); }
+
+      ol.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+      ol.steps li {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 12px;
+        align-items: start;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 16px;
+      }
+      .n {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: var(--n-bg); color: var(--primary-2);
+        display: grid; place-items: center; font-weight: 800;
+      }
+
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+      th { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+      td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+      .shot {
+        margin: 18px 0 8px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--shot-bg);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+      .chrome {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: var(--chrome-bg);
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .dot { width: 9px; height: 9px; border-radius: 50%; }
+      .d1 { background: #e24b4b; }
+      .d2 { background: #f0a429; }
+      .d3 { background: #34c98a; }
+      .shot-body { padding: 16px; }
+      .caption { font-size: 13px; color: var(--muted); margin: 0 0 28px; }
+
+      .app {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 14px;
+        min-height: 280px;
+      }
+      .side {
+        background: var(--side-bg);
+        border-radius: 14px;
+        padding: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .side .active {
+        background: var(--primary);
+        color: #fff;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-weight: 700;
+      }
+      .side p { margin: 0 0 6px; padding: 7px 10px; }
+      .side .g { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--side-g); margin: 10px 0 4px; padding: 0 10px; }
+      .main { min-width: 0; }
+      .nw {
+        background: linear-gradient(135deg, #17333c, #1c5448);
+        border-radius: 16px;
+        padding: 18px;
+        color: #e8f2ee;
+      }
+      .nw .label { font-size: 12px; color: #c5ddd4; text-transform: uppercase; letter-spacing: 0.08em; }
+      .nw .value { font-family: Sora, sans-serif; font-size: 34px; font-weight: 800; margin: 4px 0; color: #fff; }
+      .pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+      .pill { background: var(--pill-bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+      .pill span { display: block; font-size: 11px; color: var(--muted); }
+      .pill b { font-size: 15px; }
+
+      .bars { display: grid; gap: 8px; margin-top: 12px; }
+      .bar-row { display: grid; grid-template-columns: 88px 1fr 72px; gap: 8px; align-items: center; font-size: 12px; }
+      .track { height: 10px; background: var(--track-bg); border-radius: 99px; overflow: hidden; }
+      .fill { height: 100%; border-radius: 99px; }
+      .f1 { width: 100%; background: #2bb57e; }
+      .f2 { width: 30%; background: #4aa3d8; }
+      .f3 { width: 27%; background: #f0a429; }
+      .f4 { width: 41%; background: #34c98a; }
+
+      .rec {
+        display: grid;
+        grid-template-columns: 88px 1fr;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--rec-bg);
+        margin-bottom: 10px;
+      }
+      .tag {
+        align-self: start;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 4px 8px;
+        border-radius: 999px;
+        text-align: center;
+      }
+      .high { background: var(--high-bg); color: var(--high-fg); }
+      .med { background: var(--med-bg); color: var(--med-fg); }
+      .low { background: var(--low-bg); color: var(--low-fg); }
+      .rec h3 { margin: 0 0 4px; font-size: 15px; }
+      .rec p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .note {
+        background: var(--note-bg);
+        border: 1px solid var(--note-line);
+        color: var(--note-text);
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 14px;
+      }
+
+      footer.page {
+        border-top: 1px solid var(--line);
+        padding: 28px 0 40px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 800px) {
+        .grid-2, .grid-3, .app, .pills { grid-template-columns: 1fr; }
+        nav.toc { display: none; }
+        .hero { padding: 24px 18px; }
+        .side { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-inner">
+        <a class="brand" href="/login" target="_top">
+          <div class="gem">◆</div>
+          <div>
+            <strong>Freedom Planner</strong>
+            <span>Getting started</span>
+          </div>
+        </a>
+        <nav class="toc" aria-label="On this page">
+          <a href="#start">Start</a>
+          <a href="#arjun">Arjun</a>
+          <a href="#numbers">Numbers</a>
+          <a href="#dashboard">Dashboard</a>
+          <a href="#problems">Problems</a>
+          <a href="#plan">Plan</a>
+        </nav>
+        <div class="header-actions">
+          <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch color theme">
+            <span class="sun" aria-hidden="true">☀</span>
+            <span class="moon" aria-hidden="true">☾</span>
+          </button>
+          <a class="btn" href="/login" target="_top">Open the app</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <p class="kicker">Sample walkthrough</p>
+        <h1>See the product with Arjun Mehta’s household before you enter your own numbers.</h1>
+        <p>
+          Freedom Planner turns income, EMIs, SIPs, insurance, and goals into a net-worth picture,
+          a forecast, and a plan of action. This page uses the built-in sample household so first users
+          can learn the screens without mixing demo rupees into a real account.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="#arjun">Meet Arjun</a>
+          <a class="btn ghost" href="#plan">Jump to the suggestions</a>
+        </div>
+      </div>
+
+      <section id="start">
+        <h2>How to get started</h2>
+        <p class="lede">
+          After you create an account, Quick Setup asks for a financial profile. Income, expenses, loans,
+          investments, and insurance are optional on each step. An emergency fund and one FIRE path
+          (Lean, Fat, or Coast) are required before you can finish.
+        </p>
+        <ol class="steps">
+          <li>
+            <div class="n">1</div>
+            <div>
+              <strong>Sign up with email and mobile OTP</strong>
+              <p class="muted">Your money is stored on the server for your account, not in a spreadsheet.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">2</div>
+            <div>
+              <strong>Complete Quick Setup</strong>
+              <p class="muted">Profile → income → expenses → loans → investments → insurance → emergency fund → FIRE path → other goals.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">3</div>
+            <div>
+              <strong>Read the dashboard</strong>
+              <p class="muted">Net worth, surplus, debt ratio, and a projected freedom date appear from the records you saved.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">4</div>
+            <div>
+              <strong>Open AI Advisor and the report</strong>
+              <p class="muted">Suggestions are tied to your numbers: prepay high-cost debt, fill cover gaps, keep SIPs when cashflow allows.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="arjun">
+        <h2>The sample household: Arjun Mehta</h2>
+        <p class="lede">
+          Arjun is a 32-year-old salaried tech lead in India, with two dependents, a home loan, and a FIRE
+          target at 55. The sample is fictional. It is sized so every module has something to show: cash flow,
+          debt, SIPs, cover, and goals.
+        </p>
+        <div class="grid-3">
+          <article class="card">
+            <h3>Profile</h3>
+            <p>Age 32 · retire at 55 · salaried · 2 dependents · inflation 6% · currency ₹</p>
+          </article>
+          <article class="card">
+            <h3>What he wanted</h3>
+            <p>A single view of surplus, whether EMIs are too high, if term cover is enough, and when FIRE is realistic.</p>
+          </article>
+          <article class="card">
+            <h3>What was messy</h3>
+            <p>Salary, rent, SIPs, three loans, LIC, and school fees lived in memory. He could not see the trade-offs.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="numbers">
+        <h2>What Arjun entered</h2>
+        <p class="lede">These figures match the in-app sample household. Recurring expenses exclude the one-time Goa trip.</p>
+
+        <div class="shot" aria-label="Screenshot of Arjun Mehta income and expense summary">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span>Freedom Planner · Income &amp; expenses · sample</span>
+          </div>
+          <div class="shot-body">
+            <div class="grid-2">
+              <div>
+                <h3 style="margin:0 0 8px">Monthly income · ₹2,52,500</h3>
+                <table>
+                  <thead><tr><th>Source</th><th class="num">Amount</th></tr></thead>
+                  <tbody>
+                    <tr><td>Tech Lead Salary</td><td class="num">₹1,85,000</td></tr>
+                    <tr><td>Side consulting</td><td class="num">₹35,000</td></tr>
+                    <tr><td>Apartment rent</td><td class="num">₹22,000</td></tr>
+                    <tr><td>Dividends + FD interest</td><td class="num">₹10,500</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h3 style="margin:0 0 8px">Monthly outgo · ₹1,48,967</h3>
+                <table>
+                  <thead><tr><th>Bucket</th><th class="num">Amount</th></tr></thead>
+                  <tbody>
+                    <tr><td>Recurring expenses</td><td class="num">₹75,100</td></tr>
+                    <tr><td>Loan EMIs</td><td class="num">₹67,700</td></tr>
+                    <tr><td>Insurance premiums</td><td class="num">₹6,167</td></tr>
+                    <tr><td>Surplus after those</td><td class="num">₹1,03,533</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Screenshot-style view of cash flow. SIPs of ₹98,500 sit inside the surplus, not as a fourth deduction.</p>
+
+        <div class="shot" aria-label="Screenshot of Arjun Mehta loans and investments">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span>Freedom Planner · Loans &amp; investments · sample</span>
+          </div>
+          <div class="shot-body">
+            <div class="grid-2">
+              <div>
+                <h3 style="margin:0 0 8px">Loans · ₹49.00 L outstanding</h3>
+                <table>
+                  <thead><tr><th>Loan</th><th>Rate</th><th class="num">EMI</th></tr></thead>
+                  <tbody>
+                    <tr><td>HDFC home loan · ₹42.00 L</td><td>8.5%</td><td class="num">₹42,000</td></tr>
+                    <tr><td>Car loan · ₹4.80 L</td><td>9.2%</td><td class="num">₹14,500</td></tr>
+                    <tr><td>Personal loan · ₹2.20 L</td><td>13.5%</td><td class="num">₹11,200</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h3 style="margin:0 0 8px">Investments · ₹63.80 L</h3>
+                <table>
+                  <thead><tr><th>Asset</th><th class="num">Value</th><th class="num">SIP</th></tr></thead>
+                  <tbody>
+                    <tr><td>Index MFs + stocks</td><td class="num">₹27.70 L</td><td class="num">₹50,000</td></tr>
+                    <tr><td>EPF + PPF + NPS</td><td class="num">₹24.50 L</td><td class="num">₹39,500</td></tr>
+                    <tr><td>Gold, FD, crypto</td><td class="num">₹11.60 L</td><td class="num">₹9,000</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Debt cost and SIP size on one screen. The 13.5% personal loan is the expensive outlier.</p>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Protection</h3>
+            <p>Term ₹1.50 Cr · family floater ₹10 L · car cover ₹8 L. Health and car policies are close to expiry in the sample year.</p>
+          </article>
+          <article class="card">
+            <h3>Safety buffer</h3>
+            <p>Emergency fund ₹4.80 L plus liquid ₹1.50 L. Against essentials + EMIs this is about 4.8 months, short of the 6-month salaried target.</p>
+          </article>
+          <article class="card">
+            <h3>Goals</h3>
+            <p>Emergency fund, ₹6 Cr retirement, kids’ education ₹80 L, villa, vacation, and a car — plus a required FIRE path in Quick Setup.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="dashboard">
+        <h2>What the dashboard did with those numbers</h2>
+        <p class="lede">
+          Client math in the app turns the records into net worth, savings rate, debt-to-income, and a
+          projected freedom year. Empty accounts show zeros. A filled household looks like this.
+        </p>
+
+        <div class="shot" aria-label="Screenshot of Arjun Mehta net worth dashboard">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span>app · Net Worth Dashboard</span>
+          </div>
+          <div class="shot-body">
+            <div class="app">
+              <aside class="side">
+                <div class="g">Overview</div>
+                <p class="active">Net Worth</p>
+                <div class="g">Manage</div>
+                <p>Income</p>
+                <p>Loans</p>
+                <p>Investments</p>
+                <div class="g">Plan</div>
+                <p>AI Advisor</p>
+              </aside>
+              <div class="main">
+                <div class="nw">
+                  <div class="label">Total net worth · Arjun Mehta</div>
+                  <div class="value">₹19.60 L</div>
+                  <div class="muted">₹68.60 L assets · ₹49.00 L liabilities</div>
+                </div>
+                <div class="pills">
+                  <div class="pill"><span>Monthly surplus</span><b>₹1.04 L</b></div>
+                  <div class="pill"><span>Savings rate</span><b class="ok">41%</b></div>
+                  <div class="pill"><span>EMI / income</span><b class="ok">27%</b></div>
+                </div>
+                <div class="bars">
+                  <div class="bar-row"><span>Income</span><div class="track"><div class="fill f1"></div></div><span>₹2.53 L</span></div>
+                  <div class="bar-row"><span>Expenses</span><div class="track"><div class="fill f2"></div></div><span>₹75.1 K</span></div>
+                  <div class="bar-row"><span>EMIs</span><div class="track"><div class="fill f3"></div></div><span>₹67.7 K</span></div>
+                  <div class="bar-row"><span>Surplus</span><div class="track"><div class="fill f4"></div></div><span>₹1.04 L</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          Screenshot of the net-worth view. Savings rate is strong. EMIs are inside the 40% guideline.
+          Net worth is still modest because the home loan dwarfs the investment corpus.
+        </p>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>What looked healthy</h3>
+            <p>
+              41% savings rate (above the 20% 50-30-20 floor). DTI 27% (under 40%). Eight investment types.
+              SIPs of ₹98,500 already running. Term cover exists, even if it is short.
+            </p>
+          </article>
+          <article class="card">
+            <h3>What the gauges flagged</h3>
+            <p>
+              Emergency fund ~4.8 of 6 months. Term ₹1.50 Cr vs roughly 12× income + loans (~₹4.13 Cr) or the
+              15×-income coaching rule. Health cover ₹10 L vs ~₹22.5 L for three people. Equity share ~46% vs ~68% at age 32.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="problems">
+        <h2>The problems the sample made obvious</h2>
+        <p class="lede">
+          Arjun felt “fine” because salary was high. The platform showed cashflow, cost of debt, and protection
+          as one picture. That is the job of the sample: teach what to look at before you type your own data.
+        </p>
+        <div class="grid-2">
+          <article class="card">
+            <h3>1. Surplus was already spoken for</h3>
+            <p>₹1.04 L leftover after expenses, EMIs, and premiums, but ₹98,500 already goes to SIPs. Almost no cash left to fix the emergency gap or the expensive loan.</p>
+          </article>
+          <article class="card">
+            <h3>2. One loan was much costlier</h3>
+            <p>Personal loan at 13.5% on ₹2.20 L. Home loan 8.5% is cheaper than equity’s planned 12% return, so blasting the home loan is not the first move.</p>
+          </article>
+          <article class="card">
+            <h3>3. Cover did not match income</h3>
+            <p>Two dependents, ₹3.03 Cr annual income, ₹49 L debt. ₹1.50 Cr term and ₹10 L health leave a gap if income stops.</p>
+          </article>
+          <article class="card">
+            <h3>4. Emergency fund was incomplete</h3>
+            <p>Essentials plus EMIs are ~₹1.32 L/month. Six months needs ~₹7.94 L. He has ₹6.30 L liquid + earmarked. Close, not done.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="plan">
+        <h2>How the platform answered — a plan of action</h2>
+        <p class="lede">
+          Advisor output is JSON from your planner snapshot (rules plus optional OpenAI). For Arjun the
+          rule engine already supports a balanced plan: do not pause all SIPs just because debt exists;
+          attack the expensive loan; finish the safety buffer; close insurance gaps.
+        </p>
+
+        <div class="shot" aria-label="Screenshot of AI advisor suggestions for Arjun Mehta">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span>Freedom Planner · AI Financial Advisor · sample plan</span>
+          </div>
+          <div class="shot-body">
+            <p class="kicker" style="margin-top:0">Plan of action</p>
+            <h3 style="margin:0 0 14px">Keep investing. Fix the 13.5% loan, the 6-month buffer, and term cover first.</h3>
+
+            <div class="rec">
+              <span class="tag high">High</span>
+              <div>
+                <h3>Prepay the personal loan</h3>
+                <p>₹2.20 L at 13.5%, 22 months left. Redirect a slice of surplus (and the ₹4,000 crypto SIP if needed) until this EMI of ₹11,200 disappears. Do not treat the 8.5% home loan the same way.</p>
+              </div>
+            </div>
+            <div class="rec">
+              <span class="tag high">High</span>
+              <div>
+                <h3>Lift term cover toward 15× income</h3>
+                <p>Coaching rule: ₹4.55 Cr–₹6.06 Cr. Current term ₹1.50 Cr. Add cover sized to income plus outstanding loans, then keep paying the existing SIPs.</p>
+              </div>
+            </div>
+            <div class="rec">
+              <span class="tag med">Medium</span>
+              <div>
+                <h3>Finish the 6-month emergency fund</h3>
+                <p>Shortfall about ₹1.64 L vs the salaried 6× essentials+EMI target. Sample contribution ₹25,000/month closes it in a few months. Park it in liquid instruments, not equity.</p>
+              </div>
+            </div>
+            <div class="rec">
+              <span class="tag med">Medium</span>
+              <div>
+                <h3>Raise family health cover</h3>
+                <p>₹10 L floater vs ~₹22.5 L suggested for three people. Sample expiry is soon — renew and top up together. Car insurance is a date reminder, not a wealth lever.</p>
+              </div>
+            </div>
+            <div class="rec">
+              <span class="tag low">Keep</span>
+              <div>
+                <h3>Continue scheduled SIPs after the buffer</h3>
+                <p>DTI is 27%, savings rate 41%. Home-loan ROI is 8.5%. The planner does not require pausing index/EPF SIPs. After the personal loan is gone, that ₹11,200 can boost equity toward the age-32 allocation (~68%).</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Screenshot-style advisor card. Suggestions follow the app’s debt-vs-investing rule: expensive debt first, not “stop every SIP”.</p>
+
+        <p class="note">
+          This walkthrough is educational, not personal advice. OpenAI output can vary; the numbers above
+          are the deterministic picture from Arjun’s sample records. Always check lender prepayment rules
+          and a qualified adviser before you act on your own money.
+        </p>
+      </section>
+
+      <section>
+        <h2>Now enter your data</h2>
+        <p class="lede">
+          Use this page as the map. In the app, add <em>your</em> salary, EMIs, and SIPs. Do not copy Arjun’s
+          rupees into your account. When Quick Setup is done, dashboard, forecast, advisor, and the PDF report
+          all read from what you saved.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="/login" target="_top">Sign in and start setup</a>
+          <a class="btn ghost" href="#start">Back to the steps</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <div class="wrap">
+        Freedom Planner · static getting-started guide · sample household is fictional.
+      </div>
+    </footer>
+    <script>
+      (function () {
+        var button = document.getElementById("theme-toggle");
+        if (!button) return;
+        function apply(theme) {
+          var dark = theme === "dark";
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.dataset.theme = theme;
+          button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+          try { localStorage.setItem("theme", theme); } catch (e) {}
+          try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
+        }
+        apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
+        button.addEventListener("click", function () {
+          apply(document.documentElement.classList.contains("dark") ? "light" : "dark");
+        });
+      })();
+    </script>
+  </body>
+</html>

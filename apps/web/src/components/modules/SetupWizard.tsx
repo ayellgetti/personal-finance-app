@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useFinance, newId } from "@/lib/finance/store";
 import { useAuth } from "@/lib/auth/store";
 import { ageFromDob } from "@/lib/finance/profile";
@@ -306,6 +307,13 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <p className="text-sm text-muted-foreground">
+        New here?{" "}
+        <Link to="/guide" className="font-medium text-primary hover:underline">
+          Read the Arjun Mehta walkthrough
+        </Link>{" "}
+        to see dashboard, cash flow, and advisor suggestions before you enter your own numbers.
+      </p>
       <div className="flex flex-wrap gap-2">
         {STEPS.map((item, index) => {
           const Icon = item.icon;
