@@ -26,6 +26,7 @@ export interface FieldDef {
   label: string;
   type: "text" | "number" | "date" | "select" | "switch";
   options?: readonly string[];
+  optionDescriptions?: Partial<Record<string, string>>;
   defaultValue?: string | number | boolean;
   prefix?: string;
   span?: 1 | 2;
@@ -79,18 +80,23 @@ export function EntityDialog({ title, description, fields, triggerLabel = "Add",
             <div key={f.name} className={f.span === 2 || f.type === "switch" ? "col-span-2 space-y-2" : "space-y-2"}>
               <Label htmlFor={f.name}>{f.label}</Label>
               {f.type === "select" ? (
-                <Select value={String(values[f.name])} onValueChange={(val) => set(f.name, val)}>
-                  <SelectTrigger id={f.name}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {f.options?.map((o) => (
-                      <SelectItem key={o} value={o}>
-                        {o}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <>
+                  <Select value={String(values[f.name])} onValueChange={(val) => set(f.name, val)}>
+                    <SelectTrigger id={f.name}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {f.options?.map((o) => (
+                        <SelectItem key={o} value={o}>
+                          {o}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {f.optionDescriptions?.[String(values[f.name])] && (
+                    <p className="text-xs text-muted-foreground">{f.optionDescriptions[String(values[f.name])]}</p>
+                  )}
+                </>
               ) : f.type === "switch" ? (
                 <div className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <Switch id={f.name} checked={!!values[f.name]} onCheckedChange={(c) => set(f.name, c)} />

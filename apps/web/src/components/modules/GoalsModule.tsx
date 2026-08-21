@@ -1,6 +1,6 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import { formatCurrency, analyzeGoal } from "@/lib/finance/calculations";
-import { EMERGENCY_FUND_GOAL_ID, Goal, Priority, USER_GOAL_TYPES } from "@/types/finance";
+import { FIRE_GOAL_DESCRIPTIONS, EMERGENCY_FUND_GOAL_ID, FireGoalType, Goal, Priority, USER_GOAL_TYPES } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, EmptyState, Badge } from "./shared";
 import { Progress } from "@/components/ui/progress";
@@ -19,7 +19,7 @@ export function GoalsModule() {
 
   const fields: FieldDef[] = [
     { name: "name", label: "Goal Name", type: "text", span: 2 },
-    { name: "type", label: "Goal Type", type: "select", options: USER_GOAL_TYPES, span: 2 },
+    { name: "type", label: "Goal Type", type: "select", options: USER_GOAL_TYPES, optionDescriptions: FIRE_GOAL_DESCRIPTIONS, span: 2 },
     { name: "targetAmount", label: "Target Amount", type: "number", prefix: cur },
     { name: "currentSaved", label: "Already Saved", type: "number", prefix: cur },
     { name: "targetDate", label: "Target Date", type: "date", defaultValue: new Date(Date.now() + 5 * 31536000000).toISOString().slice(0, 10) },
@@ -55,6 +55,9 @@ export function GoalsModule() {
                       <div>
                         <p className="font-display font-semibold">{g.name}</p>
                         <p className="text-xs text-muted-foreground">{g.type} · by {new Date(g.targetDate).getFullYear()}</p>
+                        {g.type in FIRE_GOAL_DESCRIPTIONS && (
+                          <p className="mt-1 max-w-xs text-xs text-muted-foreground">{FIRE_GOAL_DESCRIPTIONS[g.type as FireGoalType]}</p>
+                        )}
                       </div>
                     </div>
                     {!isEmergencyGoal(g) && (

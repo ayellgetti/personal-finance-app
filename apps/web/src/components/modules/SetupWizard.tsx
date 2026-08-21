@@ -4,7 +4,10 @@ import { useAuth } from "@/lib/auth/store";
 import { ageFromDob } from "@/lib/finance/profile";
 import {
   EmploymentType,
+  FIRE_GOAL_DESCRIPTIONS,
   FIRE_GOAL_TYPES,
+  FIRE_POST_RETIREMENT_YEARS,
+  FireGoalType,
   FinanceData,
   Goal,
   USER_GOAL_TYPES,
@@ -24,6 +27,7 @@ import {
   TrendingUp, ShieldCheck, PartyPopper, ShieldAlert, Target,
 } from "lucide-react";
 import { toast } from "sonner";
+import { firePathTargets, formatCurrency } from "@/lib/finance/calculations";
 
 type Collection =
   | "incomes"
@@ -158,7 +162,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
       key: "goals", label: "Goals", icon: Target,
       fields: [
         { name: "name", label: "Goal Name", type: "text", span: 2, defaultValue: "My FIRE Goal" },
-        { name: "type", label: "Goal Type", type: "select", span: 2, options: USER_GOAL_TYPES },
+        { name: "type", label: "Goal Type", type: "select", span: 2, options: USER_GOAL_TYPES, optionDescriptions: FIRE_GOAL_DESCRIPTIONS },
         { name: "targetAmount", label: "Target Amount", type: "number", prefix: cur },
         { name: "currentSaved", label: "Already Saved", type: "number", prefix: cur },
         {
@@ -202,6 +206,15 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
   const isReview = currentStep?.id === "review";
   const entityStep = ENTITY_STEPS.find((item) => item.key === currentStep?.id) ?? null;
   const emergencyGoal = data.goals.find((goal) => goal.type === "Emergency Fund");
+  const fireTargets = firePathTargets({
+    ...data,
+    profile: {
+      ...data.profile,
+      ...profile,
+      retirementAge: Number(profile.retirementAge) || data.profile.retirementAge,
+      inflationRate: Number(profile.inflationRate) || 0,
+    },
+  });
   const [emergencyDraft, setEmergencyDraft] = useState({
     targetAmount: emergencyGoal?.targetAmount ?? 0,
     currentSaved: emergencyGoal?.currentSaved ?? 0,
@@ -332,7 +345,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
                 : isReview
                 ? "Confirm everything, then save"
                 : entityStep?.key === "goals"
-                ? "Choose one required FIRE path, then add any other life goals"
+                ? `Choose one required FIRE path. Targets use the expenses you added, inflation to retirement, and ${FIRE_POST_RETIREMENT_YEARS} years after you stop working.`
                 : `Your saved ${entityStep!.label.toLowerCase()} from the server. Add more if needed.`}
             </p>
           </div>
@@ -357,16 +370,20 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
           <>
             {entityStep.key === "goals" && (
               <div className="mb-5 grid gap-3 sm:grid-cols-3">
-                {[
-                  ["Lean FIRE", "Cover essentials with a smaller independence target"],
-                  ["Fat FIRE", "A premium lifestyle without needing to work"],
-                  ["Coast FIRE", "Invest enough now, then let compounding finish the job"],
-                ].map(([title, detail]) => (
-                  <div key={title} className="rounded-xl border border-border bg-muted/40 p-3">
-                    <p className="font-semibold">{title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-                  </div>
-                ))}
+                {FIRE_GOAL_TYPES.map((title) => {
+                  const suggested = fireTargets[title];
+                  return (
+                    <div key={title} className="rounded-xl border border-border bg-muted/40 p-3">
+                      <p className="font-semibold">{title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{FIRE_GOAL_DESCRIPTIONS[title]}</p>
+                      {suggested > 0 && (
+                        <p className="mt-2 text-xs font-medium text-foreground">
+                          Suggested: {formatCurrency(suggested, cur, true)}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
             <EntitySection
@@ -374,6 +391,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
               stepDef={entityStep}
               items={data[entityStep.key]}
               cur={cur}
+              fireTargets={entityStep.key === "goals" ? fireTargets : undefined}
               onAdd={(v) => void addItem(entityStep.key, { id: newId(), ...v } as FinanceData[typeof entityStep.key][number])}
               onRemove={(id) => void removeItem(entityStep.key, id)}
             />
@@ -544,23 +562,43 @@ function Field({ label, span, children }: { label: string; span?: 1 | 2; childre
 }
 
 function EntitySection({
-  stepDef, items, cur, onAdd, onRemove,
+  stepDef, items, cur, onAdd, onRemove, fireTargets,
 }: {
   stepDef: EntityStep;
   items: any[];
   cur: string;
   onAdd: (v: any) => void;
   onRemove: (id: string) => void;
+  fireTargets?: Record<FireGoalType, number>;
 }) {
   const init = () => {
     const v: Record<string, any> = {};
     stepDef.fields.forEach((f) => {
       v[f.name] = f.defaultValue ?? (f.type === "number" ? 0 : f.type === "switch" ? true : f.type === "select" ? f.options?.[0] : "");
     });
+    const suggested = fireTargets?.[v.type as FireGoalType];
+    if (suggested && suggested > 0 && (Number(v.targetAmount) || 0) === 0) {
+      v.targetAmount = Math.round(suggested);
+    }
     return v;
   };
   const [values, setValues] = useState<Record<string, any>>(init);
   const set = (n: string, val: any) => setValues((v) => ({ ...v, [n]: val }));
+
+  const applyFireType = (type: string) => {
+    setValues((current) => {
+      const suggested = fireTargets?.[type as FireGoalType];
+      const shouldPrefill =
+        suggested != null &&
+        suggested > 0 &&
+        (Number(current.targetAmount) || 0) === 0;
+      return {
+        ...current,
+        type,
+        ...(shouldPrefill ? { targetAmount: Math.round(suggested) } : {}),
+      };
+    });
+  };
 
   const handleAdd = () => {
     if (!values.name || String(values.name).trim() === "") {
@@ -582,12 +620,20 @@ function EntitySection({
           <div key={f.name} className={f.span === 2 || f.type === "switch" ? "col-span-2 space-y-2" : "space-y-2"}>
             <Label htmlFor={`w-${f.name}`}>{f.label}</Label>
             {f.type === "select" ? (
-              <Select value={String(values[f.name])} onValueChange={(val) => set(f.name, val)}>
-                <SelectTrigger id={`w-${f.name}`}><SelectValue /></SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {f.options?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <>
+                <Select
+                  value={String(values[f.name])}
+                  onValueChange={(val) => (f.name === "type" && fireTargets ? applyFireType(val) : set(f.name, val))}
+                >
+                  <SelectTrigger id={`w-${f.name}`}><SelectValue /></SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {f.options?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {f.optionDescriptions?.[String(values[f.name])] && (
+                  <p className="text-xs text-muted-foreground">{f.optionDescriptions[String(values[f.name])]}</p>
+                )}
+              </>
             ) : f.type === "switch" ? (
               <div className="flex items-center gap-3 rounded-xl border border-border p-3">
                 <Switch id={`w-${f.name}`} checked={!!values[f.name]} onCheckedChange={(c) => set(f.name, c)} />

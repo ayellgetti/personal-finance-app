@@ -451,7 +451,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | Debt | Loans: principal, ROI, tenure, EMI, EMI day |
 | Investments | Corpus, contribution, ROI, remaining months, hold |
 | Insurance | Type, coverage, premium, expiry |
-| Goals | Target/current amount, horizon; every user has a compulsory `emergency` goal and selects one `lean_fire`, `fat_fire`, or `coast_fire` path before completing Quick Setup |
+| Goals | Target/current amount, horizon; every user has a compulsory `emergency` goal and selects one `lean_fire`, `fat_fire`, or `coast_fire` path before completing Quick Setup. FIRE suggested targets inflate the user's added expenses to retirement and fund 25 years after they stop working (Lean = essentials, Fat = all expenses or 2× essentials, Coast = that corpus discounted so current investments can compound without extra SIPs). |
 | Profile | Retirement age, dependents, inflation, employment, currency |
 | Planner | Server cash-flow / net-worth engine |
 | AI advisor | OpenAI JSON from planner snapshot; Redis cache |

@@ -122,6 +122,16 @@ export const FIRE_GOAL_TYPES = [
   "Fat FIRE",
   "Coast FIRE",
 ] as const satisfies readonly GoalType[];
+export type FireGoalType = (typeof FIRE_GOAL_TYPES)[number];
+export const FIRE_POST_RETIREMENT_YEARS = 25;
+export const FIRE_GOAL_DESCRIPTIONS: Record<FireGoalType, string> = {
+  "Lean FIRE":
+    "Inflate the essential expenses you added to retirement, then fund 25 years of that spend after you stop working.",
+  "Fat FIRE":
+    "Inflate all expenses you added (or 2× essentials) to retirement, then fund 25 years of that lifestyle after you stop working.",
+  "Coast FIRE":
+    "Compound today’s investments until retirement so they cover your inflated expenses for 25 years with no extra SIPs.",
+};
 export const USER_GOAL_TYPES: GoalType[] = [
   ...FIRE_GOAL_TYPES,
   "Emergency Fund",

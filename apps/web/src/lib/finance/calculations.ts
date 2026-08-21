@@ -1,5 +1,7 @@
 import {
   FinanceData,
+  FireGoalType,
+  FIRE_POST_RETIREMENT_YEARS,
   Goal,
   Investment,
   Loan,
@@ -212,7 +214,7 @@ export function financialFreedom(d: FinanceData): FIResult {
   const yearsToRetire = Math.max(1, d.profile.retirementAge - d.profile.age);
   // FI number using 4% safe withdrawal, inflation-adjusted to retirement
   const futureAnnualExpenses = fvLumpSum(currentAnnualExpenses, d.profile.inflationRate, yearsToRetire);
-  const fiNumber = futureAnnualExpenses * 25;
+  const fiNumber = futureAnnualExpenses * FIRE_POST_RETIREMENT_YEARS;
   const retirementCorpus = fiNumber;
   const projectedCorpus = portfolioFutureValue(d, yearsToRetire);
   const passiveIncome = (totalInvestments(d) * 0.04) / 12;
@@ -225,7 +227,7 @@ export function financialFreedom(d: FinanceData): FIResult {
   const monthlyContribution = monthlySIP(d);
   let corpus = totalInvestments(d);
   while (years < 60) {
-    const target = fvLumpSum(currentAnnualExpenses, d.profile.inflationRate, years) * 25;
+    const target = fvLumpSum(currentAnnualExpenses, d.profile.inflationRate, years) * FIRE_POST_RETIREMENT_YEARS;
     if (corpus >= target) break;
     corpus = corpus * (1 + ret / 100) + monthlyContribution * 12 * (1 + ret / 100 / 2);
     years++;
@@ -244,6 +246,28 @@ export function financialFreedom(d: FinanceData): FIResult {
     requiredMonthlyInvestment,
     probabilityScore,
     projectedCorpus,
+  };
+}
+
+export function yearsToRetirement(d: FinanceData): number {
+  return Math.max(0, d.profile.retirementAge - d.profile.age);
+}
+
+export function firePathTargets(d: FinanceData): Record<FireGoalType, number> {
+  const years = yearsToRetirement(d);
+  const inflation = d.profile.inflationRate;
+  const essentialAnnual = essentialMonthlyExpenses(d) * 12;
+  const listedAnnual = monthlyExpenses(d) * 12;
+  const fatAnnual = listedAnnual > essentialAnnual ? listedAnnual : essentialAnnual * 2;
+  const inflate = (annual: number) => fvLumpSum(annual, inflation, years) * FIRE_POST_RETIREMENT_YEARS;
+  const lean = inflate(essentialAnnual);
+  const fat = inflate(fatAnnual);
+  const growth = weightedReturn(d) || 11;
+  const coast = years > 0 ? lean / Math.pow(1 + growth / 100, years) : lean;
+  return {
+    "Lean FIRE": lean,
+    "Fat FIRE": fat,
+    "Coast FIRE": coast,
   };
 }
 

@@ -159,9 +159,9 @@ Think in terms of a "financial freedom ladder":
 8. Periodically review progress
 
 When `goals.fireType` is supplied, treat it as the user's selected planning path:
-- `lean_fire`: Lean FIRE — essentials-focused independence with a smaller supplied target.
-- `fat_fire`: Fat FIRE — a premium lifestyle corpus from the supplied target, without needing earned income.
-- `coast_fire`: Coast FIRE — the supplied corpus should already be enough that later compounding, not extra contributions, can finish the target.
+- `lean_fire`: Lean FIRE — inflate the user's essential expenses to retirement, then fund 25 years of that spend after they stop working.
+- `fat_fire`: Fat FIRE — inflate all expenses the user added (or 2× essentials if lifestyle spend was not listed separately) to retirement, then fund 25 years of that lifestyle after they stop working.
+- `coast_fire`: Coast FIRE — compound today's investments until retirement so they cover inflated expenses for 25 years without extra contributions.
 
 Do not calculate a different target for the selected path. Use the supplied target,
 progress, projection, and gap. The executive summary and `summaryReport` must name
