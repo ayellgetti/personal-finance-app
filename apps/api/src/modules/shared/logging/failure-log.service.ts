@@ -1,8 +1,8 @@
 import type { Request } from "express";
 import { Prisma } from "@prisma/client";
-import { failureLogModel } from "../../../models/index.js";
-import { GLOBAL_HIDDEN_FIELDS } from "../../../utils/model.util.js";
-import { logger } from "../../../utils/logger.util.js";
+import { failureLogModel } from "../../../models/index";
+import { GLOBAL_HIDDEN_FIELDS } from "../../../utils/model.util";
+import { logger } from "../../../utils/logger.util";
 
 const REDACTED_FIELDS = new Set<string>([
   ...GLOBAL_HIDDEN_FIELDS,

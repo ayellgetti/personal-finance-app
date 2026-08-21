@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { PlannerReport } from "../planner/planner.engine.js";
+import type { PlannerReport } from "../planner/planner.engine";
 
 function loadAdvisorSystemPrompt(): string {
   const promptUrl = new URL("../../../../prompts/advisor.prompt.md", import.meta.url);

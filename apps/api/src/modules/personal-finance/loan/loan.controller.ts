@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
 import type {
   CreateLoanBody,
   ListLoansQuery,
   RemoveLoanBody,
   UpdateLoanBody,
-} from "./loan.request.js";
-import { loanService } from "./loan.service.js";
-import type { LoanService } from "./loan.service.js";
+} from "./loan.request";
+import { loanService } from "./loan.service";
+import type { LoanService } from "./loan.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

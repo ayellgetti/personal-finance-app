@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
+import { BaseController } from "../base/base.controller";
 import type {
   ForgotPasswordBody,
   LoginBody,
   LogoutBody,
   RefreshBody,
   RegisterBody,
-} from "./auth.request.js";
-import { authService } from "./auth.service.js";
-import type { AuthService } from "./auth.service.js";
+} from "./auth.request";
+import { authService } from "./auth.service";
+import type { AuthService } from "./auth.service";
 
 export class AuthController extends BaseController {
   constructor(private readonly service: AuthService = authService) {

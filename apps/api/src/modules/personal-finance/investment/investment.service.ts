@@ -1,11 +1,11 @@
-import { HttpError } from "../../../lib/http-error.js";
-import { investmentModel, type InvestmentModel } from "../../../models/index.js";
+import { HttpError } from "../../../utils/http-error.util";
+import { investmentModel, type InvestmentModel } from "../../../models/index";
 import type {
   CreateInvestmentBody,
   ListInvestmentsQuery,
   RemoveInvestmentBody,
   UpdateInvestmentBody,
-} from "./investment.request.js";
+} from "./investment.request";
 
 export class InvestmentService {
   constructor(private readonly model: InvestmentModel = investmentModel) {}

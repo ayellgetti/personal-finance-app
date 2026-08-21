@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { validate, validateBody } from "../../../middlewares/validate.js";
-import { goalController } from "./goal.controller.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { validate, validateBody } from "../../../middlewares/request-validate.middleware";
+import { goalController } from "./goal.controller";
 import {
   createGoalBodySchema,
   goalIdParamsSchema,
   listGoalsQuerySchema,
   removeGoalBodySchema,
   updateGoalBodySchema,
-} from "./goal.request.js";
+} from "./goal.request";
 
 export const goalRouter = Router();
 

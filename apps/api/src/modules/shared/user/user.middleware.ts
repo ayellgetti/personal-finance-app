@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { HttpError } from "../../../lib/http-error.js";
+import { HttpError } from "../../../utils/http-error.util";
 
 /**
  * User-module middleware. Keep rules that only apply to this module here.

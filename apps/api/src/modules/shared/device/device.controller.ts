@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
-import type { AddDeviceBody, RemoveDeviceBody } from "./device.request.js";
-import { deviceService } from "./device.service.js";
-import type { DeviceService } from "./device.service.js";
+import { BaseController } from "../base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
+import type { AddDeviceBody, RemoveDeviceBody } from "./device.request";
+import { deviceService } from "./device.service";
+import type { DeviceService } from "./device.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

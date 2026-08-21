@@ -1,11 +1,11 @@
-import { HttpError } from "../../../lib/http-error.js";
-import { loanModel, type LoanModel } from "../../../models/index.js";
+import { HttpError } from "../../../utils/http-error.util";
+import { loanModel, type LoanModel } from "../../../models/index";
 import type {
   CreateLoanBody,
   ListLoansQuery,
   RemoveLoanBody,
   UpdateLoanBody,
-} from "./loan.request.js";
+} from "./loan.request";
 
 export class LoanService {
   constructor(private readonly model: LoanModel = loanModel) {}

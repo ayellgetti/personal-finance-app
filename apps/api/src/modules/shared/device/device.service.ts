@@ -1,6 +1,6 @@
-import { HttpError } from "../../../lib/http-error.js";
-import { deviceModel, type DeviceModel } from "../../../models/index.js";
-import type { AddDeviceBody, RemoveDeviceBody } from "./device.request.js";
+import { HttpError } from "../../../utils/http-error.util";
+import { deviceModel, type DeviceModel } from "../../../models/index";
+import type { AddDeviceBody, RemoveDeviceBody } from "./device.request";
 
 export class DeviceService {
   constructor(private readonly model: DeviceModel = deviceModel) {}

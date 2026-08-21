@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
 import type {
   CreateInsuranceBody,
   ListInsurancesQuery,
   RemoveInsuranceBody,
   UpdateInsuranceBody,
-} from "./insurance.request.js";
-import { insuranceService } from "./insurance.service.js";
-import type { InsuranceService } from "./insurance.service.js";
+} from "./insurance.request";
+import { insuranceService } from "./insurance.service";
+import type { InsuranceService } from "./insurance.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

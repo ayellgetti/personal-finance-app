@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import type { GenerateOtpBody, ResendOtpBody, VerifyOtpBody } from "./otp.request.js";
-import { otpService } from "./otp.service.js";
-import type { OtpService } from "./otp.service.js";
+import { BaseController } from "../base/base.controller";
+import type { GenerateOtpBody, ResendOtpBody, VerifyOtpBody } from "./otp.request";
+import { otpService } from "./otp.service";
+import type { OtpService } from "./otp.service";
 
 export class OtpController extends BaseController {
   constructor(private readonly service: OtpService = otpService) {

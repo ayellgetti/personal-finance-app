@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { validateBody } from "../../../middlewares/validate.js";
-import { financialProfileController } from "./financial-profile.controller.js";
-import { upsertFinancialProfileBodySchema } from "./financial-profile.request.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { validateBody } from "../../../middlewares/request-validate.middleware";
+import { financialProfileController } from "./financial-profile.controller";
+import { upsertFinancialProfileBodySchema } from "./financial-profile.request";
 
 export const financialProfileRouter = Router();
 

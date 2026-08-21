@@ -46,7 +46,7 @@ export type AdvisorReport = {
   debtStrategy: {
     summary: string;
     steps: { order: number; loan: string; action: string; reason: string }[];
-    expectedDebtFreeMonth: number;
+    expectedDebtFreeMonth: number | null;
   };
   investmentStrategy: {
     status: "continue" | "pause" | "resume" | "review";
@@ -57,7 +57,7 @@ export type AdvisorReport = {
   emiTweaks: {
     loan: string;
     change: string;
-    monthlyExtra: number;
+    monthlyExtra: number | null;
     estimatedMonthsSaved: number | null;
     estimatedInterestSaved: number | null;
     caveat: string;

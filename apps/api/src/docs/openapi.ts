@@ -535,8 +535,8 @@ export const openApiDocument = {
         properties: {
           id: { type: "string", format: "uuid" },
           userId: { type: "string", format: "uuid" },
-          category: { type: "string", example: "education" },
-          subcategory: { type: "string", example: "first_child" },
+          category: { type: "string", example: "emergency" },
+          subcategory: { type: "string", example: "emergency_fund" },
           title: { type: "string", example: "Child education" },
           description: { type: "string", nullable: true },
           targetAmount: { type: "number", example: 10000000 },
@@ -679,7 +679,7 @@ export const openApiDocument = {
             required: ["summary", "steps", "expectedDebtFreeMonth"],
             properties: {
               summary: { type: "string" },
-              expectedDebtFreeMonth: { type: "integer" },
+              expectedDebtFreeMonth: { type: "integer", nullable: true },
               steps: {
                 type: "array",
                 items: {
@@ -728,7 +728,7 @@ export const openApiDocument = {
               properties: {
                 loan: { type: "string" },
                 change: { type: "string" },
-                monthlyExtra: { type: "number" },
+                monthlyExtra: { type: "number", nullable: true },
                 estimatedMonthsSaved: { type: "integer", nullable: true },
                 estimatedInterestSaved: { type: "number", nullable: true },
                 caveat: { type: "string" },
@@ -2072,7 +2072,7 @@ export const openApiDocument = {
         tags: ["Advisor"],
         summary: "Generate an AI-assisted financial advisor report",
         description:
-          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Calls OpenAI only when there is no matching cache entry, the numbers have changed, or `refresh=true` is passed. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
+          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Calls OpenAI when there is no matching cache entry or the numbers have changed. `refresh=true` forces a new generation only when `ADVISOR_ALLOW_REFRESH` is set; if that env flag is missing, refresh is ignored and the cached report is reused. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/RequestId" },
@@ -2081,7 +2081,8 @@ export const openApiDocument = {
             in: "query",
             required: false,
             schema: { type: "boolean" },
-            description: "Force a new OpenAI generation and overwrite the saved report.",
+            description:
+              "Request a new OpenAI generation and overwrite the saved report. Honored only when `ADVISOR_ALLOW_REFRESH` is set to true.",
           },
         ],
         responses: {

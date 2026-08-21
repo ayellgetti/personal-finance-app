@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { Prisma, type RefreshSession } from "@prisma/client";
-import { prisma } from "../../../lib/prisma.js";
+import { prisma } from "../../../utils/prisma.util";
 import {
   Model,
   type PrismaModelDelegate,
-} from "../../../utils/model.util.js";
+} from "../../../utils/model.util";
 
 export type RefreshSessionRecord = {
   jti: string;

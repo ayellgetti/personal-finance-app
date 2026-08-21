@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
 import type {
   CreateInvestmentBody,
   ListInvestmentsQuery,
   RemoveInvestmentBody,
   UpdateInvestmentBody,
-} from "./investment.request.js";
-import { investmentService } from "./investment.service.js";
-import type { InvestmentService } from "./investment.service.js";
+} from "./investment.request";
+import { investmentService } from "./investment.service";
+import type { InvestmentService } from "./investment.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

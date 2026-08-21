@@ -1,8 +1,8 @@
 import type { ErrorRequestHandler } from "express";
-import { setting } from "../config/setting.js";
-import { HttpError } from "../lib/http-error.js";
-import { failureLogService } from "../modules/shared/logging/failure-log.service.js";
-import { Api } from "../utils/api.util.js";
+import { setting } from "../config/setting";
+import { HttpError } from "../utils/http-error.util";
+import { failureLogService } from "../modules/shared/logging/failure-log.service";
+import { Api } from "../utils/api.util";
 
 export const errorHandler: ErrorRequestHandler = async (err, req, res, next) => {
   if (res.headersSent) {

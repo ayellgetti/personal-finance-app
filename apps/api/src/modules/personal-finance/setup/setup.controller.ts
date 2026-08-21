@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
-import type { SetupBody } from "./setup.request.js";
-import { setupService } from "./setup.service.js";
-import type { SetupService } from "./setup.service.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
+import type { SetupBody } from "./setup.request";
+import { setupService } from "./setup.service";
+import type { SetupService } from "./setup.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

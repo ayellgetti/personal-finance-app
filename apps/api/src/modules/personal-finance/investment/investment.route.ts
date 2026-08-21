@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { validate, validateBody } from "../../../middlewares/validate.js";
-import { investmentController } from "./investment.controller.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { validate, validateBody } from "../../../middlewares/request-validate.middleware";
+import { investmentController } from "./investment.controller";
 import {
   createInvestmentBodySchema,
   investmentIdParamsSchema,
   listInvestmentsQuerySchema,
   removeInvestmentBodySchema,
   updateInvestmentBodySchema,
-} from "./investment.request.js";
+} from "./investment.request";
 
 export const investmentRouter = Router();
 

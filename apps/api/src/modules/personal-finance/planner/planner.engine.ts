@@ -1,3 +1,8 @@
+import {
+  EMERGENCY_FUND_CATEGORY,
+  EMERGENCY_FUND_SUBCATEGORY,
+} from "../goal/goal.constants";
+
 const LOAN_BUDGET_SUBCATEGORIES = new Set([
   "housing_loan",
   "housing_addon_loan",
@@ -93,6 +98,22 @@ export type PlannerReport = {
     allGoalsTarget: number;
     projectedCorpusAtFireYear: number;
     fireGap: number;
+    items: Array<{
+      category: string;
+      subcategory: string;
+      targetAmount: number;
+      currentAmount: number;
+      remainingYears: number;
+      targetYear: number;
+    }>;
+    emergencyFund: {
+      category: string;
+      subcategory: string;
+      targetAmount: number;
+      currentAmount: number;
+      remainingYears: number;
+      targetYear: number;
+    } | null;
   };
   liabilityPlan: {
     avalanche: Array<{
@@ -364,6 +385,19 @@ export function buildPlannerReport(input: {
   const interest = input.loans.reduce((sum, loan) => sum + remainingInterest(loan), 0);
 
   const fireGoal = input.goals.find((goal) => goal.category === "retirement");
+  const emergencyFundGoal = input.goals.find(
+    (goal) =>
+      goal.category === EMERGENCY_FUND_CATEGORY ||
+      goal.subcategory === EMERGENCY_FUND_SUBCATEGORY,
+  );
+  const goalItems = input.goals.map((goal) => ({
+    category: goal.category,
+    subcategory: goal.subcategory,
+    targetAmount: goal.targetAmount,
+    currentAmount: goal.currentAmount,
+    remainingYears: goal.remainingYears,
+    targetYear: goal.targetYear,
+  }));
   const fireTarget = fireGoal?.targetAmount ?? 0;
   const fireYears = fireGoal?.remainingYears ?? 11;
   const allGoalsTarget = input.goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
@@ -594,6 +628,17 @@ export function buildPlannerReport(input: {
       allGoalsTarget,
       projectedCorpusAtFireYear: projected,
       fireGap: Math.max(0, fireTarget - projected),
+      items: goalItems,
+      emergencyFund: emergencyFundGoal
+        ? {
+            category: EMERGENCY_FUND_CATEGORY,
+            subcategory: EMERGENCY_FUND_SUBCATEGORY,
+            targetAmount: emergencyFundGoal.targetAmount,
+            currentAmount: emergencyFundGoal.currentAmount,
+            remainingYears: emergencyFundGoal.remainingYears,
+            targetYear: emergencyFundGoal.targetYear,
+          }
+        : null,
     },
     liabilityPlan: {
       avalanche,

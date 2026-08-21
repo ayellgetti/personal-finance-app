@@ -1,9 +1,9 @@
 import { randomInt } from "node:crypto";
-import { setting } from "../../../config/setting.js";
-import { HttpError } from "../../../lib/http-error.js";
-import { otpModel, type OtpModel } from "../../../models/index.js";
-import { userService, type UserService } from "../user/user.service.js";
-import { OTP_TYPE, type GenerateOtpBody, type ResendOtpBody, type VerifyOtpBody } from "./otp.request.js";
+import { setting } from "../../../config/setting";
+import { HttpError } from "../../../utils/http-error.util";
+import { otpModel, type OtpModel } from "../../../models/index";
+import { userService, type UserService } from "../user/user.service";
+import { OTP_TYPE, type GenerateOtpBody, type ResendOtpBody, type VerifyOtpBody } from "./otp.request";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 30 * 1000;

@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { validateBody } from "../../../middlewares/validate.js";
-import { userController } from "./user.controller.js";
-import { requireSelf } from "./user.middleware.js";
-import { changePasswordBodySchema, updateMeBodySchema } from "./user.request.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { validateBody } from "../../../middlewares/request-validate.middleware";
+import { userController } from "./user.controller";
+import { requireSelf } from "./user.middleware";
+import { changePasswordBodySchema, updateMeBodySchema } from "./user.request";
 
 export const userRouter = Router();
 

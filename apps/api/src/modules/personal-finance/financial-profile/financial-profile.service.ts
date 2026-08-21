@@ -1,5 +1,5 @@
-import { financialProfileModel, type FinancialProfileModel } from "../../../models/index.js";
-import type { UpsertFinancialProfileBody } from "./financial-profile.request.js";
+import { financialProfileModel, type FinancialProfileModel } from "../../../models/index";
+import type { UpsertFinancialProfileBody } from "./financial-profile.request";
 
 const DEFAULTS = {
   retirementAge: 60,

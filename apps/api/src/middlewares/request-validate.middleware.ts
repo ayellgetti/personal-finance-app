@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 import type { ZodType } from "zod";
-import { HttpError } from "../lib/http-error.js";
+import { HttpError } from "../utils/http-error.util";
 
 type RequestSchemas = {
   body?: ZodType;
@@ -8,7 +8,7 @@ type RequestSchemas = {
   params?: ZodType;
 };
 
-export function validate(schemas: RequestSchemas): RequestHandler {
+export function requestValidate(schemas: RequestSchemas): RequestHandler {
   return (req, _res, next) => {
     for (const key of ["body", "query", "params"] as const) {
       const schema = schemas[key];
@@ -33,6 +33,9 @@ export function validate(schemas: RequestSchemas): RequestHandler {
   };
 }
 
-export function validateBody(schema: ZodType): RequestHandler {
-  return validate({ body: schema });
+export function requestValidateBody(schema: ZodType): RequestHandler {
+  return requestValidate({ body: schema });
 }
+
+export const validate = requestValidate;
+export const validateBody = requestValidateBody;

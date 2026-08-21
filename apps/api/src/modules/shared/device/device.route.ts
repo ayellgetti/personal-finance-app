@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { validateBody } from "../../../middlewares/validate.js";
-import { deviceController } from "./device.controller.js";
-import { addDeviceBodySchema, removeDeviceBodySchema } from "./device.request.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { validateBody } from "../../../middlewares/request-validate.middleware";
+import { deviceController } from "./device.controller";
+import { addDeviceBodySchema, removeDeviceBodySchema } from "./device.request";
 
 export const deviceRouter = Router();
 

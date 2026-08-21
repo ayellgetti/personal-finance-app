@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
 import {
   advisorService,
   type AdvisorService,
-} from "./advisor.service.js";
+} from "./advisor.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

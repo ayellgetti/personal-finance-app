@@ -1,6 +1,6 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
-import { setting } from "../config/setting.js";
-import { HttpError } from "../lib/http-error.js";
+import { setting } from "../config/setting";
+import { HttpError } from "./http-error.util";
 
 export type AuthUser = {
   id: string;

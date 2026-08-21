@@ -52,6 +52,7 @@ type ApiInvestment = {
 type ApiGoal = {
   id: string;
   category: string;
+  subcategory?: string;
   title: string;
   targetAmount: number;
   currentAmount: number;
@@ -110,6 +111,8 @@ const INVESTMENT_TYPES: Record<string, InvestmentType> = {
 };
 
 const GOAL_TYPES: Record<string, GoalType> = {
+  emergency: "Emergency Fund",
+  emergency_fund: "Emergency Fund",
   education: "Child Education",
   marriage: "Child Marriage",
   retirement: "Retirement",
@@ -249,7 +252,10 @@ export function mapGoal(goal: ApiGoal): Goal {
   return {
     id: goal.id,
     name: goal.title,
-    type: GOAL_TYPES[goal.category] ?? "Custom Goal",
+    type:
+      GOAL_TYPES[goal.category] ??
+      GOAL_TYPES[goal.subcategory ?? ""] ??
+      "Custom Goal",
     targetAmount: goal.targetAmount,
     currentSaved: goal.currentAmount,
     targetDate: `${goal.targetYear}-01-01`,

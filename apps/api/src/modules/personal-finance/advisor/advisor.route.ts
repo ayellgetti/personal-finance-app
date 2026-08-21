@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { advisorController } from "./advisor.controller.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { advisorController } from "./advisor.controller";
 
 export const advisorRouter = Router();
 

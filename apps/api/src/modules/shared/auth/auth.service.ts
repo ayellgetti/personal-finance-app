@@ -1,25 +1,25 @@
 import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { setting } from "../../../config/setting.js";
-import { HttpError } from "../../../lib/http-error.js";
-import type { PublicUser } from "../../../models/index.js";
-import { jwtUtil, type AuthUser, type Jwt } from "../../../utils/jwt.util.js";
-import { OTP_TYPE } from "../otp/otp.request.js";
-import { otpService, type OtpService } from "../otp/otp.service.js";
-import { userService } from "../user/user.service.js";
-import type { UserService } from "../user/user.service.js";
+import { setting } from "../../../config/setting";
+import { HttpError } from "../../../utils/http-error.util";
+import type { PublicUser } from "../../../models/index";
+import { jwtUtil, type AuthUser, type Jwt } from "../../../utils/jwt.util";
+import { OTP_TYPE } from "../otp/otp.request";
+import { otpService, type OtpService } from "../otp/otp.service";
+import { userService } from "../user/user.service";
+import type { UserService } from "../user/user.service";
 import type {
   ForgotPasswordBody,
   LoginBody,
   LogoutBody,
   RefreshBody,
   RegisterBody,
-} from "./auth.request.js";
+} from "./auth.request";
 import {
   hashRefreshToken,
   refreshSessionModel,
   type RefreshSessionModel,
-} from "./auth.store.js";
+} from "./auth.store";
 
 type TokenPair = {
   accessToken: string;

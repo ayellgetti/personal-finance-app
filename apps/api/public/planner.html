@@ -747,7 +747,7 @@
             </table>
             <p class="muted">
               Expected debt-free month cited by advisor:
-              ${advice.debtStrategy.expectedDebtFreeMonth}
+              ${advice.debtStrategy.expectedDebtFreeMonth ?? "—"}
             </p>
 
             <h3>Investment pause and resume</h3>
@@ -773,7 +773,7 @@
                   <tr>
                     <td>${escapeHtml(item.loan)}</td>
                     <td>${escapeHtml(item.change)}</td>
-                    <td class="num">${rupee(item.monthlyExtra)}</td>
+                    <td class="num">${item.monthlyExtra == null ? "—" : rupee(item.monthlyExtra)}</td>
                     <td class="num">${item.estimatedMonthsSaved ?? "—"}</td>
                     <td class="num">${item.estimatedInterestSaved == null ? "—" : rupee(item.estimatedInterestSaved)}</td>
                     <td class="muted">${escapeHtml(item.caveat)}</td>

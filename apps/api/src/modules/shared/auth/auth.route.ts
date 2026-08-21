@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { validateBody } from "../../../middlewares/validate.js";
-import { authController } from "./auth.controller.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { validateBody } from "../../../middlewares/request-validate.middleware";
+import { authController } from "./auth.controller";
 import {
   forgotPasswordBodySchema,
   loginBodySchema,
   logoutBodySchema,
   refreshBodySchema,
   registerBodySchema,
-} from "./auth.request.js";
+} from "./auth.request";
 
 export const authRouter = Router();
 

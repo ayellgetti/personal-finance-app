@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { HttpError } from "../lib/http-error.js";
-import { logger } from "./logger.util.js";
+import { HttpError } from "./http-error.util";
+import { logger } from "./logger.util";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null) {
@@ -30,9 +30,20 @@ type HiddenOptions = {
   includeHidden?: boolean;
 };
 
+type RelationOptions<TOrderBy> = Pick<
+  QueryOptions<TOrderBy>,
+  "select" | "include" | "includeHidden"
+>;
+
 type ModelDelegate<TEntity, TCreate, TUpdate, TWhere, TWhereUnique, TOrderBy> = {
   create(args: { data: TCreate; select?: unknown; include?: unknown }): Promise<TEntity>;
   createMany(args: { data: TCreate[]; skipDuplicates?: boolean }): Promise<{ count: number }>;
+  createManyAndReturn?(args: {
+    data: TCreate[];
+    skipDuplicates?: boolean;
+    select?: unknown;
+    include?: unknown;
+  }): Promise<TEntity[]>;
   findMany(args: {
     where?: TWhere;
     skip?: number;
@@ -60,8 +71,16 @@ type ModelDelegate<TEntity, TCreate, TUpdate, TWhere, TWhereUnique, TOrderBy> = 
     include?: unknown;
   }): Promise<TEntity>;
   updateMany(args: { where?: TWhere; data: TUpdate }): Promise<{ count: number }>;
+  upsert(args: {
+    where: TWhereUnique;
+    create: TCreate;
+    update: TUpdate;
+    select?: unknown;
+    include?: unknown;
+  }): Promise<TEntity>;
   delete(args: { where: TWhereUnique }): Promise<TEntity>;
   deleteMany(args: { where?: TWhere }): Promise<{ count: number }>;
+  groupBy(args: Record<string, unknown>): Promise<unknown[]>;
 };
 
 export type PaginatedResult<TEntity> = {
@@ -76,6 +95,17 @@ export type PaginatedResult<TEntity> = {
   };
 };
 
+/**
+ * Prisma/PostgreSQL counterpart of a Mongoose model wrapper.
+ *
+ * Mongo → Postgres
+ * - populate → `include` (set `this.include` on a subclass)
+ * - lean() → Prisma already returns plain objects
+ * - insertMany → `createMany` / `bulkCreateAndReturn`
+ * - findOneAndUpdate + upsert → explicit `upsert` (not on every update)
+ * - duplicate key 11000 → Prisma P2002
+ * - aggregate → `groupBy`
+ */
 export abstract class Model<
   TEntity,
   TCreate,
@@ -85,6 +115,8 @@ export abstract class Model<
   TOrderBy,
 > {
   protected hidden: string[] = [];
+  protected include: unknown | undefined;
+  protected defaultOrderBy: TOrderBy | TOrderBy[] | undefined;
 
   protected constructor(
     protected readonly model: ModelDelegate<
@@ -102,8 +134,11 @@ export abstract class Model<
     return this.conceal(value, false) as PublicRecord<T>;
   }
 
-  async create(data: TCreate, options: HiddenOptions = {}): Promise<TEntity> {
-    return this.execute(() => this.model.create({ data }), options.includeHidden);
+  async create(data: TCreate, options: RelationOptions<TOrderBy> = {}): Promise<TEntity> {
+    return this.execute(
+      () => this.model.create({ data, ...this.relationArgs(options) }),
+      options.includeHidden,
+    );
   }
 
   async bulkCreate(data: TCreate[], skipDuplicates = true): Promise<number> {
@@ -111,6 +146,26 @@ export abstract class Model<
       this.model.createMany({ data, skipDuplicates }),
     );
     return result.count;
+  }
+
+  async bulkCreateAndReturn(
+    data: TCreate[],
+    skipDuplicates = true,
+    options: RelationOptions<TOrderBy> = {},
+  ): Promise<TEntity[]> {
+    if (!this.model.createManyAndReturn) {
+      throw new HttpError(500, `${this.modelName} does not support bulkCreateAndReturn`);
+    }
+
+    return this.execute(
+      () =>
+        this.model.createManyAndReturn!({
+          data,
+          skipDuplicates,
+          ...this.relationArgs(options),
+        }),
+      options.includeHidden,
+    );
   }
 
   async read(
@@ -123,9 +178,8 @@ export abstract class Model<
           where,
           skip: options.skip,
           take: options.take,
-          orderBy: options.orderBy,
-          select: options.select,
-          include: options.include,
+          orderBy: this.orderArgs(options.orderBy),
+          ...this.relationArgs(options),
         }),
       options.includeHidden,
     );
@@ -133,14 +187,13 @@ export abstract class Model<
 
   async readOne(
     where: TWhereUnique,
-    options: Pick<QueryOptions<TOrderBy>, "select" | "include" | "includeHidden"> = {},
+    options: RelationOptions<TOrderBy> = {},
   ): Promise<TEntity | null> {
     return this.execute(
       () =>
         this.model.findUnique({
           where,
-          select: options.select,
-          include: options.include,
+          ...this.relationArgs(options),
         }),
       options.includeHidden,
     );
@@ -148,18 +201,14 @@ export abstract class Model<
 
   async findOne(
     where?: TWhere,
-    options: Pick<
-      QueryOptions<TOrderBy>,
-      "orderBy" | "select" | "include" | "includeHidden"
-    > = {},
+    options: Pick<QueryOptions<TOrderBy>, "orderBy" | "select" | "include" | "includeHidden"> = {},
   ): Promise<TEntity | null> {
     return this.execute(
       () =>
         this.model.findFirst({
           where,
-          orderBy: options.orderBy,
-          select: options.select,
-          include: options.include,
+          orderBy: this.orderArgs(options.orderBy),
+          ...this.relationArgs(options),
         }),
       options.includeHidden,
     );
@@ -176,12 +225,20 @@ export abstract class Model<
   async update(
     where: TWhereUnique,
     data: TUpdate,
-    options: HiddenOptions = {},
+    options: RelationOptions<TOrderBy> = {},
   ): Promise<TEntity> {
     return this.execute(
-      () => this.model.update({ where, data }),
+      () => this.model.update({ where, data, ...this.relationArgs(options) }),
       options.includeHidden,
     );
+  }
+
+  async updateOne(
+    where: TWhereUnique,
+    data: TUpdate,
+    options: RelationOptions<TOrderBy> = {},
+  ): Promise<TEntity> {
+    return this.update(where, data, options);
   }
 
   async updateMany(where: TWhere, data: TUpdate): Promise<number> {
@@ -189,6 +246,24 @@ export abstract class Model<
       this.model.updateMany({ where, data }),
     );
     return result.count;
+  }
+
+  async upsert(
+    where: TWhereUnique,
+    create: TCreate,
+    update: TUpdate,
+    options: RelationOptions<TOrderBy> = {},
+  ): Promise<TEntity> {
+    return this.execute(
+      () =>
+        this.model.upsert({
+          where,
+          create,
+          update,
+          ...this.relationArgs(options),
+        }),
+      options.includeHidden,
+    );
   }
 
   async hardDeleteOne(
@@ -208,6 +283,10 @@ export abstract class Model<
 
   async softDelete(where: TWhereUnique, data: TUpdate): Promise<TEntity> {
     return this.update(where, data);
+  }
+
+  async softDeleteMany(where: TWhere, data: TUpdate): Promise<number> {
+    return this.updateMany(where, data);
   }
 
   async paginate(
@@ -244,6 +323,18 @@ export abstract class Model<
     };
   }
 
+  async aggregate<TResult = unknown[]>(args: Record<string, unknown>): Promise<TResult> {
+    return this.execute(() => this.model.groupBy(args)) as Promise<TResult>;
+  }
+
+  async aggregateOne<TRow extends Record<string, unknown>>(
+    args: Record<string, unknown>,
+    match: (row: TRow) => boolean,
+  ): Promise<TRow | undefined> {
+    const rows = await this.aggregate<TRow[]>(args);
+    return rows.find(match);
+  }
+
   protected async execute<TResult>(
     operation: () => Promise<TResult>,
     includeHidden = false,
@@ -254,6 +345,21 @@ export abstract class Model<
     } catch (error) {
       this.errorHandler(error);
     }
+  }
+
+  private relationArgs(options: RelationOptions<TOrderBy> = {}): {
+    select?: unknown;
+    include?: unknown;
+  } {
+    const include = options.include !== undefined ? options.include : this.include;
+    return {
+      ...(options.select !== undefined ? { select: options.select } : {}),
+      ...(include !== undefined ? { include } : {}),
+    };
+  }
+
+  private orderArgs(orderBy?: TOrderBy | TOrderBy[]): TOrderBy | TOrderBy[] | undefined {
+    return orderBy !== undefined ? orderBy : this.defaultOrderBy;
   }
 
   private hiddenFieldSet(): Set<string> {
@@ -330,11 +436,4 @@ export type PrismaModelDelegate<
   TWhere,
   TWhereUnique,
   TOrderBy,
-> = ModelDelegate<
-  TEntity,
-  TCreate,
-  TUpdate,
-  TWhere,
-  TWhereUnique,
-  TOrderBy
->;
+> = ModelDelegate<TEntity, TCreate, TUpdate, TWhere, TWhereUnique, TOrderBy>;

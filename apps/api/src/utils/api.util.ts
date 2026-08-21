@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
-import { logger } from "./logger.util.js";
+import { logger } from "./logger.util";
 
 export type ApiResponse<T> = {
-  status: boolean;
+  code: number;
+  success: boolean;
   data: T;
   message: string;
   timestamp: string;
@@ -20,7 +21,8 @@ export class Api {
     metadata?: Record<string, unknown>,
   ): Response<ApiResponse<T>> {
     const body: ApiResponse<T> = {
-      status: true,
+      code: statusCode,
+      success: true,
       data,
       message,
       timestamp: new Date().toISOString(),
@@ -48,7 +50,8 @@ export class Api {
     });
 
     return res.status(statusCode).json({
-      status: false,
+      code: statusCode,
+      success: false,
       data,
       message,
       timestamp: new Date().toISOString(),

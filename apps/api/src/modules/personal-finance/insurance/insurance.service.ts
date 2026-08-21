@@ -1,11 +1,11 @@
-import { HttpError } from "../../../lib/http-error.js";
-import { insuranceModel, type InsuranceModel } from "../../../models/index.js";
+import { HttpError } from "../../../utils/http-error.util";
+import { insuranceModel, type InsuranceModel } from "../../../models/index";
 import type {
   CreateInsuranceBody,
   ListInsurancesQuery,
   RemoveInsuranceBody,
   UpdateInsuranceBody,
-} from "./insurance.request.js";
+} from "./insurance.request";
 
 export class InsuranceService {
   constructor(private readonly model: InsuranceModel = insuranceModel) {}

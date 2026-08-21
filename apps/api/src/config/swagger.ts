@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import swaggerUi from "swagger-ui-express";
-import { openApiDocument } from "../docs/openapi.js";
+import { openApiDocument } from "../docs/openapi";
 
 export class Swagger {
   mount(app: Express): void {

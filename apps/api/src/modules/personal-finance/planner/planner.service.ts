@@ -3,11 +3,13 @@ import {
   goalModel,
   investmentModel,
   loanModel,
-} from "../../../models/index.js";
-import { buildPlannerReport } from "./planner.engine.js";
+} from "../../../models/index";
+import { goalService } from "../goal/goal.service";
+import { buildPlannerReport } from "./planner.engine";
 
 export class PlannerService {
   async report(userId: string) {
+    await goalService.ensureEmergencyFund(userId);
     const [budgets, loans, investments, goals] = await Promise.all([
       budgetModel.read({ userId, isActive: 1 }),
       loanModel.read({ userId, isActive: 1 }),

@@ -78,24 +78,16 @@ function legacyKey(userId: string) {
 }
 
 function ensureEmergencyFundGoal(data: FinanceData): FinanceData {
-  const existing = data.goals.find((g) => g.id === EMERGENCY_FUND_GOAL_ID || g.type === "Emergency Fund");
+  const existing = data.goals.find(
+    (g) => g.id === EMERGENCY_FUND_GOAL_ID || g.type === "Emergency Fund",
+  );
   if (!existing) {
     return {
       ...data,
       goals: [createEmergencyFundGoal(data.profile.emergencyFund), ...data.goals],
     };
   }
-  if (existing.currentSaved === data.profile.emergencyFund && existing.id === EMERGENCY_FUND_GOAL_ID) {
-    return data;
-  }
-  return {
-    ...data,
-    goals: data.goals.map((g) =>
-      g.id === existing.id
-        ? { ...g, id: EMERGENCY_FUND_GOAL_ID, type: "Emergency Fund", currentSaved: data.profile.emergencyFund }
-        : g,
-    ),
-  };
+  return data;
 }
 
 function emptyForUser(account?: AccountIdentity | null): FinanceData {
@@ -191,7 +183,7 @@ function mergeFinance(
     loans: remote?.loans ?? [],
     investments: remote?.investments ?? [],
     insurances: extras.insurances,
-    goals: remote?.goals.filter((g) => g.type !== "Emergency Fund") ?? [],
+    goals: remote?.goals ?? [],
     dailyExpenses: extras.dailyExpenses,
   });
 }
@@ -326,7 +318,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const removeItem = async (key: Collections, id: string) => {
-    if (key === "goals" && id === EMERGENCY_FUND_GOAL_ID) return;
+    if (key === "goals") {
+      const goal = data.goals.find((item) => item.id === id);
+      if (id === EMERGENCY_FUND_GOAL_ID || goal?.type === "Emergency Fund") return;
+    }
     try {
       if (key === "loans") {
         await removeRemoteLoan(id);

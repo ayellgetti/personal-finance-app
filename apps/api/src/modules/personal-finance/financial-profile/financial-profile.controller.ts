@@ -1,11 +1,11 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
-import type { UpsertFinancialProfileBody } from "./financial-profile.request.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
+import type { UpsertFinancialProfileBody } from "./financial-profile.request";
 import {
   financialProfileService,
   type FinancialProfileService,
-} from "./financial-profile.service.js";
+} from "./financial-profile.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

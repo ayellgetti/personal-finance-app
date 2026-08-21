@@ -1,17 +1,23 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { HttpError } from "../../../lib/http-error.js";
-import type { AiJsonProvider } from "../../shared/ai/openai.provider.js";
+import { HttpError } from "../utils/http-error.util";
+import type { AiJsonProvider } from "../modules/shared/ai/openai.provider";
 import {
   buildPlannerReport,
   type PlannerInvestment,
-} from "../planner/planner.engine.js";
-import type { PlannerService } from "../planner/planner.service.js";
-import type { AdvisorReportStore } from "./advisor.cache.js";
-import { buildAdvisorContext, hashAdvisorContext } from "./advisor.prompt.js";
-import { advisorReportSchema, type AdvisorReport } from "./advisor.schema.js";
-import { AdvisorService } from "./advisor.service.js";
+} from "../modules/personal-finance/planner/planner.engine";
+import type { PlannerService } from "../modules/personal-finance/planner/planner.service";
+import type { AdvisorReportStore } from "../modules/personal-finance/advisor/advisor.cache";
+import {
+  buildAdvisorContext,
+  hashAdvisorContext,
+} from "../modules/personal-finance/advisor/advisor.prompt";
+import {
+  advisorReportSchema,
+  type AdvisorReport,
+} from "../modules/personal-finance/advisor/advisor.schema";
+import { AdvisorService } from "../modules/personal-finance/advisor/advisor.service";
 
 const validAdvice = {
   executiveSummary: "Use the available surplus against expensive debt.",
@@ -142,6 +148,16 @@ function fixtureReport() {
     investments,
     goals: [
       {
+        id: "emergency-secret-id",
+        category: "emergency",
+        subcategory: "emergency_fund",
+        title: "Emergency Fund",
+        targetAmount: 600_000,
+        currentAmount: 120_000,
+        remainingYears: 1,
+        targetYear: 2027,
+      },
+      {
         id: "goal-secret-id",
         category: "retirement",
         subcategory: "fire",
@@ -162,14 +178,17 @@ test("advisor context includes the rule checklist without private titles", () =>
   assert.doesNotMatch(serialized, /Private/);
   assert.match(serialized, /"currency":"INR"/);
   assert.match(serialized, /"ruleChecklist"/);
-  assert.match(serialized, /"dtiAbove35"/);
+  assert.match(serialized, /"category":"emergency"/);
+  assert.match(serialized, /"emergencyFund"/);
 });
 
 test("advisor prompt markdown is the live system prompt", async () => {
-  const { ADVISOR_SYSTEM_PROMPT } = await import("./advisor.prompt.js");
-  assert.match(ADVISOR_SYSTEM_PROMPT, /Summary Report/);
-  assert.match(ADVISOR_SYSTEM_PROMPT, /Plan of Action/);
-  assert.match(ADVISOR_SYSTEM_PROMPT, /ruleChecklist/);
+  const { ADVISOR_SYSTEM_PROMPT } = await import(
+    "../modules/personal-finance/advisor/advisor.prompt"
+  );
+  assert.match(ADVISOR_SYSTEM_PROMPT, /SUMMARY REPORT/i);
+  assert.match(ADVISOR_SYSTEM_PROMPT, /PLAN OF ACTION/i);
+  assert.match(ADVISOR_SYSTEM_PROMPT, /compulsory Emergency Fund goal/);
 });
 
 test("advisor response schema accepts the contract and rejects missing sections", () => {
@@ -178,6 +197,38 @@ test("advisor response schema accepts the contract and rejects missing sections"
     advisorReportSchema.safeParse({ executiveSummary: "Incomplete" }).success,
     false,
   );
+});
+
+test("advisor response schema accepts null and omitted optional numbers", () => {
+  const parsed = advisorReportSchema.safeParse({
+    ...validAdvice,
+    immediateActions: [
+      {
+        action: "Prepay the highest-rate loan",
+        rationale: "It has the highest supplied rate.",
+      },
+    ],
+    debtStrategy: {
+      summary: "No supplied debt requires repayment planning.",
+      steps: [],
+      expectedDebtFreeMonth: null,
+    },
+    emiTweaks: [
+      {
+        loan: "Loan 1",
+        change: "Add the supplied surplus",
+        monthlyExtra: null,
+        caveat: "Confirm lender prepayment rules.",
+      },
+    ],
+  });
+
+  assert.equal(parsed.success, true);
+  assert.equal(parsed.data?.debtStrategy.expectedDebtFreeMonth, null);
+  assert.deepEqual(parsed.data?.debtStrategy.steps, []);
+  assert.equal(parsed.data?.immediateActions[0]?.priority, 1);
+  assert.equal(parsed.data?.immediateActions[0]?.monthlyAmount, null);
+  assert.equal(parsed.data?.emiTweaks[0]?.estimatedMonthsSaved, null);
 });
 
 test("surplus scenario improves payoff time and interest over scheduled EMIs", () => {
@@ -241,7 +292,7 @@ test("advisor service stores OpenAI output and reuses it while the numbers stay 
   assert.equal(second.advice.summaryReport.headline, validAdvice.summaryReport.headline);
 });
 
-test("advisor service calls OpenAI again when refresh is requested", async () => {
+test("advisor service calls OpenAI again when refresh is allowed", async () => {
   const planner = {
     report: async () => fixtureReport(),
   } as unknown as PlannerService;
@@ -257,13 +308,38 @@ test("advisor service calls OpenAI again when refresh is requested", async () =>
     contextHash: hashAdvisorContext(fixtureReport()),
     advice: validAdvice,
   });
-  const service = new AdvisorService(planner, provider, store);
+  const service = new AdvisorService(planner, provider, store, true);
 
   const result = await service.report("user-id", "request-id", { refresh: true });
 
   assert.equal(result.source, "openai");
   assert.equal(calls, 1);
   assert.equal(store.writes, 1);
+});
+
+test("advisor service ignores refresh when ADVISOR_ALLOW_REFRESH is missing", async () => {
+  const planner = {
+    report: async () => fixtureReport(),
+  } as unknown as PlannerService;
+  let calls = 0;
+  const provider: AiJsonProvider = {
+    generateJson: async () => {
+      calls += 1;
+      return validAdvice;
+    },
+  };
+  const store = memoryStore({
+    userId: "user-id",
+    contextHash: hashAdvisorContext(fixtureReport()),
+    advice: validAdvice,
+  });
+  const service = new AdvisorService(planner, provider, store, false);
+
+  const result = await service.report("user-id", "request-id", { refresh: true });
+
+  assert.equal(result.source, "cache");
+  assert.equal(calls, 0);
+  assert.equal(store.writes, 0);
 });
 
 test("advisor service propagates provider failures without persisting data", async () => {
@@ -310,7 +386,7 @@ test("advisor service returns the saved report when OpenAI fails later", async (
 
 test("printable HTML escapes AI-provided text before rendering", async () => {
   const html = await readFile(
-    new URL("../../../../public/planner.html", import.meta.url),
+    new URL("../../public/planner.html", import.meta.url),
     "utf8",
   );
 

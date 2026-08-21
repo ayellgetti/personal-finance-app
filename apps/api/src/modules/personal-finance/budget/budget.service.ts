@@ -1,11 +1,11 @@
-import { HttpError } from "../../../lib/http-error.js";
-import { budgetModel, type BudgetModel } from "../../../models/index.js";
+import { HttpError } from "../../../utils/http-error.util";
+import { budgetModel, type BudgetModel } from "../../../models/index";
 import type {
   CreateBudgetBody,
   ListBudgetsQuery,
   RemoveBudgetBody,
   UpdateBudgetBody,
-} from "./budget.request.js";
+} from "./budget.request";
 
 export class BudgetService {
   constructor(private readonly model: BudgetModel = budgetModel) {}

@@ -1,7 +1,7 @@
 import OpenAI from "openai";
-import { setting } from "../../../config/setting.js";
-import { HttpError } from "../../../lib/http-error.js";
-import { logger } from "../../../utils/logger.util.js";
+import { setting } from "../../../config/setting";
+import { HttpError } from "../../../utils/http-error.util";
+import { logger } from "../../../utils/logger.util";
 
 export type AiJsonRequest = {
   system: string;

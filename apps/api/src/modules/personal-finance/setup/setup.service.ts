@@ -1,5 +1,11 @@
-import { prisma } from "../../../lib/prisma.js";
-import type { SetupBody } from "./setup.request.js";
+import { prisma } from "../../../utils/prisma.util";
+import {
+  EMERGENCY_FUND_CATEGORY,
+  EMERGENCY_FUND_SUBCATEGORY,
+  EMERGENCY_FUND_TITLE,
+  emergencyFundTargetMonths,
+} from "../goal/goal.constants";
+import type { SetupBody } from "./setup.request";
 
 export class SetupService {
   complete(userId: string, input: SetupBody) {
@@ -98,6 +104,29 @@ export class SetupService {
         ),
       );
 
+      const existingEmergencyFund = await tx.goal.findFirst({
+        where: { userId, isActive: 1, category: EMERGENCY_FUND_CATEGORY },
+      });
+      const remainingYears = 1;
+      const monthlyExpenses = input.expenses.reduce((sum, row) => sum + row.amount, 0);
+      const emergencyFund =
+        existingEmergencyFund ??
+        (await tx.goal.create({
+          data: {
+            userId,
+            category: EMERGENCY_FUND_CATEGORY,
+            subcategory: EMERGENCY_FUND_SUBCATEGORY,
+            title: EMERGENCY_FUND_TITLE,
+            targetAmount:
+              monthlyExpenses > 0
+                ? monthlyExpenses * emergencyFundTargetMonths(input.profile.employmentType)
+                : 0,
+            currentAmount: 0,
+            remainingYears,
+            targetYear: new Date().getFullYear() + remainingYears,
+          },
+        }));
+
       await tx.user.update({
         where: { id: userId },
         data: { quickStep: 1 },
@@ -110,6 +139,7 @@ export class SetupService {
         loans,
         investments,
         insurances,
+        emergencyFund,
       };
     });
   }

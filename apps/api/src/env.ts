@@ -23,6 +23,24 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().trim().min(1).default("gpt-5-mini"),
   OPENAI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(180000).default(90000),
   REDIS_URL: z.string().trim().min(1).default("redis://127.0.0.1:6379"),
+  ADVISOR_ALLOW_REFRESH: z.preprocess((value) => {
+    if (value === undefined || (typeof value === "string" && value.trim() === "")) {
+      return undefined;
+    }
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (["1", "true", "yes"].includes(normalized)) return true;
+      if (["0", "false", "no"].includes(normalized)) return false;
+    }
+    return value;
+  }, z.boolean().optional()),
+  UPLOAD_DIR: z.string().trim().min(1).default("uploads"),
+  UPLOAD_MAX_FILE_SIZE_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(50 * 1024 * 1024)
+    .default(5 * 1024 * 1024),
 });
 
 const result = envSchema.safeParse(process.env);

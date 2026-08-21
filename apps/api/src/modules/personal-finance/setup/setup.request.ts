@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { createBudgetBodySchema } from "../budget/budget.request.js";
-import { upsertFinancialProfileBodySchema } from "../financial-profile/financial-profile.request.js";
-import { createInsuranceBodySchema } from "../insurance/insurance.request.js";
-import { createInvestmentBodySchema } from "../investment/investment.request.js";
-import { createLoanBodySchema } from "../loan/loan.request.js";
+import { createBudgetBodySchema } from "../budget/budget.request";
+import { upsertFinancialProfileBodySchema } from "../financial-profile/financial-profile.request";
+import { createInsuranceBodySchema } from "../insurance/insurance.request";
+import { createInvestmentBodySchema } from "../investment/investment.request";
+import { createLoanBodySchema } from "../loan/loan.request";
 
 const setupIncomeBodySchema = createBudgetBodySchema
   .omit({ type: true, category: true })

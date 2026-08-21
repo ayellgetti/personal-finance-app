@@ -1,18 +1,18 @@
 import type { User } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { setting } from "../../../config/setting.js";
-import { HttpError } from "../../../lib/http-error.js";
+import { setting } from "../../../config/setting";
+import { HttpError } from "../../../utils/http-error.util";
 import {
   userModel,
   type CreateUserInput,
   type PublicUser,
   type UpdateUserInput,
   type UserModel,
-} from "../../../models/index.js";
+} from "../../../models/index";
 import {
   refreshSessionModel,
   type RefreshSessionModel,
-} from "../auth/auth.store.js";
+} from "../auth/auth.store";
 
 const PASSWORD_HISTORY_LIMIT = 5;
 

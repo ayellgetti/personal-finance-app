@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { validateBody } from "../../../middlewares/validate.js";
-import { otpController } from "./otp.controller.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { validateBody } from "../../../middlewares/request-validate.middleware";
+import { otpController } from "./otp.controller";
 import {
   generateOtpBodySchema,
   resendOtpBodySchema,
   verifyOtpBodySchema,
-} from "./otp.request.js";
+} from "./otp.request";
 
 export const otpRouter = Router();
 

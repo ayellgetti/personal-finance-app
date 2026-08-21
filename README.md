@@ -40,7 +40,7 @@ The API uses class-based layers:
 - `modules/*/*.service.ts` — business logic
 - `modules/*/*.controller.ts` — HTTP handlers
 - `modules/*/*.request.ts` — Zod request validation
-- `middlewares/` — request ID, access logs, authentication, validation, and errors
+- `middlewares/*.middleware.ts` — request ID, access logs, authentication, validation, and errors
 - `utils/api.util.ts` — constant response envelope
 
 Every JSON response contains `status`, `data`, `message`, `timestamp`, and

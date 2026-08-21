@@ -1,6 +1,6 @@
 import { Prisma, type Tradingview } from "@prisma/client";
-import { prisma } from "../lib/prisma.js";
-import { PrismaModel } from "./prisma-model.js";
+import { prisma } from "../utils/prisma.util";
+import { PrismaModel } from "./prisma-model";
 
 export class TradingviewModel extends PrismaModel<
   Tradingview,

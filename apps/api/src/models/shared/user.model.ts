@@ -1,7 +1,7 @@
 import { Prisma, type User } from "@prisma/client";
-import { prisma } from "../../lib/prisma.js";
-import type { PublicRecord } from "../../utils/model.util.js";
-import { PrismaModel } from "../prisma-model.js";
+import { prisma } from "../../utils/prisma.util";
+import type { PublicRecord } from "../../utils/model.util";
+import { PrismaModel } from "../prisma-model";
 
 export type CreateUserInput = {
   firstName: string;

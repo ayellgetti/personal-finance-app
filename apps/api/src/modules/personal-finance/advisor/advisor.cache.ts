@@ -1,9 +1,9 @@
-import { logger } from "../../../utils/logger.util.js";
-import { getRedis } from "../../../lib/redis.js";
+import { logger } from "../../../utils/logger.util";
+import { getRedis } from "../../../utils/redis.util";
 import {
   advisorReportSchema,
   type AdvisorReport,
-} from "./advisor.schema.js";
+} from "./advisor.schema";
 
 export type CachedAdvisorAdvice = {
   userId: string;

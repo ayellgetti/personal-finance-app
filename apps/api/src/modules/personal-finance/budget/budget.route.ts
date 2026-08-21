@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { validate, validateBody } from "../../../middlewares/validate.js";
-import { budgetController } from "./budget.controller.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { validate, validateBody } from "../../../middlewares/request-validate.middleware";
+import { budgetController } from "./budget.controller";
 import {
   budgetIdParamsSchema,
   createBudgetBodySchema,
   listBudgetsQuerySchema,
   removeBudgetBodySchema,
   updateBudgetBodySchema,
-} from "./budget.request.js";
+} from "./budget.request";
 
 export const budgetRouter = Router();
 

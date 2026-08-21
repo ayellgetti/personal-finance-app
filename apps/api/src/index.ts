@@ -1,4 +1,4 @@
-import "./env.js";
-import { app } from "./config/app.js";
+import "./env";
+import { app } from "./config/app";
 
 app.start();

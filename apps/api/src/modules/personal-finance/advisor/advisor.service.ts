@@ -1,25 +1,26 @@
-import { HttpError } from "../../../lib/http-error.js";
+import { setting } from "../../../config/setting";
+import { HttpError } from "../../../utils/http-error.util";
 import {
   openAiProvider,
   type AiJsonProvider,
-} from "../../shared/ai/openai.provider.js";
+} from "../../shared/ai/openai.provider";
 import {
   plannerService,
   type PlannerService,
-} from "../planner/planner.service.js";
+} from "../planner/planner.service";
 import {
   redisAdvisorStore,
   type AdvisorReportStore,
-} from "./advisor.cache.js";
+} from "./advisor.cache";
 import {
   ADVISOR_SYSTEM_PROMPT,
   buildAdvisorUserPrompt,
   hashAdvisorContext,
-} from "./advisor.prompt.js";
+} from "./advisor.prompt";
 import {
   advisorReportSchema,
   type AdvisorReport,
-} from "./advisor.schema.js";
+} from "./advisor.schema";
 
 export type AdvisorReportResult = {
   planner: Awaited<ReturnType<PlannerService["report"]>>;
@@ -33,6 +34,7 @@ export class AdvisorService {
     private readonly planner: PlannerService = plannerService,
     private readonly provider: AiJsonProvider = openAiProvider,
     private readonly store: AdvisorReportStore = redisAdvisorStore,
+    private readonly allowRefresh: boolean = setting.advisor.allowRefresh,
   ) {}
 
   async report(
@@ -43,8 +45,9 @@ export class AdvisorService {
     const planner = await this.planner.report(userId);
     const contextHash = hashAdvisorContext(planner);
     const cached = await this.store.findByUserId(userId);
+    const refresh = Boolean(options.refresh) && this.allowRefresh;
 
-    if (!options.refresh && cached?.contextHash === contextHash) {
+    if (!refresh && cached?.contextHash === contextHash) {
       return {
         planner,
         advice: cached.advice,
@@ -64,7 +67,11 @@ export class AdvisorService {
       if (!parsed.success) {
         throw new HttpError(502, "OpenAI returned an invalid advisor report", {
           provider: "openai",
-          validation: parsed.error.flatten(),
+          validation: parsed.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            code: issue.code,
+            message: issue.message,
+          })),
         });
       }
 

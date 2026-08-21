@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
 import type {
   CreateBudgetBody,
   ListBudgetsQuery,
   RemoveBudgetBody,
   UpdateBudgetBody,
-} from "./budget.request.js";
-import { budgetService } from "./budget.service.js";
-import type { BudgetService } from "./budget.service.js";
+} from "./budget.request";
+import { budgetService } from "./budget.service";
+import type { BudgetService } from "./budget.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {

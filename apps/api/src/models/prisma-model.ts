@@ -1,7 +1,7 @@
 import {
   Model,
   type PrismaModelDelegate,
-} from "../utils/model.util.js";
+} from "../utils/model.util";
 
 export abstract class PrismaModel<
   TEntity,

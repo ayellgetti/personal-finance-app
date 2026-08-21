@@ -1,15 +1,15 @@
 import { Router } from "express";
-import { asyncHandler } from "../../../middlewares/async-handler.js";
-import { requireAuth } from "../../../middlewares/require-auth.js";
-import { validate, validateBody } from "../../../middlewares/validate.js";
-import { insuranceController } from "./insurance.controller.js";
+import { asyncHandler } from "../../../middlewares/async-handler.middleware";
+import { requireAuth } from "../../../middlewares/jwt-auth.middleware";
+import { validate, validateBody } from "../../../middlewares/request-validate.middleware";
+import { insuranceController } from "./insurance.controller";
 import {
   createInsuranceBodySchema,
   insuranceIdParamsSchema,
   listInsurancesQuerySchema,
   removeInsuranceBodySchema,
   updateInsuranceBodySchema,
-} from "./insurance.request.js";
+} from "./insurance.request";
 
 export const insuranceRouter = Router();
 

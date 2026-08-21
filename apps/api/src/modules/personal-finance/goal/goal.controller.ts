@@ -1,14 +1,14 @@
 import type { Request, Response } from "express";
-import { BaseController } from "../../../controller/base.controller.js";
-import { HttpError } from "../../../lib/http-error.js";
+import { BaseController } from "../../shared/base/base.controller";
+import { HttpError } from "../../../utils/http-error.util";
 import type {
   CreateGoalBody,
   ListGoalsQuery,
   RemoveGoalBody,
   UpdateGoalBody,
-} from "./goal.request.js";
-import { goalService } from "./goal.service.js";
-import type { GoalService } from "./goal.service.js";
+} from "./goal.request";
+import { goalService } from "./goal.service";
+import type { GoalService } from "./goal.service";
 
 function currentUserId(req: Request): string {
   if (!req.user) {
