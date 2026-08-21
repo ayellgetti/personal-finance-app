@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { useFinance, newId } from "@/lib/finance/store";
 import { useAuth } from "@/lib/auth/store";
 import { ageFromDob } from "@/lib/finance/profile";
-import { EmploymentType, FinanceData } from "@/types/finance";
+import {
+  EmploymentType,
+  FIRE_GOAL_TYPES,
+  FinanceData,
+  Goal,
+  USER_GOAL_TYPES,
+} from "@/types/finance";
 import { FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge } from "./shared";
 import { Button } from "@/components/ui/button";
@@ -15,11 +21,17 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   Plus, Check, ChevronLeft, ChevronRight, User, Wallet, Receipt, Landmark,
-  TrendingUp, ShieldCheck, PartyPopper,
+  TrendingUp, ShieldCheck, PartyPopper, ShieldAlert, Target,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type Collection = "incomes" | "expenses" | "loans" | "investments" | "insurances";
+type Collection =
+  | "incomes"
+  | "expenses"
+  | "loans"
+  | "investments"
+  | "insurances"
+  | "goals";
 
 interface EntityStep {
   key: Collection;
@@ -32,9 +44,24 @@ interface EntityStep {
 const fmt = (n: number, cur: string) =>
   `${cur}${Number(n || 0).toLocaleString("en-IN")}`;
 
-export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: () => void }) {
+function isFireGoal(goal: Goal) {
+  return FIRE_GOAL_TYPES.some((type) => type === goal.type);
+}
+
+function hasValidFireGoal(goals: Goal[]) {
+  return goals.some((goal) => isFireGoal(goal) && goal.targetAmount > 0);
+}
+
+export function SetupWizard({ onDone }: { onDone: () => void }) {
   const { user } = useAuth();
-  const { data, loading, addItem, removeItem, updateProfile } = useFinance();
+  const {
+    data,
+    loading,
+    addItem,
+    removeItem,
+    updateItem,
+    updateProfile,
+  } = useFinance();
   const cur = data.profile.currency;
   const accountName = user?.name ?? data.profile.name;
   const accountAge = user ? ageFromDob(user.dob) : data.profile.age;
@@ -127,22 +154,107 @@ export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: (
       ],
       summary: (ins, c) => ({ title: ins.name, badge: ins.type, value: fmt(ins.coverage, c) }),
     },
+    {
+      key: "goals", label: "Goals", icon: Target,
+      fields: [
+        { name: "name", label: "Goal Name", type: "text", span: 2, defaultValue: "My FIRE Goal" },
+        { name: "type", label: "Goal Type", type: "select", span: 2, options: USER_GOAL_TYPES },
+        { name: "targetAmount", label: "Target Amount", type: "number", prefix: cur },
+        { name: "currentSaved", label: "Already Saved", type: "number", prefix: cur },
+        {
+          name: "targetDate",
+          label: "Target Date",
+          type: "date",
+          span: 2,
+          defaultValue: new Date(Date.now() + 10 * 31536000000).toISOString().slice(0, 10),
+        },
+        { name: "priority", label: "Priority", type: "select", span: 2, options: ["High", "Medium", "Low"] },
+      ],
+      summary: (goal, c) => ({
+        title: goal.name,
+        badge: goal.type,
+        value: fmt(goal.targetAmount, c),
+      }),
+    },
   ];
 
   const STEPS = [
     { id: "profile", label: "Profile", icon: User },
-    ...ENTITY_STEPS.map((s) => ({ id: s.key, label: s.label, icon: s.icon })),
+    ...ENTITY_STEPS.filter((s) => s.key !== "goals").map((s) => ({
+      id: s.key,
+      label: s.label,
+      icon: s.icon,
+    })),
+    { id: "emergency", label: "Emergency Fund", icon: ShieldAlert },
+    ...ENTITY_STEPS.filter((s) => s.key === "goals").map((s) => ({
+      id: s.key,
+      label: s.label,
+      icon: s.icon,
+    })),
     { id: "review", label: "Review", icon: PartyPopper },
   ];
 
   const totalSteps = STEPS.length;
   const [step, setStep] = useState(0);
-  const isProfile = step === 0;
-  const isReview = step === totalSteps - 1;
-  const entityStep = !isProfile && !isReview ? ENTITY_STEPS[step - 1] : null;
+  const currentStep = STEPS[step];
+  const isProfile = currentStep?.id === "profile";
+  const isEmergency = currentStep?.id === "emergency";
+  const isReview = currentStep?.id === "review";
+  const entityStep = ENTITY_STEPS.find((item) => item.key === currentStep?.id) ?? null;
+  const emergencyGoal = data.goals.find((goal) => goal.type === "Emergency Fund");
+  const [emergencyDraft, setEmergencyDraft] = useState({
+    targetAmount: emergencyGoal?.targetAmount ?? 0,
+    currentSaved: emergencyGoal?.currentSaved ?? 0,
+    targetDate:
+      emergencyGoal?.targetDate ??
+      new Date(Date.now() + 31536000000).toISOString().slice(0, 10),
+  });
 
-  const finish = () => {
-    updateProfile({
+  useEffect(() => {
+    if (!emergencyGoal) return;
+    setEmergencyDraft({
+      targetAmount: emergencyGoal.targetAmount,
+      currentSaved: emergencyGoal.currentSaved,
+      targetDate: emergencyGoal.targetDate,
+    });
+  }, [emergencyGoal]);
+
+  const saveEmergencyFund = async () => {
+    if (!emergencyGoal || emergencyDraft.targetAmount <= 0) {
+      toast.error("Set an emergency fund target amount before continuing");
+      return false;
+    }
+    try {
+      await updateItem("goals", emergencyGoal.id, {
+        targetAmount: emergencyDraft.targetAmount,
+        currentSaved: emergencyDraft.currentSaved,
+        targetDate: emergencyDraft.targetDate,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const goNext = async () => {
+    if (isEmergency && !(await saveEmergencyFund())) return;
+    if (
+      entityStep?.key === "goals" &&
+      !hasValidFireGoal(data.goals)
+    ) {
+      toast.error("Choose and save one FIRE goal before continuing");
+      return;
+    }
+    setStep((current) => current + 1);
+  };
+
+  const finish = async () => {
+    if (!(await saveEmergencyFund())) return;
+    if (!hasValidFireGoal(data.goals)) {
+      toast.error("Choose Lean FIRE, Fat FIRE, or Coast FIRE before finishing");
+      return;
+    }
+    await updateProfile({
       retirementAge: Number(profile.retirementAge) || data.profile.retirementAge,
       currency: profile.currency.trim() || "₹",
       inflationRate: Number(profile.inflationRate) || 0,
@@ -153,9 +265,21 @@ export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: (
     onDone();
   };
 
-  const stepIcon = isProfile ? User : isReview ? PartyPopper : entityStep!.icon;
+  const stepIcon = isProfile
+    ? User
+    : isEmergency
+      ? ShieldAlert
+      : isReview
+        ? PartyPopper
+        : entityStep!.icon;
   const StepIcon = stepIcon;
-  const stepTitle = isProfile ? "Your Profile" : isReview ? "Review & Finish" : entityStep!.label;
+  const stepTitle = isProfile
+    ? "Your Profile"
+    : isEmergency
+      ? "Emergency Fund"
+      : isReview
+        ? "Review & Finish"
+        : entityStep!.label;
 
   if (loading) {
     return (
@@ -203,8 +327,12 @@ export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: (
             <p className="text-sm text-muted-foreground">
               {isProfile
                 ? "Retirement, dependents, and inflation are saved to your financial profile"
+                : isEmergency
+                ? "Set the required safety buffer used by your planner and advisor"
                 : isReview
                 ? "Confirm everything, then save"
+                : entityStep?.key === "goals"
+                ? "Choose one required FIRE path, then add any other life goals"
                 : `Your saved ${entityStep!.label.toLowerCase()} from the server. Add more if needed.`}
             </p>
           </div>
@@ -217,15 +345,39 @@ export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: (
           />
         )}
 
-        {entityStep && (
-          <EntitySection
-            key={entityStep.key}
-            stepDef={entityStep}
-            items={data[entityStep.key]}
-            cur={cur}
-            onAdd={(v) => void addItem(entityStep.key, { id: newId(), ...v } as FinanceData[typeof entityStep.key][number])}
-            onRemove={(id) => void removeItem(entityStep.key, id)}
+        {isEmergency && (
+          <EmergencyFundSetup
+            value={emergencyDraft}
+            currency={cur}
+            onChange={setEmergencyDraft}
           />
+        )}
+
+        {entityStep && (
+          <>
+            {entityStep.key === "goals" && (
+              <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                {[
+                  ["Lean FIRE", "Cover essentials with a smaller independence target"],
+                  ["Fat FIRE", "A premium lifestyle without needing to work"],
+                  ["Coast FIRE", "Invest enough now, then let compounding finish the job"],
+                ].map(([title, detail]) => (
+                  <div key={title} className="rounded-xl border border-border bg-muted/40 p-3">
+                    <p className="font-semibold">{title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <EntitySection
+              key={entityStep.key}
+              stepDef={entityStep}
+              items={data[entityStep.key]}
+              cur={cur}
+              onAdd={(v) => void addItem(entityStep.key, { id: newId(), ...v } as FinanceData[typeof entityStep.key][number])}
+              onRemove={(id) => void removeItem(entityStep.key, id)}
+            />
+          </>
         )}
 
         {isReview && (
@@ -233,15 +385,29 @@ export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: (
             <ReviewRow label="Profile" value={`${accountName}, age ${accountAge} · retire at ${profile.retirementAge} · ${profile.employmentType}`} />
             <ReviewRow label="Dependents" value={String(profile.dependents)} />
             <ReviewRow label="Inflation" value={`${profile.inflationRate}%`} />
-            {ENTITY_STEPS.map((s) => (
+            <ReviewRow
+              label="Emergency Fund"
+              value={`${fmt(emergencyDraft.targetAmount, cur)} target`}
+            />
+            <ReviewRow
+              label="FIRE Path"
+              value={data.goals.find(isFireGoal)?.type ?? "Not selected"}
+            />
+            {ENTITY_STEPS.filter((s) => s.key !== "goals").map((s) => (
               <ReviewRow key={s.key} label={s.label} value={`${data[s.key].length} saved`} />
             ))}
+            <ReviewRow
+              label="Other Goals"
+              value={`${data.goals.filter((goal) => goal.type !== "Emergency Fund" && !isFireGoal(goal)).length} saved`}
+            />
           </div>
         )}
       </Panel>
 
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" onClick={onSkip ?? onDone}>Skip for now</Button>
+        <span className="text-xs text-muted-foreground">
+          Emergency Fund and one FIRE path are required
+        </span>
         <div className="flex gap-2">
           {step > 0 && (
             <Button variant="outline" className="gap-1 rounded-xl" onClick={() => setStep((s) => s - 1)}>
@@ -249,16 +415,79 @@ export function SetupWizard({ onDone, onSkip }: { onDone: () => void; onSkip?: (
             </Button>
           )}
           {!isReview ? (
-            <Button className="gap-1 rounded-xl" onClick={() => setStep((s) => s + 1)}>
+            <Button className="gap-1 rounded-xl" onClick={() => void goNext()}>
               Next <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button className="gap-1 rounded-xl" onClick={finish}>
+            <Button className="gap-1 rounded-xl" onClick={() => void finish()}>
               <Check className="h-4 w-4" /> Finish Setup
             </Button>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+type EmergencyFundDraft = {
+  targetAmount: number;
+  currentSaved: number;
+  targetDate: string;
+};
+
+function EmergencyFundSetup({
+  value,
+  currency,
+  onChange,
+}: {
+  value: EmergencyFundDraft;
+  currency: string;
+  onChange: (value: EmergencyFundDraft) => void;
+}) {
+  const set = (key: keyof EmergencyFundDraft, next: number | string) =>
+    onChange({ ...value, [key]: next });
+
+  return (
+    <div className="grid grid-cols-2 gap-4 rounded-xl border border-dashed border-border p-4">
+      <Field label="Target Amount">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+            {currency}
+          </span>
+          <Input
+            type="number"
+            min={1}
+            className="pl-7"
+            value={value.targetAmount}
+            onChange={(event) => set("targetAmount", Number(event.target.value))}
+          />
+        </div>
+      </Field>
+      <Field label="Already Saved">
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+            {currency}
+          </span>
+          <Input
+            type="number"
+            min={0}
+            className="pl-7"
+            value={value.currentSaved}
+            onChange={(event) => set("currentSaved", Number(event.target.value))}
+          />
+        </div>
+      </Field>
+      <Field label="Target Date" span={2}>
+        <Input
+          type="date"
+          value={value.targetDate}
+          onChange={(event) => set("targetDate", event.target.value)}
+        />
+      </Field>
+      <p className="col-span-2 text-sm text-muted-foreground">
+        Keep this fund liquid. The planner uses this goal before debt and
+        investment recommendations.
+      </p>
     </div>
   );
 }
@@ -336,6 +565,10 @@ function EntitySection({
   const handleAdd = () => {
     if (!values.name || String(values.name).trim() === "") {
       toast.error("Please enter a name first");
+      return;
+    }
+    if (stepDef.key === "goals" && Number(values.targetAmount) <= 0) {
+      toast.error("Set a goal target amount greater than zero");
       return;
     }
     onAdd(values);

@@ -88,7 +88,9 @@ export function buildAdvisorUserPrompt(report: PlannerReport): string {
   return `Prepare a summary report and a plan of action from this sanitized data.
 Apply the system-prompt rule engine to the ruleChecklist. Prioritize cashflow safety,
 then expensive debt, then the supplied investment resume milestone. Explain EMI or
-prepayment changes using only the supplied scenario comparisons.
+prepayment changes using only the supplied scenario comparisons. When goals.fireType
+is supplied, make the executive summary and summaryReport explicitly reflect that
+chosen FIRE path and its supplied target, progress, projection, and gap.
 
 Financial context:
 ${JSON.stringify(buildAdvisorContext(report))}`;

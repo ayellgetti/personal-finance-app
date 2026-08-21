@@ -104,6 +104,9 @@ export interface Insurance {
 
 export type GoalType =
   | "Emergency Fund"
+  | "Lean FIRE"
+  | "Fat FIRE"
+  | "Coast FIRE"
   | "Dream Home"
   | "Dream Car"
   | "Child Education"
@@ -114,7 +117,14 @@ export type GoalType =
   | "Custom Goal";
 
 export const EMERGENCY_FUND_GOAL_ID = "emergency-fund";
+export const FIRE_GOAL_TYPES = [
+  "Lean FIRE",
+  "Fat FIRE",
+  "Coast FIRE",
+] as const satisfies readonly GoalType[];
 export const USER_GOAL_TYPES: GoalType[] = [
+  ...FIRE_GOAL_TYPES,
+  "Emergency Fund",
   "Dream Home",
   "Dream Car",
   "Child Education",

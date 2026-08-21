@@ -22,6 +22,11 @@ export class SetupController extends BaseController {
     const result = await this.service.complete(currentUserId(req), body);
     this.sendSuccess(req, res, result, "Setup saved", 201);
   }
+
+  async completeQuickStep(req: Request, res: Response) {
+    const user = await this.service.completeQuickStep(currentUserId(req));
+    this.sendSuccess(req, res, { user }, "Quick setup completed");
+  }
 }
 
 export const setupController = new SetupController();

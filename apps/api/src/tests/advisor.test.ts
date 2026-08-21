@@ -160,7 +160,7 @@ function fixtureReport() {
       {
         id: "goal-secret-id",
         category: "retirement",
-        subcategory: "fire",
+        subcategory: "lean_fire",
         title: "Private family goal",
         targetAmount: 30_000_000,
         currentAmount: 0,
@@ -178,6 +178,7 @@ test("advisor context includes the rule checklist without private titles", () =>
   assert.doesNotMatch(serialized, /Private/);
   assert.match(serialized, /"currency":"INR"/);
   assert.match(serialized, /"ruleChecklist"/);
+  assert.match(serialized, /"fireType":"lean_fire"/);
   assert.match(serialized, /"category":"emergency"/);
   assert.match(serialized, /"emergencyFund"/);
 });

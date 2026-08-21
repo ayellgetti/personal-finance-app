@@ -24,15 +24,18 @@ import {
 } from "./profile";
 import {
   createRemoteExpense,
+  createRemoteGoal,
   createRemoteIncome,
   createRemoteInvestment,
   createRemoteLoan,
   fetchAccountUser,
   fetchRemoteFinance,
   removeRemoteBudget,
+  removeRemoteGoal,
   removeRemoteInvestment,
   removeRemoteLoan,
   updateRemoteLoan,
+  updateRemoteGoal,
   upsertRemoteFinancialProfile,
   type RemoteFinance,
   type RemoteFinancialProfile,
@@ -289,6 +292,30 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         setData((d) => ({ ...d, investments: [...d.investments, created] }));
         return;
       }
+      if (key === "goals") {
+        const goal = item as Goal;
+        // The API keeps a single emergency goal per user, so editing beats a 409.
+        const existingEmergencyFund =
+          goal.type === "Emergency Fund"
+            ? data.goals.find((current) => current.type === "Emergency Fund")
+            : undefined;
+        if (existingEmergencyFund) {
+          const updated = await updateRemoteGoal(existingEmergencyFund.id, {
+            ...goal,
+            id: existingEmergencyFund.id,
+          });
+          setData((d) => ({
+            ...d,
+            goals: d.goals.map((current) =>
+              current.id === existingEmergencyFund.id ? updated : current,
+            ),
+          }));
+          return;
+        }
+        const created = await createRemoteGoal(goal);
+        setData((d) => ({ ...d, goals: [...d.goals, created] }));
+        return;
+      }
       setData((d) => ({ ...d, [key]: [...(d[key] as any[]), item] }));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save");
@@ -311,6 +338,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
       return;
     }
+    if (key === "goals") {
+      const current = data.goals.find((goal) => goal.id === id);
+      if (!current) return;
+      try {
+        const updated = await updateRemoteGoal(id, {
+          ...current,
+          ...(patch as Partial<Goal>),
+          id,
+        } as Goal);
+        setData((d) => ({
+          ...d,
+          goals: d.goals.map((goal) => (goal.id === id ? updated : goal)),
+        }));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not update goal");
+        throw error;
+      }
+      return;
+    }
     setData((d) => ({
       ...d,
       [key]: (d[key] as any[]).map((item) => (item.id === id ? { ...item, ...patch } : item)),
@@ -320,7 +366,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const removeItem = async (key: Collections, id: string) => {
     if (key === "goals") {
       const goal = data.goals.find((item) => item.id === id);
-      if (id === EMERGENCY_FUND_GOAL_ID || goal?.type === "Emergency Fund") return;
+      if (id === EMERGENCY_FUND_GOAL_ID || goal?.type === "Emergency Fund") {
+        toast.error("Emergency fund is required and cannot be removed");
+        return;
+      }
     }
     try {
       if (key === "loans") {
@@ -336,6 +385,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (key === "investments") {
         await removeRemoteInvestment(id);
         setData((d) => ({ ...d, investments: d.investments.filter((item) => item.id !== id) }));
+        return;
+      }
+      if (key === "goals") {
+        await removeRemoteGoal(id);
+        setData((d) => ({ ...d, goals: d.goals.filter((goal) => goal.id !== id) }));
         return;
       }
       setData((d) => ({ ...d, [key]: (d[key] as any[]).filter((x) => x.id !== id) }));

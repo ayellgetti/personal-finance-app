@@ -10,6 +10,13 @@ export const setupRouter = Router();
 setupRouter.use(requireAuth);
 
 setupRouter.post(
+  "/complete",
+  asyncHandler(async (req, res) => {
+    await setupController.completeQuickStep(req, res);
+  }),
+);
+
+setupRouter.post(
   "/",
   validateBody(setupBodySchema),
   asyncHandler(async (req, res) => {

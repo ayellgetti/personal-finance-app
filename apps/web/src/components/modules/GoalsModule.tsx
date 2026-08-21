@@ -1,6 +1,6 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import { formatCurrency, analyzeGoal } from "@/lib/finance/calculations";
-import { EMERGENCY_FUND_GOAL_ID, Priority, USER_GOAL_TYPES } from "@/types/finance";
+import { EMERGENCY_FUND_GOAL_ID, Goal, Priority, USER_GOAL_TYPES } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, EmptyState, Badge } from "./shared";
 import { Progress } from "@/components/ui/progress";
@@ -13,7 +13,9 @@ const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
 export function GoalsModule() {
   const { data, addItem, removeItem } = useFinance();
   const cur = data.profile.currency;
-  const lifeGoals = data.goals.filter((g) => g.id !== EMERGENCY_FUND_GOAL_ID && g.type !== "Emergency Fund");
+  const lifeGoals = data.goals;
+  const isEmergencyGoal = (goal: Goal) =>
+    goal.id === EMERGENCY_FUND_GOAL_ID || goal.type === "Emergency Fund";
 
   const fields: FieldDef[] = [
     { name: "name", label: "Goal Name", type: "text", span: 2 },
@@ -55,9 +57,11 @@ export function GoalsModule() {
                         <p className="text-xs text-muted-foreground">{g.type} · by {new Date(g.targetDate).getFullYear()}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-danger" onClick={() => removeItem("goals", g.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {!isEmergencyGoal(g) && (
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-danger" onClick={() => removeItem("goals", g.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
 
                   <div className="mt-4 flex items-center justify-between text-sm">

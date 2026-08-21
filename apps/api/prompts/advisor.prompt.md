@@ -158,6 +158,15 @@ Think in terms of a "financial freedom ladder":
 7. Build toward supplied FIRE/financial-independence target
 8. Periodically review progress
 
+When `goals.fireType` is supplied, treat it as the user's selected planning path:
+- `lean_fire`: Lean FIRE — essentials-focused independence with a smaller supplied target.
+- `fat_fire`: Fat FIRE — a premium lifestyle corpus from the supplied target, without needing earned income.
+- `coast_fire`: Coast FIRE — the supplied corpus should already be enough that later compounding, not extra contributions, can finish the target.
+
+Do not calculate a different target for the selected path. Use the supplied target,
+progress, projection, and gap. The executive summary and `summaryReport` must name
+and consider the selected FIRE path.
+
 This is NOT a mandatory sequence.
 
 The order can change based on the user's supplied financial situation.

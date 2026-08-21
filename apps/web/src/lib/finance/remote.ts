@@ -56,6 +56,7 @@ type ApiGoal = {
   title: string;
   targetAmount: number;
   currentAmount: number;
+  remainingYears: number;
   targetYear: number;
 };
 
@@ -116,6 +117,11 @@ const GOAL_TYPES: Record<string, GoalType> = {
   education: "Child Education",
   marriage: "Child Marriage",
   retirement: "Retirement",
+  lean_fire: "Lean FIRE",
+  fat_fire: "Fat FIRE",
+  coast_fire: "Coast FIRE",
+  full_fire: "Fat FIRE",
+  wealth_fire: "Coast FIRE",
   home: "Dream Home",
   car: "Dream Car",
   vacation: "International Vacation",
@@ -253,8 +259,8 @@ export function mapGoal(goal: ApiGoal): Goal {
     id: goal.id,
     name: goal.title,
     type:
-      GOAL_TYPES[goal.category] ??
       GOAL_TYPES[goal.subcategory ?? ""] ??
+      GOAL_TYPES[goal.category] ??
       "Custom Goal",
     targetAmount: goal.targetAmount,
     currentSaved: goal.currentAmount,
@@ -438,6 +444,62 @@ export async function createRemoteInvestment(input: Investment): Promise<Investm
 export async function removeRemoteInvestment(id: string): Promise<void> {
   if (!isSignedIn()) throw new Error("Not signed in");
   await api("/api/investments/remove", {
+    method: "POST",
+    body: { id },
+  });
+}
+
+const GOAL_API_IDENTITY: Record<GoalType, { category: string; subcategory: string }> = {
+  "Emergency Fund": { category: "emergency", subcategory: "emergency_fund" },
+  "Lean FIRE": { category: "retirement", subcategory: "lean_fire" },
+  "Fat FIRE": { category: "retirement", subcategory: "fat_fire" },
+  "Coast FIRE": { category: "retirement", subcategory: "coast_fire" },
+  "Dream Home": { category: "home", subcategory: "dream_home" },
+  "Dream Car": { category: "car", subcategory: "dream_car" },
+  "Child Education": { category: "education", subcategory: "child_education" },
+  "Child Marriage": { category: "marriage", subcategory: "child_marriage" },
+  Retirement: { category: "retirement", subcategory: "retirement" },
+  "International Vacation": { category: "vacation", subcategory: "international_vacation" },
+  "Business Expansion": { category: "business", subcategory: "business_expansion" },
+  "Custom Goal": { category: "custom", subcategory: "custom" },
+};
+
+function goalToApiBody(input: Goal) {
+  const targetYear = new Date(input.targetDate).getFullYear();
+  const safeTargetYear = Number.isFinite(targetYear)
+    ? targetYear
+    : new Date().getFullYear() + 1;
+  return {
+    ...GOAL_API_IDENTITY[input.type],
+    title: input.name.trim() || input.type,
+    targetAmount: Number(input.targetAmount) || 0,
+    currentAmount: Number(input.currentSaved) || 0,
+    remainingYears: Math.max(0, safeTargetYear - new Date().getFullYear()),
+    targetYear: safeTargetYear,
+  };
+}
+
+export async function createRemoteGoal(input: Goal): Promise<Goal> {
+  if (!isSignedIn()) throw new Error("Not signed in");
+  const result = await api<{ goal: ApiGoal }>("/api/goals", {
+    method: "POST",
+    body: goalToApiBody(input),
+  });
+  return mapGoal(result.goal);
+}
+
+export async function updateRemoteGoal(id: string, input: Goal): Promise<Goal> {
+  if (!isSignedIn()) throw new Error("Not signed in");
+  const result = await api<{ goal: ApiGoal }>(`/api/goals/${id}`, {
+    method: "PATCH",
+    body: goalToApiBody(input),
+  });
+  return mapGoal(result.goal);
+}
+
+export async function removeRemoteGoal(id: string): Promise<void> {
+  if (!isSignedIn()) throw new Error("Not signed in");
+  await api("/api/goals/remove", {
     method: "POST",
     body: { id },
   });

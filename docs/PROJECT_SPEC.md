@@ -446,12 +446,12 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | Area | Behavior |
 | --- | --- |
 | Auth | OTP register, login, refresh, profile |
-| Onboarding | Setup wizard → profile + income + expenses + loans + investments + insurance + goals |
+| Onboarding | Setup wizard → profile + income + expenses + loans + investments + insurance + required emergency fund + required FIRE path (Lean, Fat, or Coast) + other goals |
 | Cash flow | Recurring `Budget` income/expense |
 | Debt | Loans: principal, ROI, tenure, EMI, EMI day |
 | Investments | Corpus, contribution, ROI, remaining months, hold |
 | Insurance | Type, coverage, premium, expiry |
-| Goals | Target/current amount, horizon; every user has a compulsory `emergency` goal |
+| Goals | Target/current amount, horizon; every user has a compulsory `emergency` goal and selects one `lean_fire`, `fat_fire`, or `coast_fire` path before completing Quick Setup |
 | Profile | Retirement age, dependents, inflation, employment, currency |
 | Planner | Server cash-flow / net-worth engine |
 | AI advisor | OpenAI JSON from planner snapshot; Redis cache |

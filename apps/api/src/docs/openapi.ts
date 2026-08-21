@@ -188,7 +188,6 @@ export const openApiDocument = {
           gender: { type: "string", minLength: 1, maxLength: 20 },
           avatar: { type: "string", maxLength: 2048, nullable: true },
           avatarBackground: { type: "string", maxLength: 2048, nullable: true },
-          quickStep: { type: "integer", minimum: 0, maximum: 1, example: 1 },
         },
       },
       ForgotPasswordRequest: {
@@ -556,7 +555,11 @@ export const openApiDocument = {
         required: ["category", "subcategory", "title", "targetAmount", "remainingYears"],
         properties: {
           category: { type: "string" },
-          subcategory: { type: "string" },
+          subcategory: {
+            type: "string",
+            description:
+              "FIRE choices use `lean_fire`, `fat_fire`, or `coast_fire` with category `retirement`.",
+          },
           title: { type: "string" },
           description: { type: "string", nullable: true },
           targetAmount: { type: "number", minimum: 0 },
@@ -1865,12 +1868,34 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/setup/complete": {
+      post: {
+        tags: ["Setup"],
+        summary: "Complete Quick Setup",
+        description:
+          "Marks Quick Setup complete only when the authenticated user has an emergency-fund goal with a positive target and a saved FIRE path (`lean_fire`, `fat_fire`, or `coast_fire`) with a positive target.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        responses: {
+          "200": {
+            description: "Quick Setup completed",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
     "/api/setup": {
       post: {
         tags: ["Setup"],
         summary: "Save financial setup in one transaction",
         description:
-          "Upserts the financial profile and creates incomes (Budget), expenses (Budget), loans, investments, and insurances for the authenticated user. All writes succeed or none do. Also sets `quickStep` to 1.",
+          "Upserts the financial profile and creates incomes (Budget), expenses (Budget), loans, investments, insurances, and the default emergency goal for the authenticated user. All writes succeed or none do. Call `/api/setup/complete` after saving the required emergency and FIRE goals.",
         security: [{ bearerAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/RequestId" }],
         requestBody: {

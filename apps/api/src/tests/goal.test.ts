@@ -7,6 +7,7 @@ import {
   EMERGENCY_FUND_TITLE,
 } from "../modules/personal-finance/goal/goal.constants";
 import { GoalService } from "../modules/personal-finance/goal/goal.service";
+import { assertRequiredSetupGoals } from "../modules/personal-finance/setup/setup.service";
 import type { GoalModel } from "../models/index";
 
 type FakeGoal = {
@@ -111,5 +112,22 @@ test("remove rejects the compulsory emergency fund goal", async () => {
   await assert.rejects(
     () => service.remove("user-1", { id: "ef-1" }),
     (error: unknown) => error instanceof HttpError && error.status === 400,
+  );
+});
+
+test("quick setup requires funded emergency and FIRE goals", () => {
+  assert.throws(
+    () => assertRequiredSetupGoals({ targetAmount: 300_000 }, null),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
+  );
+  assert.throws(
+    () => assertRequiredSetupGoals(null, { targetAmount: 10_000_000 }),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
+  );
+  assert.doesNotThrow(() =>
+    assertRequiredSetupGoals(
+      { targetAmount: 300_000 },
+      { targetAmount: 10_000_000 },
+    ),
   );
 });

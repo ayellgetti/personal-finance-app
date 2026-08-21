@@ -10,8 +10,11 @@ import {
   EMERGENCY_FUND_CATEGORY,
   EMERGENCY_FUND_SUBCATEGORY,
   EMERGENCY_FUND_TITLE,
+  FIRE_GOAL_CATEGORY,
+  FIRE_GOAL_SUBCATEGORIES,
   emergencyFundTargetMonths,
   isEmergencyFundGoal,
+  isFireGoal,
 } from "./goal.constants";
 
 export class GoalService {
@@ -42,6 +45,12 @@ export class GoalService {
       if (existing) {
         throw new HttpError(409, "Emergency fund goal already exists");
       }
+    }
+    if (isFireGoal(input) && (await this.findFireGoal(userId))) {
+      throw new HttpError(
+        409,
+        "A FIRE goal already exists; update it to change the FIRE type",
+      );
     }
 
     return this.model.create({
@@ -121,6 +130,15 @@ export class GoalService {
       userId,
       isActive: 1,
       category: EMERGENCY_FUND_CATEGORY,
+    });
+  }
+
+  private findFireGoal(userId: string) {
+    return this.model.findOne({
+      userId,
+      isActive: 1,
+      category: FIRE_GOAL_CATEGORY,
+      subcategory: { in: [...FIRE_GOAL_SUBCATEGORIES] },
     });
   }
 

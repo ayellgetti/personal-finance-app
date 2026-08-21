@@ -7,7 +7,6 @@ export const updateMeBodySchema = z
     gender: z.string().trim().min(1).max(20),
     avatar: z.string().trim().max(2048).nullable(),
     avatarBackground: z.string().trim().max(2048).nullable(),
-    quickStep: z.number().int().min(0).max(1),
   })
   .partial()
   .refine((value) => Object.keys(value).length > 0, {

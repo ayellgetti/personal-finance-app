@@ -223,9 +223,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: "Not signed in" };
     }
     try {
-      const result = await api<{ user: ApiUser }>("/api/users/me", {
-        method: "PATCH",
-        body: { quickStep: 1 },
+      const result = await api<{ user: ApiUser }>("/api/setup/complete", {
+        method: "POST",
       });
       updateStoredUser(result.user);
       setUser(toPublic(result.user));

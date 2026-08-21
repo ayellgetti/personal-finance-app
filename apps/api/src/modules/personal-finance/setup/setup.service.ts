@@ -1,13 +1,56 @@
 import { prisma } from "../../../utils/prisma.util";
+import { HttpError } from "../../../utils/http-error.util";
+import { goalModel } from "../../../models/index";
+import { userService } from "../../shared/user/user.service";
 import {
   EMERGENCY_FUND_CATEGORY,
   EMERGENCY_FUND_SUBCATEGORY,
   EMERGENCY_FUND_TITLE,
+  FIRE_GOAL_CATEGORY,
+  FIRE_GOAL_SUBCATEGORIES,
   emergencyFundTargetMonths,
 } from "../goal/goal.constants";
 import type { SetupBody } from "./setup.request";
 
+export function assertRequiredSetupGoals(
+  emergencyFund: { targetAmount: number } | null,
+  fireGoal: { targetAmount: number } | null,
+) {
+  if (!emergencyFund || emergencyFund.targetAmount <= 0) {
+    throw new HttpError(
+      422,
+      "A funded emergency goal with a target amount is required",
+    );
+  }
+  if (!fireGoal || fireGoal.targetAmount <= 0) {
+    throw new HttpError(
+      422,
+      "Choose Lean FIRE, Fat FIRE, or Coast FIRE and set a target amount",
+    );
+  }
+}
+
 export class SetupService {
+  async completeQuickStep(userId: string) {
+    const [emergencyFund, fireGoal] = await Promise.all([
+      goalModel.findOne({
+        userId,
+        isActive: 1,
+        category: EMERGENCY_FUND_CATEGORY,
+      }),
+      goalModel.findOne({
+        userId,
+        isActive: 1,
+        category: FIRE_GOAL_CATEGORY,
+        subcategory: { in: [...FIRE_GOAL_SUBCATEGORIES] },
+      }),
+    ]);
+
+    assertRequiredSetupGoals(emergencyFund, fireGoal);
+
+    return userService.updateMe(userId, { quickStep: 1 });
+  }
+
   complete(userId: string, input: SetupBody) {
     return prisma.$transaction(async (tx) => {
       const financialProfile = await tx.financialProfile.upsert({
@@ -126,11 +169,6 @@ export class SetupService {
             targetYear: new Date().getFullYear() + remainingYears,
           },
         }));
-
-      await tx.user.update({
-        where: { id: userId },
-        data: { quickStep: 1 },
-      });
 
       return {
         financialProfile,

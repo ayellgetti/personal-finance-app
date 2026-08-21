@@ -67,7 +67,7 @@ const Index = () => {
     <AppLayout active={visibleView} onSelect={selectView} title={META[visibleView].title} description={META[visibleView].description}>
       <div key={visibleView} className="animate-fade-in">
         {visibleView === "dashboard" && <Dashboard onNavigate={selectView} />}
-        {visibleView === "setup" && <SetupWizard onDone={() => void finishSetup(true)} onSkip={() => void finishSetup(true)} />}
+        {visibleView === "setup" && <SetupWizard onDone={() => void finishSetup(true)} />}
         {visibleView === "profile" && <ProfileModule />}
         {visibleView === "income" && <IncomeModule />}
         {visibleView === "expenses" && <ExpenseModule />}

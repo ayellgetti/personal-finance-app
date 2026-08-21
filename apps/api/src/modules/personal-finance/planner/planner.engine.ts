@@ -1,6 +1,7 @@
 import {
   EMERGENCY_FUND_CATEGORY,
   EMERGENCY_FUND_SUBCATEGORY,
+  isFireGoal,
 } from "../goal/goal.constants";
 
 const LOAN_BUDGET_SUBCATEGORIES = new Set([
@@ -92,6 +93,7 @@ export type PlannerReport = {
     remainingInterestEstimate: number;
   };
   goals: {
+    fireType: string | null;
     fireTarget: number;
     fireCorpus: number;
     fireProgressPct: number;
@@ -384,7 +386,9 @@ export function buildPlannerReport(input: {
   const liabilities = input.loans.reduce((sum, loan) => sum + loan.principalPendingAmount, 0);
   const interest = input.loans.reduce((sum, loan) => sum + remainingInterest(loan), 0);
 
-  const fireGoal = input.goals.find((goal) => goal.category === "retirement");
+  const fireGoal =
+    input.goals.find(isFireGoal) ??
+    input.goals.find((goal) => goal.category === "retirement");
   const emergencyFundGoal = input.goals.find(
     (goal) =>
       goal.category === EMERGENCY_FUND_CATEGORY ||
@@ -622,6 +626,7 @@ export function buildPlannerReport(input: {
       remainingInterestEstimate: Math.round(interest),
     },
     goals: {
+      fireType: fireGoal?.subcategory ?? null,
       fireTarget,
       fireCorpus: Math.round(corpus),
       fireProgressPct: fireTarget ? Math.round((corpus / fireTarget) * 1000) / 10 : 0,
