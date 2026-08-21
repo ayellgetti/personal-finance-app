@@ -6,17 +6,12 @@ import type { AiJsonProvider } from "../modules/shared/ai/openai.provider";
 import {
   buildPlannerReport,
   type PlannerInvestment,
-} from "../modules/personal-finance/planner/planner.engine";
+} from "../modules/personal-finance/planner/planner.engine";    
 import type { PlannerService } from "../modules/personal-finance/planner/planner.service";
 import type { AdvisorReportStore } from "../modules/personal-finance/advisor/advisor.cache";
-import {
-  buildAdvisorContext,
-  hashAdvisorContext,
-} from "../modules/personal-finance/advisor/advisor.prompt";
-import {
-  advisorReportSchema,
-  type AdvisorReport,
-} from "../modules/personal-finance/advisor/advisor.schema";
+import { buildAdvisorContext, hashAdvisorContext } from "../modules/personal-finance/advisor/advisor.prompt";
+import type { AdvisorQuotaStore } from "../modules/personal-finance/advisor/advisor.quota";
+import { advisorReportSchema, type AdvisorReport } from "../modules/personal-finance/advisor/advisor.schema";
 import { AdvisorService } from "../modules/personal-finance/advisor/advisor.service";
 
 const validAdvice = {
@@ -269,6 +264,20 @@ function memoryStore(
   return store;
 }
 
+function memoryQuota(limit = 1, used = 0): AdvisorQuotaStore & { used: number } {
+  const state = {
+    used,
+    async read() {
+      return { used: state.used, limit, remaining: Math.max(0, limit - state.used) };
+    },
+    async consume() {
+      state.used = Math.min(limit, state.used + 1);
+      return state.read();
+    },
+  };
+  return state;
+}
+
 test("advisor service stores OpenAI output and reuses it while the numbers stay the same", async () => {
   const planner = {
     report: async () => fixtureReport(),
@@ -281,7 +290,7 @@ test("advisor service stores OpenAI output and reuses it while the numbers stay 
     },
   };
   const store = memoryStore();
-  const service = new AdvisorService(planner, provider, store);
+  const service = new AdvisorService(planner, provider, store, memoryQuota());
 
   const first = await service.report("user-id", "request-id");
   const second = await service.report("user-id", "request-id");
@@ -309,13 +318,70 @@ test("advisor service calls OpenAI again when refresh is allowed", async () => {
     contextHash: hashAdvisorContext(fixtureReport()),
     advice: validAdvice,
   });
-  const service = new AdvisorService(planner, provider, store, true);
+  const quota = memoryQuota();
+  const service = new AdvisorService(planner, provider, store, quota, true);
 
   const result = await service.report("user-id", "request-id", { refresh: true });
 
   assert.equal(result.source, "openai");
   assert.equal(calls, 1);
   assert.equal(store.writes, 1);
+  assert.equal(quota.used, 1);
+  assert.deepEqual(result.quota, { used: 1, limit: 1, remaining: 0 });
+});
+
+test("advisor service rejects a refresh once the allowance is spent", async () => {
+  const planner = {
+    report: async () => fixtureReport(),
+  } as unknown as PlannerService;
+  let calls = 0;
+  const provider: AiJsonProvider = {
+    generateJson: async () => {
+      calls += 1;
+      return validAdvice;
+    },
+  };
+  const store = memoryStore({
+    userId: "user-id",
+    contextHash: hashAdvisorContext(fixtureReport()),
+    advice: validAdvice,
+  });
+  const service = new AdvisorService(planner, provider, store, memoryQuota(1, 1), true);
+
+  await assert.rejects(
+    () => service.report("user-id", "request-id", { refresh: true }),
+    (error: unknown) =>
+      error instanceof HttpError &&
+      error.status === 402 &&
+      (error.details as { code: string }).code === "AI_REPORT_LIMIT_REACHED",
+  );
+  assert.equal(calls, 0);
+  assert.equal(store.writes, 0);
+});
+
+test("advisor service still serves the saved report after the allowance is spent", async () => {
+  const planner = {
+    report: async () => fixtureReport(),
+  } as unknown as PlannerService;
+  let calls = 0;
+  const provider: AiJsonProvider = {
+    generateJson: async () => {
+      calls += 1;
+      return validAdvice;
+    },
+  };
+  const store = memoryStore({
+    userId: "user-id",
+    contextHash: hashAdvisorContext(fixtureReport()),
+    advice: validAdvice,
+  });
+  const service = new AdvisorService(planner, provider, store, memoryQuota(1, 1));
+
+  const result = await service.report("user-id", "request-id");
+
+  assert.equal(result.source, "cache");
+  assert.equal(calls, 0);
+  assert.deepEqual(result.quota, { used: 1, limit: 1, remaining: 0 });
 });
 
 test("advisor service ignores refresh when ADVISOR_ALLOW_REFRESH is missing", async () => {
@@ -334,7 +400,7 @@ test("advisor service ignores refresh when ADVISOR_ALLOW_REFRESH is missing", as
     contextHash: hashAdvisorContext(fixtureReport()),
     advice: validAdvice,
   });
-  const service = new AdvisorService(planner, provider, store, false);
+  const service = new AdvisorService(planner, provider, store, memoryQuota(), false);
 
   const result = await service.report("user-id", "request-id", { refresh: true });
 
@@ -353,7 +419,7 @@ test("advisor service propagates provider failures without persisting data", asy
     },
   };
   const store = memoryStore();
-  const service = new AdvisorService(planner, provider, store);
+  const service = new AdvisorService(planner, provider, store, memoryQuota());
 
   await assert.rejects(
     () => service.report("user-id", "request-id"),
@@ -376,13 +442,15 @@ test("advisor service returns the saved report when OpenAI fails later", async (
     contextHash: "stale-hash",
     advice: validAdvice,
   });
-  const service = new AdvisorService(planner, provider, store);
+  const quota = memoryQuota();
+  const service = new AdvisorService(planner, provider, store, quota, true);
 
   const result = await service.report("user-id", "request-id", { refresh: true });
 
   assert.equal(result.source, "cache");
   assert.equal(result.advice.summaryReport.headline, validAdvice.summaryReport.headline);
   assert.equal(store.writes, 0);
+  assert.equal(quota.used, 0);
 });
 
 test("printable HTML escapes AI-provided text before rendering", async () => {

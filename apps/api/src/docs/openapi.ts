@@ -2097,7 +2097,7 @@ export const openApiDocument = {
         tags: ["Advisor"],
         summary: "Generate an AI-assisted financial advisor report",
         description:
-          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Calls OpenAI when there is no matching cache entry or the numbers have changed. `refresh=true` forces a new generation only when `ADVISOR_ALLOW_REFRESH` is set; if that env flag is missing, refresh is ignored and the cached report is reused. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
+          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Calls OpenAI only when there is no matching cache entry, the numbers have changed, or `refresh=true` is passed. Every user gets `User.aiReportLimit` manual refreshes (one by default); once `refresh=true` has been used that many times the endpoint answers `402` and the client has to offer an upgrade. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/RequestId" },
@@ -2123,7 +2123,13 @@ export const openApiDocument = {
                       properties: {
                         data: {
                           type: "object",
-                          required: ["planner", "advice", "source", "generatedAt"],
+                          required: [
+                            "planner",
+                            "advice",
+                            "source",
+                            "generatedAt",
+                            "quota",
+                          ],
                           properties: {
                             planner: { type: "object" },
                             advice: {
@@ -2131,6 +2137,16 @@ export const openApiDocument = {
                             },
                             source: { type: "string", enum: ["openai", "cache"] },
                             generatedAt: { type: "string", format: "date-time" },
+                            quota: {
+                              type: "object",
+                              description: "Manual refresh allowance for this user.",
+                              required: ["used", "limit", "remaining"],
+                              properties: {
+                                used: { type: "integer" },
+                                limit: { type: "integer" },
+                                remaining: { type: "integer" },
+                              },
+                            },
                           },
                         },
                       },
@@ -2141,6 +2157,15 @@ export const openApiDocument = {
             },
           },
           "401": { $ref: "#/components/responses/Unauthorized" },
+          "402": {
+            description:
+              "Refresh allowance is used up. `data.code` is `AI_REPORT_LIMIT_REACHED` and `data.quota` holds the current counts.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
           "502": { $ref: "#/components/responses/EnvelopeError" },
           "503": { $ref: "#/components/responses/EnvelopeError" },
           "504": { $ref: "#/components/responses/EnvelopeError" },

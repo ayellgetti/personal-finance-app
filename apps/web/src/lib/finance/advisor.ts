@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { getAccessToken, getRefreshToken } from "@/lib/auth/store";
 import {
@@ -68,10 +70,18 @@ export type AdvisorReport = {
 
 export type AdvisorSource = "openai" | "cache" | "rules";
 
+/** Manual "Refresh AI" allowance held on the account. */
+export type AdvisorQuota = {
+  used: number;
+  limit: number;
+  remaining: number;
+};
+
 export type AdvisorResult = {
   advice: AdvisorReport;
   source: AdvisorSource;
   generatedAt?: string;
+  quota?: AdvisorQuota;
 };
 
 const CATEGORIES: AdvisorCategory[] = [
@@ -198,6 +208,7 @@ export async function fetchAdvisorReport(
       advice: AdvisorReport;
       source: "openai" | "cache";
       generatedAt?: string;
+      quota?: AdvisorQuota;
     }>(path, {
       method: "POST",
       signal: AbortSignal.timeout(110_000),
@@ -206,6 +217,7 @@ export async function fetchAdvisorReport(
       advice: result.advice,
       source: result.source,
       generatedAt: result.generatedAt,
+      quota: result.quota,
     };
   } catch (error) {
     if (error instanceof ApiError && [502, 503, 504].includes(error.status)) {
@@ -220,8 +232,16 @@ export async function fetchAdvisorReport(
 
 const ADVISOR_QUERY_KEY = ["advisor-report"] as const;
 
+const LIMIT_REACHED_STATUS = 402;
+
+function quotaFromError(error: ApiError): AdvisorQuota | undefined {
+  const quota = (error.data as { quota?: AdvisorQuota } | null)?.quota;
+  return quota && typeof quota.remaining === "number" ? quota : undefined;
+}
+
 export function useAdvisorReport(data: FinanceData, enabled = true) {
   const queryClient = useQueryClient();
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const query = useQuery({
     queryKey: ADVISOR_QUERY_KEY,
     queryFn: () => fetchAdvisorReport(data, false),
@@ -231,16 +251,51 @@ export function useAdvisorReport(data: FinanceData, enabled = true) {
     retry: false,
   });
 
+  const setQuota = (quota: AdvisorQuota) => {
+    queryClient.setQueryData<AdvisorResult>(ADVISOR_QUERY_KEY, (previous) =>
+      previous ? { ...previous, quota } : previous,
+    );
+  };
+
   const regenerate = useMutation({
     mutationFn: () => fetchAdvisorReport(data, true),
     onSuccess: (result) => {
-      queryClient.setQueryData(ADVISOR_QUERY_KEY, result);
+      queryClient.setQueryData<AdvisorResult>(ADVISOR_QUERY_KEY, (previous) => ({
+        ...result,
+        quota: result.quota ?? previous?.quota,
+      }));
     },
   });
 
+  const quota = query.data?.quota;
+  const canRefresh = !quota || quota.remaining > 0;
+
+  const requestRefresh = async () => {
+    if (!canRefresh) {
+      setPaywallOpen(true);
+      return;
+    }
+
+    try {
+      await regenerate.mutateAsync();
+    } catch (error) {
+      if (error instanceof ApiError && error.status === LIMIT_REACHED_STATUS) {
+        const spent = quotaFromError(error);
+        if (spent) setQuota(spent);
+        setPaywallOpen(true);
+        return;
+      }
+      toast.error(error instanceof ApiError ? error.message : "Could not refresh the AI report");
+    }
+  };
+
   return {
     ...query,
-    regenerate: regenerate.mutateAsync,
+    quota,
+    canRefresh,
+    requestRefresh,
+    paywallOpen,
+    setPaywallOpen,
     isRegenerating: regenerate.isPending,
   };
 }

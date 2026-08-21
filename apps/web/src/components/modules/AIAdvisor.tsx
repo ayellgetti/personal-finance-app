@@ -2,10 +2,11 @@ import { useFinance } from "@/lib/finance/store";
 import { healthScore } from "@/lib/finance/calculations";
 import { useAdvisorReport } from "@/lib/finance/advisor";
 import { AdvisorPlanOfAction } from "./AdvisorOutput";
+import { AdvisorPaywallDialog } from "./AdvisorPaywallDialog";
 import { Panel } from "./shared";
 import { HealthGauge } from "./HealthGauge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw, Lock } from "lucide-react";
 
 export function AIAdvisor() {
   const { data } = useFinance();
@@ -32,10 +33,14 @@ export function AIAdvisor() {
           <Button
             variant="secondary"
             className="rounded-xl"
-            onClick={() => void query.regenerate()}
+            onClick={() => void query.requestRefresh()}
             disabled={query.isRegenerating}
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${query.isRegenerating ? "animate-spin" : ""}`} />
+            {query.canRefresh ? (
+              <RefreshCw className={`mr-2 h-4 w-4 ${query.isRegenerating ? "animate-spin" : ""}`} />
+            ) : (
+              <Lock className="mr-2 h-4 w-4" />
+            )}
             {query.isRegenerating ? "Generating…" : "Refresh plan"}
           </Button>
         </div>
@@ -76,6 +81,12 @@ export function AIAdvisor() {
           {advice && <AdvisorPlanOfAction advice={advice} currency={data.profile.currency} />}
         </div>
       </div>
+
+      <AdvisorPaywallDialog
+        open={query.paywallOpen}
+        onOpenChange={query.setPaywallOpen}
+        quota={query.quota}
+      />
     </div>
   );
 }

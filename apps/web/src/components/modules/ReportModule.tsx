@@ -9,9 +9,10 @@ import {
 import { generateReport } from "@/lib/finance/pdfReport";
 import { useAdvisorReport } from "@/lib/finance/advisor";
 import { AdvisorPlanOfAction, AdvisorSummary } from "./AdvisorOutput";
+import { AdvisorPaywallDialog } from "./AdvisorPaywallDialog";
 import { Panel, Badge } from "./shared";
 import { Button } from "@/components/ui/button";
-import { Download, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
+import { Download, CheckCircle2, AlertTriangle, RefreshCw, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export function ReportModule() {
@@ -59,10 +60,14 @@ export function ReportModule() {
           <Button
             variant="secondary"
             className="rounded-xl"
-            onClick={() => void query.regenerate()}
+            onClick={() => void query.requestRefresh()}
             disabled={query.isRegenerating}
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${query.isRegenerating ? "animate-spin" : ""}`} />
+            {query.canRefresh ? (
+              <RefreshCw className={`mr-2 h-4 w-4 ${query.isRegenerating ? "animate-spin" : ""}`} />
+            ) : (
+              <Lock className="mr-2 h-4 w-4" />
+            )}
             Refresh AI
           </Button>
           <Button
@@ -141,6 +146,12 @@ export function ReportModule() {
           ))}
         </div>
       </Panel>
+
+      <AdvisorPaywallDialog
+        open={query.paywallOpen}
+        onOpenChange={query.setPaywallOpen}
+        quota={query.quota}
+      />
     </div>
   );
 }

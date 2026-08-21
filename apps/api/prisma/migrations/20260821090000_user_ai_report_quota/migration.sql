@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "aiReportCount" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "aiReportLimit" INTEGER NOT NULL DEFAULT 1;

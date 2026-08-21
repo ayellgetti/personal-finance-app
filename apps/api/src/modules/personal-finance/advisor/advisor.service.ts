@@ -18,6 +18,11 @@ import {
   hashAdvisorContext,
 } from "./advisor.prompt";
 import {
+  userAdvisorQuotaStore,
+  type AdvisorQuota,
+  type AdvisorQuotaStore,
+} from "./advisor.quota";
+import {
   advisorReportSchema,
   type AdvisorReport,
 } from "./advisor.schema";
@@ -27,6 +32,7 @@ export type AdvisorReportResult = {
   advice: AdvisorReport;
   source: "openai" | "cache";
   generatedAt: string;
+  quota: AdvisorQuota;
 };
 
 export class AdvisorService {
@@ -34,6 +40,7 @@ export class AdvisorService {
     private readonly planner: PlannerService = plannerService,
     private readonly provider: AiJsonProvider = openAiProvider,
     private readonly store: AdvisorReportStore = redisAdvisorStore,
+    private readonly quotas: AdvisorQuotaStore = userAdvisorQuotaStore,
     private readonly allowRefresh: boolean = setting.advisor.allowRefresh,
   ) {}
 
@@ -45,7 +52,8 @@ export class AdvisorService {
     const planner = await this.planner.report(userId);
     const contextHash = hashAdvisorContext(planner);
     const cached = await this.store.findByUserId(userId);
-    const refresh = Boolean(options.refresh) && this.allowRefresh;
+    let quota = await this.quotas.read(userId);
+    const refresh = Boolean(options.refresh && this.allowRefresh);
 
     if (!refresh && cached?.contextHash === contextHash) {
       return {
@@ -53,7 +61,15 @@ export class AdvisorService {
         advice: cached.advice,
         source: "cache",
         generatedAt: cached.updatedAt.toISOString(),
+        quota,
       };
+    }
+
+    if (refresh && quota.remaining <= 0) {
+      throw new HttpError(402, "Your AI report refreshes are used up", {
+        code: "AI_REPORT_LIMIT_REACHED",
+        quota,
+      });
     }
 
     try {
@@ -81,11 +97,16 @@ export class AdvisorService {
         advice: parsed.data,
       });
 
+      if (refresh) {
+        quota = await this.quotas.consume(userId);
+      }
+
       return {
         planner,
         advice: saved.advice,
         source: "openai",
         generatedAt: saved.updatedAt.toISOString(),
+        quota,
       };
     } catch (error) {
       if (cached) {
@@ -94,6 +115,7 @@ export class AdvisorService {
           advice: cached.advice,
           source: "cache",
           generatedAt: cached.updatedAt.toISOString(),
+          quota,
         };
       }
       throw error;

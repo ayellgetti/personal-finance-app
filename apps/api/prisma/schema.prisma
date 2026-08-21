@@ -21,6 +21,8 @@ model User {
   avatarBackground  String?
   entryData         Json?
   quickStep         Int      @default(0)
+  aiReportCount     Int      @default(0)
+  aiReportLimit     Int      @default(1)
   isActive          Int      @default(1)
   createdBy         String?
   updatedBy         String?
