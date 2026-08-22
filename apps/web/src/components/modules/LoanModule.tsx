@@ -8,6 +8,8 @@ import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge, EditButton } from "./shared";
 import { StatCard } from "@/components/StatCard";
 import { Landmark, Percent, CalendarClock, TrendingDown } from "lucide-react";
+import { QuickAddDialog } from "./QuickTypePicker";
+import { LoanQuickAdd } from "./LoanQuickAdd";
 
 const TYPES: LoanType[] = ["Home Loan", "Personal Loan", "Business Loan", "Vehicle Loan", "Education Loan"];
 
@@ -36,7 +38,15 @@ export function LoanModule() {
   const cur = data.profile.currency;
   const dti = debtToIncome(data);
   const strategy = prepaymentStrategy(data);
-  const addFields = loanFields(undefined, cur);
+  const addLoan = (
+    <QuickAddDialog
+      title="Quick Loan Entry"
+      description="Pick a loan type, then add as many as you need before closing."
+      triggerLabel="Add Loan"
+    >
+      <LoanQuickAdd currency={cur} onAdd={(loan) => addItem("loans", { id: newId(), ...loan })} />
+    </QuickAddDialog>
+  );
 
   return (
     <div className="space-y-6">
@@ -47,7 +57,7 @@ export function LoanModule() {
         <StatCard label="Loans Active" value={String(data.loans.length)} icon={CalendarClock} accent="gold" />
       </div>
 
-      <Panel title="Loan Portfolio" action={<EntityDialog title="Add Loan" fields={addFields} triggerLabel="Add Loan" onSubmit={(v) => addItem("loans", { id: newId(), ...v } as Loan)} />}>
+      <Panel title="Loan Portfolio" action={addLoan}>
         <div className="space-y-3">
           {loading ? (
             <EmptyState message="Loading loans from your account…" />

@@ -22,6 +22,8 @@ export type SetPasswordInput = Pick<User, "password" | "oldPasswords">;
 
 export type AiReportUsageInput = { aiReportCount: { increment: number } };
 
+export type AiReportLimitInput = { aiReportLimit: { increment: number } };
+
 export type AiReportQuota = {
   used: number;
   limit: number;
@@ -43,7 +45,7 @@ function toAiReportQuota(
 export class UserModel extends PrismaModel<
   User,
   CreateUserInput,
-  UpdateUserInput | SetPasswordInput | AiReportUsageInput,
+  UpdateUserInput | SetPasswordInput | AiReportUsageInput | AiReportLimitInput,
   Prisma.UserWhereInput,
   Prisma.UserWhereUniqueInput,
   Prisma.UserOrderByWithRelationInput
@@ -98,6 +100,15 @@ export class UserModel extends PrismaModel<
       { id, aiReportCount: { lt: prisma.user.fields.aiReportLimit } },
       { aiReportCount: { increment: 1 } },
     );
+    return this.readAiReportQuota(id);
+  }
+
+  /** Raises this user's generation cap. Extra reports are per account, not a global env. */
+  async incrementAiReportLimit(id: string, extra = 1): Promise<AiReportQuota> {
+    if (!Number.isInteger(extra) || extra < 1) {
+      throw new HttpError(400, "Allowance increment must be a positive integer");
+    }
+    await this.update({ id }, { aiReportLimit: { increment: extra } });
     return this.readAiReportQuota(id);
   }
 }

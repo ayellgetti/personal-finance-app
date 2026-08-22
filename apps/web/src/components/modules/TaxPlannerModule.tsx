@@ -38,6 +38,7 @@ const emptyInput: TaxPlanInput = {
   hraExemption: 0,
   homeLoanInterest: 0,
   nps80Ccd: 0,
+  employerNps80Ccd2: 0,
   otherDeductions: 0,
 };
 
@@ -46,11 +47,13 @@ function Field({
   value,
   onChange,
   prefix,
+  hint,
 }: {
   label: string;
   value: number;
   onChange: (value: number) => void;
   prefix?: string;
+  hint?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -64,6 +67,7 @@ function Field({
           onChange={(event) => onChange(Number(event.target.value) || 0)}
         />
       </div>
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
@@ -80,8 +84,7 @@ export function TaxPlannerModule() {
   const regimes = useMemo(() => country?.regimes ?? [], [country]);
   const regime = regimes.find((item) => item.code === input.regimeCode);
   const symbol = currencySymbol(regime?.currency ?? country?.currency ?? "INR");
-  const isIndiaOld = input.regimeCode.startsWith("in_old_");
-  const showOtherDeductions = input.countryCode !== "IN";
+  const deductions = regime?.deductions ?? [];
 
   const setField = <K extends keyof TaxPlanInput>(key: K, value: TaxPlanInput[K]) => {
     setInput((current) => ({ ...current, [key]: value }));
@@ -179,18 +182,21 @@ export function TaxPlannerModule() {
             </div>
             <Field label="Gross salary / employment income" value={input.grossSalary} onChange={(value) => setField("grossSalary", value)} prefix={symbol} />
             <Field label="Other taxable income" value={input.otherIncome} onChange={(value) => setField("otherIncome", value)} prefix={symbol} />
-            {isIndiaOld ? (
-              <>
-                <Field label="Section 80C" value={input.section80C ?? 0} onChange={(value) => setField("section80C", value)} prefix={symbol} />
-                <Field label="Section 80D" value={input.section80D ?? 0} onChange={(value) => setField("section80D", value)} prefix={symbol} />
-                <Field label="HRA exemption" value={input.hraExemption ?? 0} onChange={(value) => setField("hraExemption", value)} prefix={symbol} />
-                <Field label="Home-loan interest (24b)" value={input.homeLoanInterest ?? 0} onChange={(value) => setField("homeLoanInterest", value)} prefix={symbol} />
-                <Field label="NPS 80CCD(1B)" value={input.nps80Ccd ?? 0} onChange={(value) => setField("nps80Ccd", value)} prefix={symbol} />
-              </>
+            {regime ? (
+              <p className="text-xs text-muted-foreground">
+                Standard deduction of {formatCurrency(regime.standardDeduction, symbol)} is applied automatically.
+              </p>
             ) : null}
-            {showOtherDeductions ? (
-              <Field label="Other deductions" value={input.otherDeductions ?? 0} onChange={(value) => setField("otherDeductions", value)} prefix={symbol} />
-            ) : null}
+            {deductions.map((deduction) => (
+              <Field
+                key={deduction.code}
+                label={deduction.label}
+                hint={deduction.hint}
+                value={(input[deduction.code] as number | undefined) ?? 0}
+                onChange={(value) => setField(deduction.code, value)}
+                prefix={symbol}
+              />
+            ))}
             <div className="space-y-2">
               <Label>Scenario title</Label>
               <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="FY 2025-26 new regime" />

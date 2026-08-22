@@ -8,6 +8,8 @@ import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
 import { StatCard } from "@/components/StatCard";
 import { TrendingUp, Repeat, Gauge, Wallet } from "lucide-react";
+import { QuickAddDialog } from "./QuickTypePicker";
+import { InvestmentQuickAdd } from "./InvestmentQuickAdd";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const TYPES: InvestmentType[] = [
@@ -30,7 +32,15 @@ export function InvestmentModule() {
   const cur = data.profile.currency;
   const alloc = assetAllocation(data);
 
-  const fields = investmentFields(undefined, cur);
+  const addInvestment = (
+    <QuickAddDialog
+      title="Quick Investment Entry"
+      description="Pick a type, then add as many holdings as you need before closing."
+      triggerLabel="Add Investment"
+    >
+      <InvestmentQuickAdd currency={cur} onAdd={(investment) => addItem("investments", { id: newId(), ...investment })} />
+    </QuickAddDialog>
+  );
 
   return (
     <div className="space-y-6">
@@ -56,7 +66,7 @@ export function InvestmentModule() {
           ) : <EmptyState message="No investments yet" />}
         </Panel>
 
-        <Panel className="lg:col-span-3" title="Holdings" action={<EntityDialog title="Add Investment" fields={fields} triggerLabel="Add Investment" onSubmit={(v) => addItem("investments", { id: newId(), ...v } as any)} />}>
+        <Panel className="lg:col-span-3" title="Holdings" action={addInvestment}>
           <div className="max-h-[340px] space-y-3 overflow-y-auto pr-1">
             {data.investments.length ? data.investments.map((inv) => (
               <ItemRow

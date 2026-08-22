@@ -7,14 +7,21 @@ import {
 import { goalService } from "../goal/goal.service";
 import { buildPlannerReport } from "./planner.engine";
 
+/**
+ * Postgres returns unordered rows in physical order, which shifts on every
+ * update. The advisor hashes this report, so the row order has to be stable or
+ * unchanged numbers look like new numbers.
+ */
+const STABLE_ORDER = [{ createdAt: "asc" as const }, { id: "asc" as const }];
+
 export class PlannerService {
   async report(userId: string) {
     await goalService.ensureEmergencyFund(userId);
     const [budgets, loans, investments, goals] = await Promise.all([
-      budgetModel.read({ userId, isActive: 1 }),
-      loanModel.read({ userId, isActive: 1 }),
-      investmentModel.read({ userId, isActive: 1 }),
-      goalModel.read({ userId, isActive: 1 }),
+      budgetModel.read({ userId, isActive: 1 }, { orderBy: STABLE_ORDER }),
+      loanModel.read({ userId, isActive: 1 }, { orderBy: STABLE_ORDER }),
+      investmentModel.read({ userId, isActive: 1 }, { orderBy: STABLE_ORDER }),
+      goalModel.read({ userId, isActive: 1 }, { orderBy: STABLE_ORDER }),
     ]);
 
     return buildPlannerReport({

@@ -33,6 +33,8 @@ export type AdvisorReportResult = {
   advice: AdvisorReport;
   source: "openai" | "cache";
   generatedAt: string;
+  /** The saved report was written from older numbers; only a refresh updates it. */
+  stale: boolean;
   quota: AdvisorQuotaView;
 };
 
@@ -60,19 +62,26 @@ export class AdvisorService {
     const cached = await this.store.findByUserId(userId);
     let quota = this.view(await this.quotas.read(userId));
     const refresh = Boolean(options.refresh && this.allowRefresh);
+    const savedResult = (
+      entry: NonNullable<typeof cached>,
+    ): AdvisorReportResult => ({
+      planner,
+      advice: entry.advice,
+      source: "cache",
+      generatedAt: entry.updatedAt.toISOString(),
+      stale: entry.contextHash !== contextHash,
+      quota,
+    });
 
-    if (!refresh && cached?.contextHash === contextHash) {
-      return {
-        planner,
-        advice: cached.advice,
-        source: "cache",
-        generatedAt: cached.updatedAt.toISOString(),
-        quota,
-      };
+    if (cached && !refresh && cached.contextHash === contextHash) {
+      return savedResult(cached);
     }
 
-    if (refresh && !this.ignoreQuota && quota.remaining <= 0) {
-      throw new HttpError(402, "Your AI report refreshes are used up", {
+    if (!this.ignoreQuota && quota.remaining <= 0) {
+      if (cached && !refresh) {
+        return savedResult(cached);
+      }
+      throw new HttpError(402, "Your AI report allowance is used up", {
         code: "AI_REPORT_LIMIT_REACHED",
         quota,
       });
@@ -97,32 +106,27 @@ export class AdvisorService {
         });
       }
 
-      const saved = await this.store.upsert({
+      const written = await this.store.upsert({
         userId,
         contextHash,
         advice: parsed.data,
       });
 
-      if (refresh && !this.ignoreQuota) {
+      if (!this.ignoreQuota) {
         quota = this.view(await this.quotas.consume(userId));
       }
 
       return {
         planner,
-        advice: saved.advice,
+        advice: written.advice,
         source: "openai",
-        generatedAt: saved.updatedAt.toISOString(),
+        generatedAt: written.updatedAt.toISOString(),
+        stale: false,
         quota,
       };
     } catch (error) {
       if (cached) {
-        return {
-          planner,
-          advice: cached.advice,
-          source: "cache",
-          generatedAt: cached.updatedAt.toISOString(),
-          quota,
-        };
+        return savedResult(cached);
       }
       throw error;
     }

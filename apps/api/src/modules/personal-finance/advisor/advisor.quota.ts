@@ -8,6 +8,7 @@ export type AdvisorQuotaView = AdvisorQuota & { unlimited: boolean };
 export interface AdvisorQuotaStore {
   read(userId: string): Promise<AdvisorQuota>;
   consume(userId: string): Promise<AdvisorQuota>;
+  grant(userId: string, extra?: number): Promise<AdvisorQuota>;
 }
 
 export class UserAdvisorQuotaStore implements AdvisorQuotaStore {
@@ -19,6 +20,10 @@ export class UserAdvisorQuotaStore implements AdvisorQuotaStore {
 
   consume(userId: string): Promise<AdvisorQuota> {
     return this.users.consumeAiReport(userId);
+  }
+
+  grant(userId: string, extra = 1): Promise<AdvisorQuota> {
+    return this.users.incrementAiReportLimit(userId, extra);
   }
 }
 

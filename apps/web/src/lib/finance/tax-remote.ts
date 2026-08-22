@@ -9,6 +9,23 @@ function requireAuth() {
 
 export type TaxSlab = { upTo: number | null; rate: number };
 
+export type TaxDeductionCode =
+  | "section80C"
+  | "section80D"
+  | "hraExemption"
+  | "homeLoanInterest"
+  | "nps80Ccd"
+  | "employerNps80Ccd2"
+  | "otherDeductions";
+
+export type TaxDeduction = {
+  code: TaxDeductionCode;
+  label: string;
+  cap?: number;
+  salaryCapRate?: number;
+  hint?: string;
+};
+
 export type TaxRegime = {
   code: string;
   countryCode: string;
@@ -18,6 +35,7 @@ export type TaxRegime = {
   currency: string;
   standardDeduction: number;
   slabs: TaxSlab[];
+  deductions: TaxDeduction[];
   notes: string[];
 };
 
@@ -38,6 +56,7 @@ export type TaxPlanInput = {
   hraExemption?: number;
   homeLoanInterest?: number;
   nps80Ccd?: number;
+  employerNps80Ccd2?: number;
   otherDeductions?: number;
   title?: string;
 };

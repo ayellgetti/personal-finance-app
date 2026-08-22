@@ -7,6 +7,8 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Trash2, Target } from "lucide-react";
 import { EmergencyFundModule } from "./EmergencyFundModule";
+import { QuickAddDialog } from "./QuickTypePicker";
+import { GoalQuickAdd } from "./GoalQuickAdd";
 
 const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
 
@@ -28,7 +30,15 @@ export function GoalsModule() {
   const isEmergencyGoal = (goal: Goal) =>
     goal.id === EMERGENCY_FUND_GOAL_ID || goal.type === "Emergency Fund";
 
-  const fields = goalFields(undefined, cur);
+  const addGoal = (
+    <QuickAddDialog
+      title="Quick Goal Entry"
+      description="Pick a goal type, then add as many milestones as you need before closing."
+      triggerLabel="Add Goal"
+    >
+      <GoalQuickAdd currency={cur} onAdd={(goal) => addItem("goals", { id: newId(), ...goal })} />
+    </QuickAddDialog>
+  );
 
   return (
     <div className="space-y-8">
@@ -40,7 +50,7 @@ export function GoalsModule() {
             <h3 className="font-display text-lg font-semibold">Life Goals</h3>
             <p className="text-sm text-muted-foreground">Add home, education, retirement and other milestones</p>
           </div>
-          <EntityDialog title="Add Goal" fields={fields} triggerLabel="Add Goal" onSubmit={(v) => addItem("goals", { id: newId(), ...v } as any)} />
+          {addGoal}
         </div>
 
         {lifeGoals.length ? (

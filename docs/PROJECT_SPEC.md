@@ -321,7 +321,7 @@ Typed config: `apps/api/src/env.ts`, `apps/api/src/config/setting.ts`.
 
 Typical: `NODE_ENV`, `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `JWT_*`, `OPENAI_*`, `REDIS_URL`, `ADVISOR_ALLOW_REFRESH`, `ADVISOR_IGNORE_QUOTA`, `UPLOAD_*`.
 
-`ADVISOR_IGNORE_QUOTA=true` is a development-only escape hatch: it implies `ADVISOR_ALLOW_REFRESH`, stops advisor refreshes from consuming `User.aiReportLimit`, and never raises `402 AI_REPORT_LIMIT_REACHED`. `setting.ts` forces it off when `NODE_ENV=production`.
+`ADVISOR_IGNORE_QUOTA=true` is a development-only escape hatch: it implies `ADVISOR_ALLOW_REFRESH`, stops advisor generations from consuming `User.aiReportLimit`, and never raises `402 AI_REPORT_LIMIT_REACHED`. Extra reports are granted per user by incrementing `User.aiReportLimit` (default 1), not by a global env var. `setting.ts` forces the quota override off when `NODE_ENV=production`.
 
 ---
 
@@ -376,7 +376,7 @@ Playwright E2E is not in the repo. Do not add it inside an unrelated feature.
 
 ## 28. Background jobs
 
-Advisor generation is request-scoped (OpenAI, 90s timeout). Redis caches by user + planner context hash.
+Advisor generation is request-scoped (OpenAI, 90s timeout). Redis caches by user + planner context hash. Every generation — automatic or `refresh=true` — spends one unit of `User.aiReportLimit`; once the allowance is gone the saved report is returned with `stale: true` instead of calling OpenAI again. Extra reports are granted by incrementing that user's `aiReportLimit`. Planner reads are ordered (`createdAt`, `id`) so unchanged numbers keep producing the same context hash.
 
 No `jobs/` / `workers/` tree. Do not add a queue until email, exports, or schedules are a real requirement.
 
@@ -458,7 +458,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | Planner | Server cash-flow / net-worth engine |
 | AI advisor | OpenAI JSON from planner snapshot; Redis cache |
 | Statements | Bank or phone/UPI statements as PDF, CSV/TSV, Excel or pasted text (password-protected PDF/Excel supported); categorized lines (not live bank aggregation, no OCR for scanned PDFs) |
-| Tax planner | Country-wise slabs (India first, plus US/UK estimates); saved scenarios — not e-filing |
+| Tax planner | Country-wise slabs and regime-specific deductions (India old/new, US/UK estimates); saved scenarios — not e-filing |
 | Learning hub | Static lessons |
 | Report | AI summary + client PDF |
 

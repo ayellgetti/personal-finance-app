@@ -75,6 +75,7 @@ export class TaxService {
       hraExemption: input.hraExemption ?? existingInput.hraExemption,
       homeLoanInterest: input.homeLoanInterest ?? existingInput.homeLoanInterest,
       nps80Ccd: input.nps80Ccd ?? existingInput.nps80Ccd,
+      employerNps80Ccd2: input.employerNps80Ccd2 ?? existingInput.employerNps80Ccd2,
       otherDeductions: input.otherDeductions ?? existingInput.otherDeductions,
     };
     const regime = this.requireRegime(merged.countryCode, merged.regimeCode);
@@ -142,9 +143,11 @@ function asPlanInput(value: unknown): TaxPlanInputBody {
     hraExemption: typeof record.hraExemption === "number" ? record.hraExemption : undefined,
     homeLoanInterest:
       typeof record.homeLoanInterest === "number" ? record.homeLoanInterest : undefined,
-    nps80Ccd: typeof record.nps80Ccd === "number" ? record.nps80Ccd : undefined,
-    otherDeductions:
-      typeof record.otherDeductions === "number" ? record.otherDeductions : undefined,
+      nps80Ccd: typeof record.nps80Ccd === "number" ? record.nps80Ccd : undefined,
+      employerNps80Ccd2:
+        typeof record.employerNps80Ccd2 === "number" ? record.employerNps80Ccd2 : undefined,
+      otherDeductions:
+        typeof record.otherDeductions === "number" ? record.otherDeductions : undefined,
   };
 }
 

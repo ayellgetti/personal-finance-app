@@ -5,6 +5,23 @@ export type TaxSlab = {
   rate: number;
 };
 
+export type TaxDeductionCode =
+  | "section80C"
+  | "section80D"
+  | "hraExemption"
+  | "homeLoanInterest"
+  | "nps80Ccd"
+  | "employerNps80Ccd2"
+  | "otherDeductions";
+
+export type TaxDeduction = {
+  code: TaxDeductionCode;
+  label: string;
+  cap?: number;
+  salaryCapRate?: number;
+  hint?: string;
+};
+
 export type TaxRegime = {
   code: string;
   countryCode: TaxCountryCode;
@@ -15,6 +32,7 @@ export type TaxRegime = {
   standardDeduction: number;
   slabs: TaxSlab[];
   cessRate: number;
+  deductions: TaxDeduction[];
   rebate?: {
     maxTaxableIncome: number;
     maxRebate: number;
@@ -29,6 +47,61 @@ export type TaxCountry = {
   currency: string;
   regimes: TaxRegime[];
 };
+
+const IN_NEW_DEDUCTIONS: TaxDeduction[] = [
+  {
+    code: "employerNps80Ccd2",
+    label: "Employer NPS (80CCD(2))",
+    salaryCapRate: 0.14,
+    hint: "Allowed in the new regime. This estimate caps it at 14% of salary.",
+  },
+];
+
+const IN_OLD_DEDUCTIONS: TaxDeduction[] = [
+  {
+    code: "section80C",
+    label: "Section 80C",
+    cap: 150_000,
+    hint: "EPF, ELSS, life insurance, PPF. Cap ₹1.5 lakh.",
+  },
+  {
+    code: "section80D",
+    label: "Section 80D",
+    cap: 25_000,
+    hint: "Health insurance. Cap ₹25,000 for self (non-senior).",
+  },
+  {
+    code: "hraExemption",
+    label: "HRA exemption",
+    hint: "Enter the computed HRA exemption, not the full HRA received.",
+  },
+  {
+    code: "homeLoanInterest",
+    label: "Home-loan interest (24b)",
+    cap: 200_000,
+    hint: "Self-occupied interest. Cap ₹2 lakh.",
+  },
+  {
+    code: "nps80Ccd",
+    label: "NPS 80CCD(1B)",
+    cap: 50_000,
+    hint: "Additional employee NPS. Cap ₹50,000.",
+  },
+  {
+    code: "employerNps80Ccd2",
+    label: "Employer NPS (80CCD(2))",
+    salaryCapRate: 0.14,
+    hint: "Employer contribution. This estimate caps it at 14% of salary.",
+  },
+];
+
+const GENERIC_DEDUCTIONS: TaxDeduction[] = [
+  {
+    code: "otherDeductions",
+    label: "Other deductions",
+    hint: "Itemized or extra deductions beyond the standard deduction.",
+  },
+];
 
 const IN_NEW_FY_2025_26: TaxRegime = {
   code: "in_new_fy2025_26",
@@ -48,11 +121,12 @@ const IN_NEW_FY_2025_26: TaxRegime = {
     { upTo: null, rate: 0.3 },
   ],
   cessRate: 0.04,
+  deductions: IN_NEW_DEDUCTIONS,
   rebate: { maxTaxableIncome: 1_200_000, maxRebate: 60_000, marginalRelief: true },
   notes: [
     "Salaried standard deduction of ₹75,000 is applied automatically.",
     "Section 87A rebate zeros tax when taxable income is at or below ₹12 lakh; marginal relief applies just above that.",
-    "Chapter VI-A deductions such as 80C are not available in the new regime.",
+    "80C, 80D, HRA, and 80CCD(1B) are not available. Employer NPS under 80CCD(2) is allowed.",
   ],
 };
 
@@ -71,10 +145,11 @@ const IN_OLD_FY_2025_26: TaxRegime = {
     { upTo: null, rate: 0.3 },
   ],
   cessRate: 0.04,
+  deductions: IN_OLD_DEDUCTIONS,
   rebate: { maxTaxableIncome: 500_000, maxRebate: 12_500 },
   notes: [
     "Standard deduction of ₹50,000 for salaried income.",
-    "80C (₹1.5L), 80D, HRA exemption, and self-occupied home-loan interest (₹2L) can be entered.",
+    "80C (₹1.5L), 80D, HRA exemption, self-occupied home-loan interest (₹2L), and NPS can be entered.",
     "Section 87A rebate of up to ₹12,500 if taxable income is ₹5 lakh or less.",
   ],
 };
@@ -96,9 +171,11 @@ const IN_NEW_FY_2024_25: TaxRegime = {
     { upTo: null, rate: 0.3 },
   ],
   cessRate: 0.04,
+  deductions: IN_NEW_DEDUCTIONS,
   rebate: { maxTaxableIncome: 700_000, maxRebate: 25_000, marginalRelief: true },
   notes: [
     "FY 2024-25 new-regime slabs with rebate up to ₹7 lakh taxable income.",
+    "80C-style Chapter VI-A deductions are not available. Employer NPS under 80CCD(2) is allowed.",
   ],
 };
 
@@ -120,6 +197,7 @@ const US_FEDERAL_2025_SINGLE: TaxRegime = {
     { upTo: null, rate: 0.37 },
   ],
   cessRate: 0,
+  deductions: GENERIC_DEDUCTIONS,
   notes: [
     "Federal income tax only. State tax, FICA, and credits are not modelled.",
     "Uses the 2025 single filer brackets and a simplified standard deduction.",
@@ -141,6 +219,7 @@ const GB_ENGLAND_2025_26: TaxRegime = {
     { upTo: null, rate: 0.45 },
   ],
   cessRate: 0,
+  deductions: GENERIC_DEDUCTIONS,
   notes: [
     "Personal allowance of £12,570 is modelled as a 0% first slab.",
     "Personal-allowance taper above £100,000 and National Insurance are not modelled.",

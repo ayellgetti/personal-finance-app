@@ -445,6 +445,7 @@ export const openApiDocument = {
           hraExemption: { type: "number", minimum: 0 },
           homeLoanInterest: { type: "number", minimum: 0 },
           nps80Ccd: { type: "number", minimum: 0 },
+          employerNps80Ccd2: { type: "number", minimum: 0 },
           otherDeductions: { type: "number", minimum: 0 },
         },
       },
@@ -2179,7 +2180,7 @@ export const openApiDocument = {
         tags: ["Advisor"],
         summary: "Generate an AI-assisted financial advisor report",
         description:
-          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Calls OpenAI only when there is no matching cache entry, the numbers have changed, or `refresh=true` is passed. Every user gets `User.aiReportLimit` manual refreshes (one by default); once `refresh=true` has been used that many times the endpoint answers `402` and the client has to offer an upgrade. Setting `ADVISOR_IGNORE_QUOTA=true` outside production lifts that cap for local development: refreshes are neither counted nor rejected, and `quota.unlimited` is true. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
+          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Every OpenAI generation, automatic or `refresh=true`, spends one unit of the `User.aiReportLimit` allowance (one by default). Once the allowance is gone the saved report is served with `stale: true` when the numbers have moved on; only `refresh=true`, or a user with no saved report at all, gets `402` so the client can offer an upgrade. Setting `ADVISOR_IGNORE_QUOTA=true` outside production lifts that cap for local development: generations are neither counted nor rejected, and `quota.unlimited` is true. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/RequestId" },
@@ -2210,6 +2211,7 @@ export const openApiDocument = {
                             "advice",
                             "source",
                             "generatedAt",
+                            "stale",
                             "quota",
                           ],
                           properties: {
@@ -2219,9 +2221,14 @@ export const openApiDocument = {
                             },
                             source: { type: "string", enum: ["openai", "cache"] },
                             generatedAt: { type: "string", format: "date-time" },
+                            stale: {
+                              type: "boolean",
+                              description:
+                                "True when the saved advice was generated from older numbers; a refresh is needed to update it.",
+                            },
                             quota: {
                               type: "object",
-                              description: "Manual refresh allowance for this user.",
+                              description: "AI report generation allowance for this user.",
                               required: ["used", "limit", "remaining", "unlimited"],
                               properties: {
                                 used: { type: "integer" },
@@ -2246,7 +2253,7 @@ export const openApiDocument = {
           "401": { $ref: "#/components/responses/Unauthorized" },
           "402": {
             description:
-              "Refresh allowance is used up. `data.code` is `AI_REPORT_LIMIT_REACHED` and `data.quota` holds the current counts.",
+              "Generation allowance is used up and no saved report can be served. `data.code` is `AI_REPORT_LIMIT_REACHED` and `data.quota` holds the current counts.",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/Envelope" },

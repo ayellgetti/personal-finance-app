@@ -47,6 +47,35 @@ test("India old regime applies 80C and 87A rebate at 5 lakh taxable", () => {
   assert.equal(result.totalTax, 0);
 });
 
+test("India new regime ignores 80C and applies employer NPS", () => {
+  const result = computeTaxPlan({
+    countryCode: "IN",
+    regimeCode: "in_new_fy2025_26",
+    grossSalary: 1_275_000,
+    otherIncome: 0,
+    section80C: 150_000,
+    employerNps80Ccd2: 80_000,
+  });
+
+  assert.equal(result.standardDeduction, 75_000);
+  assert.equal(result.chapterViaDeductions, 80_000);
+  assert.equal(result.taxableIncome, 1_120_000);
+  assert.equal(result.totalTax, 0);
+});
+
+test("India new regime caps employer NPS at 14 percent of salary", () => {
+  const result = computeTaxPlan({
+    countryCode: "IN",
+    regimeCode: "in_new_fy2025_26",
+    grossSalary: 1_000_000,
+    otherIncome: 0,
+    employerNps80Ccd2: 200_000,
+  });
+
+  assert.equal(result.chapterViaDeductions, 140_000);
+  assert.equal(result.taxableIncome, 785_000);
+});
+
 test("US federal 2025 single uses USD brackets", () => {
   const result = computeTaxPlan({
     countryCode: "US",

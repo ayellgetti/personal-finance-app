@@ -5,16 +5,8 @@ import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
 import { ExpenseQuickAdd } from "./ExpenseQuickAdd";
 import { StatCard } from "@/components/StatCard";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Receipt, RefreshCw, Coins, Plus } from "lucide-react";
+import { Receipt, RefreshCw, Coins } from "lucide-react";
+import { QuickAddDialog } from "./QuickTypePicker";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 
 function expenseFields(expense: Expense, currency: string): FieldDef[] {
@@ -39,23 +31,13 @@ export function ExpenseModule() {
   })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
 
   const addExpense = (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button className="gap-2 rounded-xl">
-          <Plus className="h-4 w-4" /> Add Expense
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="font-display">Quick Expense Entry</DialogTitle>
-          <DialogDescription>
-            Pick a category, then log as many entries as you need before closing.
-          </DialogDescription>
-        </DialogHeader>
-        {/* Category-first entry: fields appear once a category is chosen */}
-        <ExpenseQuickAdd currency={cur} onAdd={(expense) => addItem("expenses", { id: newId(), ...expense })} />
-      </DialogContent>
-    </Dialog>
+    <QuickAddDialog
+      title="Quick Expense Entry"
+      description="Pick a category, then log as many entries as you need before closing."
+      triggerLabel="Add Expense"
+    >
+      <ExpenseQuickAdd currency={cur} onAdd={(expense) => addItem("expenses", { id: newId(), ...expense })} />
+    </QuickAddDialog>
   );
 
   return (

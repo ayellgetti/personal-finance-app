@@ -1,4 +1,4 @@
-import { findTaxRegime, type TaxRegime, type TaxSlab } from "./tax.catalog";
+import { findTaxRegime, type TaxDeductionCode, type TaxRegime, type TaxSlab } from "./tax.catalog";
 
 export type TaxPlanInput = {
   countryCode: string;
@@ -10,6 +10,7 @@ export type TaxPlanInput = {
   hraExemption?: number;
   homeLoanInterest?: number;
   nps80Ccd?: number;
+  employerNps80Ccd2?: number;
   otherDeductions?: number;
 };
 
@@ -43,11 +44,6 @@ export type TaxPlanResult = {
   slabs: TaxSlabResult[];
   notes: string[];
 };
-
-const IN_80C_CAP = 150_000;
-const IN_80D_CAP = 25_000;
-const IN_24B_CAP = 200_000;
-const IN_80CCD_CAP = 50_000;
 
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -113,17 +109,37 @@ function applyRebate(tax: number, taxable: number, regime: TaxRegime): { tax: nu
   return { tax, rebate: 0 };
 }
 
-function indiaChapterVia(regime: TaxRegime, input: TaxPlanInput): number {
-  if (!regime.code.startsWith("in_old_")) {
-    return 0;
+function inputAmount(code: TaxDeductionCode, input: TaxPlanInput): number {
+  switch (code) {
+    case "section80C":
+      return clampNonNegative(input.section80C);
+    case "section80D":
+      return clampNonNegative(input.section80D);
+    case "hraExemption":
+      return clampNonNegative(input.hraExemption);
+    case "homeLoanInterest":
+      return clampNonNegative(input.homeLoanInterest);
+    case "nps80Ccd":
+      return clampNonNegative(input.nps80Ccd);
+    case "employerNps80Ccd2":
+      return clampNonNegative(input.employerNps80Ccd2);
+    case "otherDeductions":
+      return clampNonNegative(input.otherDeductions);
   }
+}
 
-  const section80C = Math.min(IN_80C_CAP, clampNonNegative(input.section80C));
-  const section80D = Math.min(IN_80D_CAP, clampNonNegative(input.section80D));
-  const hra = clampNonNegative(input.hraExemption);
-  const homeLoan = Math.min(IN_24B_CAP, clampNonNegative(input.homeLoanInterest));
-  const nps = Math.min(IN_80CCD_CAP, clampNonNegative(input.nps80Ccd));
-  return section80C + section80D + hra + homeLoan + nps;
+function chapterViaDeductions(regime: TaxRegime, input: TaxPlanInput): number {
+  const salary = clampNonNegative(input.grossSalary);
+  return regime.deductions.reduce((total, deduction) => {
+    let value = inputAmount(deduction.code, input);
+    if (deduction.cap != null) {
+      value = Math.min(value, deduction.cap);
+    }
+    if (deduction.salaryCapRate != null) {
+      value = Math.min(value, salary * deduction.salaryCapRate);
+    }
+    return total + value;
+  }, 0);
 }
 
 export function computeTaxPlan(input: TaxPlanInput): TaxPlanResult {
@@ -136,11 +152,8 @@ export function computeTaxPlan(input: TaxPlanInput): TaxPlanResult {
   const otherIncome = clampNonNegative(input.otherIncome);
   const grossIncome = roundMoney(grossSalary + otherIncome);
   const standardDeduction = Math.min(regime.standardDeduction, grossSalary);
-  const chapterViaDeductions =
-    regime.countryCode === "IN"
-      ? indiaChapterVia(regime, input)
-      : clampNonNegative(input.otherDeductions);
-  const taxableIncome = roundMoney(Math.max(0, grossIncome - standardDeduction - chapterViaDeductions));
+  const chapterViaDeductionsAmount = chapterViaDeductions(regime, input);
+  const taxableIncome = roundMoney(Math.max(0, grossIncome - standardDeduction - chapterViaDeductionsAmount));
   const { tax: taxBeforeRebate, breakdown } = taxFromSlabs(taxableIncome, regime.slabs);
   const rebated = applyRebate(taxBeforeRebate, taxableIncome, regime);
   const cess = roundMoney(rebated.tax * regime.cessRate);
@@ -155,7 +168,7 @@ export function computeTaxPlan(input: TaxPlanInput): TaxPlanResult {
     currency: regime.currency,
     grossIncome,
     standardDeduction: roundMoney(standardDeduction),
-    chapterViaDeductions: roundMoney(chapterViaDeductions),
+    chapterViaDeductions: roundMoney(chapterViaDeductionsAmount),
     taxableIncome,
     taxBeforeRebate,
     rebate: rebated.rebate,

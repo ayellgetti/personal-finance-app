@@ -264,14 +264,20 @@ function memoryStore(
   return store;
 }
 
-function memoryQuota(limit = 1, used = 0): AdvisorQuotaStore & { used: number } {
+function memoryQuota(limit = 1, used = 0): AdvisorQuotaStore & { used: number; limit: number } {
   const state = {
     used,
+    limit,
     async read() {
-      return { used: state.used, limit, remaining: Math.max(0, limit - state.used) };
+      return { used: state.used, limit: state.limit, remaining: Math.max(0, state.limit - state.used) };
     },
     async consume() {
-      state.used = Math.min(limit, state.used + 1);
+      state.used = Math.min(state.limit, state.used + 1);
+      return state.read();
+    },
+    async grant(_userId: string, extra = 1) {
+      void _userId;
+      state.limit += extra;
       return state.read();
     },
   };
@@ -425,6 +431,120 @@ test("advisor service still serves the saved report after the allowance is spent
   assert.equal(result.source, "cache");
   assert.equal(calls, 0);
   assert.deepEqual(result.quota, { used: 1, limit: 1, remaining: 0, unlimited: false });
+});
+
+test("advisor service spends the allowance on an automatic generation", async () => {
+  const planner = {
+    report: async () => fixtureReport(),
+  } as unknown as PlannerService;
+  let calls = 0;
+  const provider: AiJsonProvider = {
+    generateJson: async () => {
+      calls += 1;
+      return validAdvice;
+    },
+  };
+  const store = memoryStore();
+  const quota = memoryQuota();
+  const service = new AdvisorService(planner, provider, store, quota, false, false);
+
+  const result = await service.report("user-id", "request-id");
+
+  assert.equal(result.source, "openai");
+  assert.equal(result.stale, false);
+  assert.equal(calls, 1);
+  assert.equal(quota.used, 1);
+  assert.deepEqual(result.quota, { used: 1, limit: 1, remaining: 0, unlimited: false });
+});
+
+test("advisor service serves the saved report as stale once the numbers change", async () => {
+  const planner = {
+    report: async () => fixtureReport(),
+  } as unknown as PlannerService;
+  let calls = 0;
+  const provider: AiJsonProvider = {
+    generateJson: async () => {
+      calls += 1;
+      return validAdvice;
+    },
+  };
+  const store = memoryStore({
+    userId: "user-id",
+    contextHash: "hash-from-older-numbers",
+    advice: validAdvice,
+  });
+  const service = new AdvisorService(planner, provider, store, memoryQuota(1, 1), false, false);
+
+  const result = await service.report("user-id", "request-id");
+
+  assert.equal(result.source, "cache");
+  assert.equal(result.stale, true);
+  assert.equal(calls, 0, "a spent allowance must not reach OpenAI again");
+  assert.equal(store.writes, 0);
+});
+
+test("raising a user's aiReportLimit allows another OpenAI generation", async () => {
+  const planner = {
+    report: async () => fixtureReport(),
+  } as unknown as PlannerService;
+  let calls = 0;
+  const provider: AiJsonProvider = {
+    generateJson: async () => {
+      calls += 1;
+      return validAdvice;
+    },
+  };
+  const store = memoryStore({
+    userId: "user-id",
+    contextHash: hashAdvisorContext(fixtureReport()),
+    advice: validAdvice,
+  });
+  const quota = memoryQuota(1, 1);
+  const service = new AdvisorService(planner, provider, store, quota, true, false);
+
+  await assert.rejects(
+    () => service.report("user-id", "request-id", { refresh: true }),
+    (error: unknown) => error instanceof HttpError && error.status === 402,
+  );
+
+  await quota.grant("user-id", 1);
+  const result = await service.report("user-id", "request-id", { refresh: true });
+
+  assert.equal(result.source, "openai");
+  assert.equal(calls, 1);
+  assert.equal(quota.used, 2);
+  assert.equal(quota.limit, 2);
+  assert.deepEqual(result.quota, { used: 2, limit: 2, remaining: 0, unlimited: false });
+});
+
+test("advisor service refuses a first generation once the allowance is spent", async () => {
+  const planner = {
+    report: async () => fixtureReport(),
+  } as unknown as PlannerService;
+  let calls = 0;
+  const provider: AiJsonProvider = {
+    generateJson: async () => {
+      calls += 1;
+      return validAdvice;
+    },
+  };
+  const service = new AdvisorService(
+    planner,
+    provider,
+    memoryStore(),
+    memoryQuota(1, 1),
+    false,
+    false,
+  );
+
+  await assert.rejects(
+    () => service.report("user-id", "request-id"),
+    (error: unknown) =>
+      error instanceof HttpError &&
+      error.status === 402 &&
+      (error.details as { code: string }).code === "AI_REPORT_LIMIT_REACHED",
+  );
+  assert.equal(calls, 0);
 });
 
 test("advisor service ignores refresh when ADVISOR_ALLOW_REFRESH is missing", async () => {

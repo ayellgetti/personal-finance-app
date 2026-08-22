@@ -83,6 +83,8 @@ export type AdvisorResult = {
   advice: AdvisorReport;
   source: AdvisorSource;
   generatedAt?: string;
+  /** The saved report was generated from older numbers; a refresh updates it. */
+  stale?: boolean;
   quota?: AdvisorQuota;
 };
 
@@ -196,6 +198,8 @@ export function buildLocalAdvisorReport(data: FinanceData): AdvisorReport {
   };
 }
 
+const LIMIT_REACHED_STATUS = 402;
+
 export async function fetchAdvisorReport(
   data: FinanceData,
   refresh = false,
@@ -210,6 +214,7 @@ export async function fetchAdvisorReport(
       advice: AdvisorReport;
       source: "openai" | "cache";
       generatedAt?: string;
+      stale?: boolean;
       quota?: AdvisorQuota;
     }>(path, {
       method: "POST",
@@ -219,10 +224,15 @@ export async function fetchAdvisorReport(
       advice: result.advice,
       source: result.source,
       generatedAt: result.generatedAt,
+      stale: result.stale,
       quota: result.quota,
     };
   } catch (error) {
     if (error instanceof ApiError && [502, 503, 504].includes(error.status)) {
+      return { advice: buildLocalAdvisorReport(data), source: "rules" };
+    }
+    // Automatic loads never show the paywall; that is reserved for "Refresh AI".
+    if (!refresh && error instanceof ApiError && error.status === LIMIT_REACHED_STATUS) {
       return { advice: buildLocalAdvisorReport(data), source: "rules" };
     }
     if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
@@ -233,8 +243,6 @@ export async function fetchAdvisorReport(
 }
 
 const ADVISOR_QUERY_KEY = ["advisor-report"] as const;
-
-const LIMIT_REACHED_STATUS = 402;
 
 function quotaFromError(error: ApiError): AdvisorQuota | undefined {
   const quota = (error.data as { quota?: AdvisorQuota } | null)?.quota;

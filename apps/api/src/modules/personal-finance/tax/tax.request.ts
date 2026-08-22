@@ -22,6 +22,7 @@ export const taxPlanInputSchema = z.object({
   hraExemption: money.optional(),
   homeLoanInterest: money.optional(),
   nps80Ccd: money.optional(),
+  employerNps80Ccd2: money.optional(),
   otherDeductions: money.optional(),
 });
 

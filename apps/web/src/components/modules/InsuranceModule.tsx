@@ -5,6 +5,8 @@ import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge, EditButton } from "./shared";
 import { Progress } from "@/components/ui/progress";
 import { ShieldCheck, ShieldAlert } from "lucide-react";
+import { QuickAddDialog } from "./QuickTypePicker";
+import { InsuranceQuickAdd } from "./InsuranceQuickAdd";
 
 const TYPES: InsuranceType[] = ["Term Insurance", "Health Insurance", "Car Insurance", "Bike Insurance", "Home Insurance"];
 
@@ -25,7 +27,15 @@ export function InsuranceModule() {
   const termPct = a.recommendedTermCover ? Math.min(100, (a.currentTermCover / a.recommendedTermCover) * 100) : 0;
   const healthPct = a.recommendedHealthCover ? Math.min(100, (a.currentHealthCover / a.recommendedHealthCover) * 100) : 0;
 
-  const fields = insuranceFields(undefined, cur);
+  const addPolicy = (
+    <QuickAddDialog
+      title="Quick Policy Entry"
+      description="Pick a policy type, then add as many as you need before closing."
+      triggerLabel="Add Policy"
+    >
+      <InsuranceQuickAdd currency={cur} onAdd={(insurance) => addItem("insurances", { id: newId(), ...insurance })} />
+    </QuickAddDialog>
+  );
 
   const AdequacyCard = ({ title, pct, current, recommended, gap }: { title: string; pct: number; current: number; recommended: number; gap: number }) => (
     <Panel title={title}>
@@ -49,7 +59,7 @@ export function InsuranceModule() {
         <AdequacyCard title="Health Adequacy" pct={healthPct} current={a.currentHealthCover} recommended={a.recommendedHealthCover} gap={a.healthGap} />
       </div>
 
-      <Panel title="Policies" action={<EntityDialog title="Add Insurance" fields={fields} triggerLabel="Add Policy" onSubmit={(v) => addItem("insurances", { id: newId(), ...v } as any)} />}>
+      <Panel title="Policies" action={addPolicy}>
         <div className="space-y-3">
           {data.insurances.length ? data.insurances.map((ins) => {
             const expired = new Date(ins.expiryDate) < new Date();
