@@ -1,7 +1,25 @@
 # Local development stack (Vite on 5173, bind mounts, admin UIs).
+# nginx also fronts the stack on http://localhost so /api is same-origin.
 # AWS / public hosts: docker-compose.prod.yml — see docs/AWS_DEPLOY.md.
 
 services:
+  nginx:
+    image: nginx:latest
+    container_name: docker-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      # conf.d, not nginx.conf: these files are server blocks, not a main config.
+      # nginx.dev.conf proxies to Vite; nginx.conf serves a built dist in prod.
+      - ./deploy/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/snippets:/etc/nginx/snippets:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
   postgres:
     image: postgres:16-alpine
     container_name: docker-postgres
@@ -119,6 +137,8 @@ services:
     environment:
       VITE_API_PROXY: http://api:5001
       VITE_DEV_POLLING: "1"
+      # Hostnames used to reach nginx on port 80. Vite rejects unknown Host headers.
+      VITE_DEV_ALLOWED_HOSTS: web.local.uat
     volumes:
       # Source is bind mounted so edits hot reload without an image rebuild.
       # The anonymous volume keeps the image's Linux-built node_modules.
@@ -127,6 +147,12 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:

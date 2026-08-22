@@ -18,40 +18,32 @@ ssh -L 5001:localhost:5001 user@host   # then use docker exec / a temporary port
 - Security group inbound: **22** (your IP), **80** (0.0.0.0/0). Do not open 5432, 5433, 6379, 5001, 5050, or 5173.
 - Allocate an Elastic IP if you want a stable address.
 
-Install Docker with `docker-setup.sh` (Debian/Ubuntu). Log out and back in so the `docker` group applies.
+Install Docker with `docker-setup.sh` (Debian/Ubuntu). Log out and back in so the `docker` group applies. First-time hosts can use `./deploy.sh --install-docker` instead, then SSH again and run `./deploy.sh`.
 
-## 2. App files
+## 2. App files and start
 
 ```bash
 git clone <this-repo> personal-finance-app
 cd personal-finance-app
-cp .env.prod.example .env.prod
+chmod +x deploy.sh docker-setup.sh
+./deploy.sh
 ```
 
-Edit `.env.prod`:
+`deploy.sh` copies `.env.prod.example` to `.env.prod` if needed, sets `PUBLIC_ORIGIN` from the instance public IP when that value is still a placeholder, generates `POSTGRES_PASSWORD` / JWT secrets when they are still the example strings, then runs `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build`. Existing real secrets are left alone.
 
-- `PUBLIC_ORIGIN` — exactly what you type in the browser, no trailing slash (`http://13.x.x.x` or `https://your.domain`).
-- `PUBLIC_PORT` — host port for nginx. Leave at `80` unless a TLS terminator fronts the stack.
-- Strong `POSTGRES_PASSWORD`, `JWT_ACCESS_SECRET`, and `JWT_REFRESH_SECRET` (16+ characters). Keep Postgres passwords alphanumeric so `DATABASE_URL` stays valid.
-- Optional: `OPENAI_API_KEY` for the advisor.
-
-## 3. Start
-
-```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
-```
+Optional flags: `--origin https://your.domain`, `--port 80`, `--no-build`. Edit `.env.prod` yourself for `OPENAI_API_KEY` and SMTP/Twilio.
 
 Open `http://<public-ip>/`. Health: `http://<public-ip>/health`.
 
 Rebuild after API or web changes:
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+./deploy.sh
 ```
 
 Logs: `docker compose -f docker-compose.prod.yml logs -f api web`.
 
-## 4. HTTPS (optional)
+## 3. HTTPS (optional)
 
 Put a domain on the Elastic IP, then terminate TLS with a host nginx/Caddy, an ALB, or Certbot in front of this Compose stack. Set `PUBLIC_ORIGIN` to `https://your.domain` and recreate the API container so CORS matches.
 

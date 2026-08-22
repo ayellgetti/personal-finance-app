@@ -9,7 +9,9 @@ pnpm + Turborepo monorepo with a TypeScript Express API, Vite React web app, and
 
 Local Postgres is exposed on **5433** (avoids clashing with an existing 5432 instance). Connection string is in `apps/api/.env`.
 
-AWS EC2: do not use this Compose file on a public host. Use `docker-compose.prod.yml` (nginx on port 80). Steps: `docs/AWS_DEPLOY.md`.
+The Compose stack also runs nginx on **http://localhost** (port 80), proxying `/api` and `/health` to the API and everything else to the Vite dev server, so the browser sees one origin. Hitting `http://localhost:5173` directly still works.
+
+AWS EC2: do not use this Compose file on a public host. Use `./deploy.sh` (or `docker-compose.prod.yml` by hand). Steps: `docs/AWS_DEPLOY.md`.
 
 ## Setup
 
