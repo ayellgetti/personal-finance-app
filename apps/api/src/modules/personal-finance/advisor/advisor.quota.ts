@@ -2,6 +2,9 @@ import { userModel, type AiReportQuota, type UserModel } from "../../../models/s
 
 export type AdvisorQuota = AiReportQuota;
 
+/** Quota as the client sees it; `unlimited` is true while the dev override is on. */
+export type AdvisorQuotaView = AdvisorQuota & { unlimited: boolean };
+
 export interface AdvisorQuotaStore {
   read(userId: string): Promise<AdvisorQuota>;
   consume(userId: string): Promise<AdvisorQuota>;

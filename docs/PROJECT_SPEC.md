@@ -319,7 +319,9 @@ Typed config: `apps/api/src/env.ts`, `apps/api/src/config/setting.ts`.
 
 `apps/api/.env.example` — never commit real secrets.
 
-Typical: `NODE_ENV`, `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `JWT_*`, `OPENAI_*`, `REDIS_URL`, `ADVISOR_ALLOW_REFRESH`, `UPLOAD_*`.
+Typical: `NODE_ENV`, `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `JWT_*`, `OPENAI_*`, `REDIS_URL`, `ADVISOR_ALLOW_REFRESH`, `ADVISOR_IGNORE_QUOTA`, `UPLOAD_*`.
+
+`ADVISOR_IGNORE_QUOTA=true` is a development-only escape hatch: it implies `ADVISOR_ALLOW_REFRESH`, stops advisor refreshes from consuming `User.aiReportLimit`, and never raises `402 AI_REPORT_LIMIT_REACHED`. `setting.ts` forces it off when `NODE_ENV=production`.
 
 ---
 

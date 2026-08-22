@@ -12,7 +12,7 @@ export class OtpController extends BaseController {
   async generate(req: Request, res: Response) {
     const body = req.body as GenerateOtpBody;
     const result = await this.service.generate(body);
-    this.sendSuccess(req, res, result, "OTP generated");
+    this.sendSuccess(req, res, result, "OTP sent");
   }
 
   async resend(req: Request, res: Response) {

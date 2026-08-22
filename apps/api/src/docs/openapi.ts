@@ -234,6 +234,11 @@ export const openApiDocument = {
             pattern: "^\\+?[0-9]{7,15}$",
             example: "9876543210",
           },
+          email: {
+            type: "string",
+            format: "email",
+            description: "Required when `type` is `register`. The same OTP is emailed and texted.",
+          },
           type: { type: "string", enum: ["register", "forgot-password"], example: "register" },
         },
       },
@@ -837,7 +842,7 @@ export const openApiDocument = {
         tags: ["Auth"],
         summary: "Register a user after OTP verification",
         description:
-          "Call `/api/otp/generate` with `type: register` first. This endpoint verifies that OTP, creates the user, and returns access/refresh tokens so the new account is signed in.",
+          "Call `/api/otp/generate` with `type: register` first, then `/api/otp/verify`. This endpoint checks that OTP again, creates the user, and returns access/refresh tokens so the new account is signed in.",
         parameters: [{ $ref: "#/components/parameters/RequestId" }],
         requestBody: {
           required: true,
@@ -984,6 +989,8 @@ export const openApiDocument = {
       post: {
         tags: ["OTP"],
         summary: "Generate an OTP",
+        description:
+          "Creates a 6-digit OTP and delivers it by SMS. Registration OTPs also require `email` and are sent on both email and SMS. The code is included in the response only outside production.",
         parameters: [{ $ref: "#/components/parameters/RequestId" }],
         requestBody: {
           required: true,
@@ -995,7 +1002,7 @@ export const openApiDocument = {
         },
         responses: {
           "200": {
-            description: "OTP generated. The code is included only outside production.",
+            description: "OTP generated and sent. The code is included only outside production.",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/Envelope" },
@@ -1010,6 +1017,8 @@ export const openApiDocument = {
       post: {
         tags: ["OTP"],
         summary: "Resend an OTP",
+        description:
+          "Issues a new code to the same mobile number. Pass `email` again for registration OTPs so it is emailed as well.",
         parameters: [{ $ref: "#/components/parameters/RequestId" }],
         requestBody: {
           required: true,
@@ -2097,7 +2106,7 @@ export const openApiDocument = {
         tags: ["Advisor"],
         summary: "Generate an AI-assisted financial advisor report",
         description:
-          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Calls OpenAI only when there is no matching cache entry, the numbers have changed, or `refresh=true` is passed. Every user gets `User.aiReportLimit` manual refreshes (one by default); once `refresh=true` has been used that many times the endpoint answers `402` and the client has to offer an upgrade. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
+          "Returns the Redis-cached OpenAI advisor report when the financial input hash is unchanged. Calls OpenAI only when there is no matching cache entry, the numbers have changed, or `refresh=true` is passed. Every user gets `User.aiReportLimit` manual refreshes (one by default); once `refresh=true` has been used that many times the endpoint answers `402` and the client has to offer an upgrade. Setting `ADVISOR_IGNORE_QUOTA=true` outside production lifts that cap for local development: refreshes are neither counted nor rejected, and `quota.unlimited` is true. Names, contact details, credentials, tokens, and record IDs are not sent to OpenAI.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/RequestId" },
@@ -2140,11 +2149,16 @@ export const openApiDocument = {
                             quota: {
                               type: "object",
                               description: "Manual refresh allowance for this user.",
-                              required: ["used", "limit", "remaining"],
+                              required: ["used", "limit", "remaining", "unlimited"],
                               properties: {
                                 used: { type: "integer" },
                                 limit: { type: "integer" },
                                 remaining: { type: "integer" },
+                                unlimited: {
+                                  type: "boolean",
+                                  description:
+                                    "True when `ADVISOR_IGNORE_QUOTA` is on outside production, so `remaining` is not enforced.",
+                                },
                               },
                             },
                           },

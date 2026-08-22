@@ -20,7 +20,7 @@ import {
 import { toast } from "sonner";
 
 type Mode = "login" | "signup";
-type SignupStep = "details" | "otp";
+type SignupStep = "details" | "otp" | "password";
 
 const emptyDraft: SignupDraft = {
   firstName: "",
@@ -33,12 +33,13 @@ const emptyDraft: SignupDraft = {
 };
 
 export default function Login() {
-  const { user, login, requestSignupOtp, resendSignupOtp, completeSignup } = useAuth();
+  const { user, login, requestSignupOtp, resendSignupOtp, verifySignupOtp, completeSignup } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("login");
   const [signupStep, setSignupStep] = useState<SignupStep>("details");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [draft, setDraft] = useState<SignupDraft>(emptyDraft);
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,10 +50,20 @@ export default function Login() {
     setMode(next);
     setSignupStep("details");
     setOtp("");
+    setConfirmPassword("");
+    setDraft(emptyDraft);
   };
 
   const patchDraft = (patch: Partial<SignupDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
+  };
+
+  const notifyOtp = (result: { otp?: number }) => {
+    if (result.otp) {
+      toast.message(`Dev OTP: ${result.otp}`);
+      return;
+    }
+    toast.success("OTP sent to your email and mobile number");
   };
 
   const sendOtp = async () => {
@@ -61,11 +72,7 @@ export default function Login() {
       toast.error(result.error);
       return false;
     }
-    if (result.otp) {
-      toast.message(`Dev OTP: ${result.otp}`);
-    } else {
-      toast.success("OTP sent to your mobile number");
-    }
+    notifyOtp(result);
     setSignupStep("otp");
     return true;
   };
@@ -85,17 +92,34 @@ export default function Login() {
 
   const onSignupDetails = async (e: FormEvent) => {
     e.preventDefault();
-    if (draft.password.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
     setBusy(true);
     await sendOtp();
     setBusy(false);
   };
 
-  const onVerifyAndRegister = async (e: FormEvent) => {
+  const onVerifyOtp = async (e: FormEvent) => {
     e.preventDefault();
+    setBusy(true);
+    const result = await verifySignupOtp(draft.mobileNo, otp);
+    setBusy(false);
+    if (result.ok === false) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("OTP verified. Set a password to finish.");
+    setSignupStep("password");
+  };
+
+  const onCreateAccount = async (e: FormEvent) => {
+    e.preventDefault();
+    if (draft.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    if (draft.password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
     setBusy(true);
     const result = await completeSignup(draft, otp);
     setBusy(false);
@@ -109,17 +133,13 @@ export default function Login() {
 
   const onResend = async () => {
     setBusy(true);
-    const result = await resendSignupOtp(draft.mobileNo);
+    const result = await resendSignupOtp(draft.mobileNo, draft.email);
     setBusy(false);
     if (result.ok === false) {
       toast.error(result.error);
       return;
     }
-    if (result.otp) {
-      toast.message(`Dev OTP: ${result.otp}`);
-    } else {
-      toast.success("A new OTP was sent");
-    }
+    notifyOtp(result);
   };
 
   return (
@@ -139,7 +159,9 @@ export default function Login() {
             {mode === "login"
               ? "Sign in to your wealth workspace"
               : signupStep === "otp"
-                ? `Enter the OTP sent to ${draft.mobileNo}`
+                ? `Enter the OTP sent to ${draft.email} and ${draft.mobileNo}`
+                : signupStep === "password"
+                  ? "OTP verified. Choose a password for your account"
                 : "Create your account to get started"}
           </p>
         </div>
@@ -280,27 +302,13 @@ export default function Login() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  value={draft.password}
-                  onChange={(e) => patchDraft({ password: e.target.value })}
-                  placeholder="At least 8 characters"
-                  className="rounded-xl"
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                />
-              </div>
               <Button type="submit" className="mt-2 w-full rounded-xl" disabled={busy || !draft.gender}>
                 {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send OTP
               </Button>
             </form>
-          ) : (
-            <form onSubmit={onVerifyAndRegister} className="space-y-5">
+          ) : signupStep === "otp" ? (
+            <form onSubmit={onVerifyOtp} className="space-y-5">
               <div className="flex justify-center">
                 <InputOTP maxLength={6} value={otp} onChange={setOtp}>
                   <InputOTPGroup>
@@ -312,7 +320,7 @@ export default function Login() {
               </div>
               <Button type="submit" className="w-full rounded-xl" disabled={busy || otp.length !== 6}>
                 {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Verify OTP and create account
+                Verify OTP
               </Button>
               <div className="flex items-center justify-between text-sm">
                 <button
@@ -335,10 +343,56 @@ export default function Login() {
                 </button>
               </div>
             </form>
+          ) : (
+            <form onSubmit={onCreateAccount} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  value={draft.password}
+                  onChange={(e) => patchDraft({ password: e.target.value })}
+                  placeholder="At least 8 characters"
+                  className="rounded-xl"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password-confirm">Confirm password</Label>
+                <Input
+                  id="signup-password-confirm"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat your password"
+                  className="rounded-xl"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                />
+              </div>
+              <Button type="submit" className="mt-2 w-full rounded-xl" disabled={busy}>
+                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Create account
+              </Button>
+              <button
+                type="button"
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setSignupStep("otp");
+                  patchDraft({ password: "" });
+                  setConfirmPassword("");
+                }}
+              >
+                Back
+              </button>
+            </form>
           )}
 
           <p className="mt-5 text-center text-xs text-muted-foreground">
-            Accounts are created on the API after mobile OTP verification.
+            Accounts are created after email and SMS OTP verification.
           </p>
           <p className="mt-3 text-center text-sm">
             <Link to="/guide" className="font-medium text-primary hover:underline">

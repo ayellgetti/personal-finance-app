@@ -1,16 +1,26 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import { formatCurrency, formatPercent, monthlyIncome } from "@/lib/finance/calculations";
-import { IncomeType } from "@/types/finance";
+import { Income, IncomeType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Panel, ItemRow, EmptyState, Badge, CHART_COLORS, tooltipStyle } from "./shared";
+import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const TYPES: IncomeType[] = [
   "Salary", "Business Income", "Rental Income", "Dividend Income", "Freelancing Income", "Interest Income", "Other Income",
 ];
 
+function incomeFields(income: Income | undefined, currency: string): FieldDef[] {
+  return [
+    { name: "name", label: "Source Name", type: "text", span: 2, defaultValue: income?.name ?? "" },
+    { name: "type", label: "Income Type", type: "select", options: TYPES, span: 2, defaultValue: income?.type ?? TYPES[0] },
+    { name: "monthlyAmount", label: "Monthly Amount", type: "number", prefix: currency, defaultValue: income?.monthlyAmount ?? 0 },
+    { name: "growthRate", label: "Growth Rate (%)", type: "number", defaultValue: income?.growthRate ?? 0 },
+    { name: "startDate", label: "Start Date", type: "date", span: 2, defaultValue: income?.startDate ?? new Date().toISOString().slice(0, 10) },
+  ];
+}
+
 export function IncomeModule() {
-  const { data, addItem, removeItem } = useFinance();
+  const { data, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const total = monthlyIncome(data);
 
@@ -19,13 +29,7 @@ export function IncomeModule() {
     value: data.incomes.filter((i) => i.type === t).reduce((s, i) => s + i.monthlyAmount, 0),
   })).filter((x) => x.value > 0);
 
-  const fields: FieldDef[] = [
-    { name: "name", label: "Source Name", type: "text", span: 2 },
-    { name: "type", label: "Income Type", type: "select", options: TYPES, span: 2 },
-    { name: "monthlyAmount", label: "Monthly Amount", type: "number", prefix: cur },
-    { name: "growthRate", label: "Growth Rate (%)", type: "number" },
-    { name: "startDate", label: "Start Date", type: "date", span: 2, defaultValue: new Date().toISOString().slice(0, 10) },
-  ];
+  const fields = incomeFields(undefined, cur);
 
   return (
     <div className="space-y-6">
@@ -60,6 +64,14 @@ export function IncomeModule() {
                   { label: "Growth", value: formatPercent(i.growthRate) },
                   { label: "Monthly", value: formatCurrency(i.monthlyAmount, cur), emphasis: true },
                 ]}
+                actions={
+                  <EntityDialog
+                    title="Edit Income Source"
+                    fields={incomeFields(i, cur)}
+                    trigger={<EditButton />}
+                    onSubmit={(v) => updateItem("incomes", i.id, v)}
+                  />
+                }
                 onDelete={() => removeItem("incomes", i.id)}
               />
             )) : <EmptyState message="Add your first income source" />}

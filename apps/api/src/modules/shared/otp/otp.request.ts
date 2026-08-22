@@ -10,10 +10,21 @@ export const otpTypeSchema = z.enum([
   OTP_TYPE.FORGOT_PASSWORD,
 ]);
 
-export const generateOtpBodySchema = z.object({
-  mobileNo: z.string().trim().regex(/^\+?[0-9]{7,15}$/, "Invalid mobile number"),
-  type: otpTypeSchema,
-});
+export const generateOtpBodySchema = z
+  .object({
+    mobileNo: z.string().trim().regex(/^\+?[0-9]{7,15}$/, "Invalid mobile number"),
+    email: z.string().trim().email().optional(),
+    type: otpTypeSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (value.type === OTP_TYPE.REGISTER && !value.email) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["email"],
+        message: "Email is required to send a registration OTP",
+      });
+    }
+  });
 
 export const resendOtpBodySchema = generateOtpBodySchema;
 

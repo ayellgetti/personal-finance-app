@@ -2,10 +2,10 @@ import { useFinance, newId } from "@/lib/finance/store";
 import {
   formatCurrency, dailySummary, dailyByCategory, dailyTrend,
 } from "@/lib/finance/calculations";
-import { DailyCategory } from "@/types/finance";
+import { DailyCategory, DailyExpense } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { StatCard } from "@/components/StatCard";
-import { Panel, ItemRow, EmptyState, Badge, CHART_COLORS, tooltipStyle } from "./shared";
+import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
 import {
   Utensils, Fuel, ShoppingBag, Bus, ReceiptText, Clapperboard, Stethoscope, MoreHorizontal,
   CalendarDays, CalendarRange, Wallet, PiggyBank,
@@ -28,8 +28,16 @@ const CAT_ICON: Record<DailyCategory, typeof Utensils> = {
   Other: MoreHorizontal,
 };
 
+function dailyExpenseFields(expense: DailyExpense | undefined, currency: string): FieldDef[] {
+  return [
+    { name: "amount", label: "Amount", type: "number", prefix: currency, span: 2, defaultValue: expense?.amount ?? 0 },
+    { name: "category", label: "Category", type: "select", options: CATEGORIES, span: 2, defaultValue: expense?.category ?? CATEGORIES[0] },
+    { name: "notes", label: "Notes (optional)", type: "text", span: 2, defaultValue: expense?.notes ?? "" },
+  ];
+}
+
 export function DailyExpenseModule() {
-  const { data, addItem, removeItem, updateProfile } = useFinance();
+  const { data, addItem, updateItem, removeItem, updateProfile } = useFinance();
   const cur = data.profile.currency;
   const summary = dailySummary(data);
   const byCat = dailyByCategory(data, 30);
@@ -37,11 +45,7 @@ export function DailyExpenseModule() {
 
   const recent = [...data.dailyExpenses].sort((a, b) => +new Date(b.date) - +new Date(a.date)).slice(0, 40);
 
-  const fields: FieldDef[] = [
-    { name: "amount", label: "Amount", type: "number", prefix: cur, span: 2 },
-    { name: "category", label: "Category", type: "select", options: CATEGORIES, span: 2 },
-    { name: "notes", label: "Notes (optional)", type: "text", span: 2 },
-  ];
+  const fields = dailyExpenseFields(undefined, cur);
 
   const budgetFields: FieldDef[] = [
     { name: "dailyBudget", label: "Monthly Spending Budget", type: "number", prefix: cur, defaultValue: data.profile.dailyBudget, span: 2 },
@@ -176,6 +180,14 @@ export function DailyExpenseModule() {
               title={e.notes || e.category}
               subtitle={`${e.category} · ${new Date(e.date).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`}
               values={[{ label: "Amount", value: formatCurrency(e.amount, cur), emphasis: true }]}
+              actions={
+                <EntityDialog
+                  title="Edit Expense"
+                  fields={dailyExpenseFields(e, cur)}
+                  trigger={<EditButton />}
+                  onSubmit={(v) => updateItem("dailyExpenses", e.id, v)}
+                />
+              }
               onDelete={() => removeItem("dailyExpenses", e.id)}
             />
           )) : <EmptyState message="Log your first daily expense" />}

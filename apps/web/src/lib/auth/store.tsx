@@ -38,13 +38,16 @@ export type SignupDraft = {
 
 type AuthResult = { ok: true } | { ok: false; error: string };
 
-type OtpResult = { ok: true; otp?: number } | { ok: false; error: string };
+type OtpResult =
+  | { ok: true; otp?: number; delivered?: { email: boolean; sms: boolean } }
+  | { ok: false; error: string };
 
 interface AuthContextValue {
   user: PublicUser | null;
   login: (email: string, password: string) => Promise<AuthResult>;
   requestSignupOtp: (draft: SignupDraft) => Promise<OtpResult>;
-  resendSignupOtp: (mobileNo: string) => Promise<OtpResult>;
+  resendSignupOtp: (mobileNo: string, email: string) => Promise<OtpResult>;
+  verifySignupOtp: (mobileNo: string, otp: string) => Promise<AuthResult>;
   completeSignup: (draft: SignupDraft, otp: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   updateAccount: (updates: {
@@ -101,25 +104,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const requestSignupOtp = useCallback(async (draft: SignupDraft): Promise<OtpResult> => {
     try {
-      const result = await api<{ otp?: number }>("/api/otp/generate", {
-        method: "POST",
-        body: { mobileNo: draft.mobileNo, type: "register" },
-      });
-      return { ok: true, otp: result.otp };
+      const result = await api<{ otp?: number; delivered?: { email: boolean; sms: boolean } }>(
+        "/api/otp/generate",
+        {
+          method: "POST",
+          body: { mobileNo: draft.mobileNo, email: draft.email, type: "register" },
+        },
+      );
+      return { ok: true, otp: result.otp, delivered: result.delivered };
     } catch (error) {
       return { ok: false, error: errorMessage(error, "Unable to send OTP") };
     }
   }, []);
 
-  const resendSignupOtp = useCallback(async (mobileNo: string): Promise<OtpResult> => {
+  const resendSignupOtp = useCallback(async (mobileNo: string, email: string): Promise<OtpResult> => {
     try {
-      const result = await api<{ otp?: number }>("/api/otp/resend", {
-        method: "POST",
-        body: { mobileNo, type: "register" },
-      });
-      return { ok: true, otp: result.otp };
+      const result = await api<{ otp?: number; delivered?: { email: boolean; sms: boolean } }>(
+        "/api/otp/resend",
+        {
+          method: "POST",
+          body: { mobileNo, email, type: "register" },
+        },
+      );
+      return { ok: true, otp: result.otp, delivered: result.delivered };
     } catch (error) {
       return { ok: false, error: errorMessage(error, "Unable to resend OTP") };
+    }
+  }, []);
+
+  const verifySignupOtp = useCallback(async (mobileNo: string, otp: string): Promise<AuthResult> => {
+    const no = Number(otp);
+    if (!Number.isInteger(no) || otp.length !== 6) {
+      return { ok: false, error: "Enter the 6-digit OTP" };
+    }
+
+    try {
+      await api("/api/otp/verify", {
+        method: "POST",
+        body: { mobileNo, type: "register", no },
+      });
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "OTP verification failed") };
     }
   }, []);
 
@@ -240,12 +266,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       requestSignupOtp,
       resendSignupOtp,
+      verifySignupOtp,
       completeSignup,
       logout,
       updateAccount,
       completeQuickSetup,
     }),
-    [user, login, requestSignupOtp, resendSignupOtp, completeSignup, logout, updateAccount, completeQuickSetup],
+    [user, login, requestSignupOtp, resendSignupOtp, verifySignupOtp, completeSignup, logout, updateAccount, completeQuickSetup],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

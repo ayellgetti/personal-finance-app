@@ -3,9 +3,9 @@ import {
   formatCurrency, formatPercent, totalInvestments, monthlySIP, weightedReturn,
   assetAllocation, investmentProjection,
 } from "@/lib/finance/calculations";
-import { InvestmentType } from "@/types/finance";
+import { Investment, InvestmentType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Panel, ItemRow, EmptyState, Badge, CHART_COLORS, tooltipStyle } from "./shared";
+import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
 import { StatCard } from "@/components/StatCard";
 import { TrendingUp, Repeat, Gauge, Wallet } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
@@ -14,19 +14,23 @@ const TYPES: InvestmentType[] = [
   "Mutual Funds", "Stocks", "Bonds", "Fixed Deposits", "PPF", "EPF", "NPS", "Gold", "Real Estate", "Crypto", "Other",
 ];
 
+function investmentFields(investment: Investment | undefined, currency: string): FieldDef[] {
+  return [
+    { name: "name", label: "Investment Name", type: "text", span: 2, defaultValue: investment?.name ?? "" },
+    { name: "type", label: "Type", type: "select", options: TYPES, span: 2, defaultValue: investment?.type ?? TYPES[0] },
+    { name: "currentValue", label: "Current Value", type: "number", prefix: currency, defaultValue: investment?.currentValue ?? 0 },
+    { name: "monthlySip", label: "Monthly SIP", type: "number", prefix: currency, defaultValue: investment?.monthlySip ?? 0 },
+    { name: "expectedReturn", label: "Expected Return (%)", type: "number", defaultValue: investment?.expectedReturn ?? 0 },
+    { name: "horizon", label: "Horizon (years)", type: "number", defaultValue: investment?.horizon ?? 0 },
+  ];
+}
+
 export function InvestmentModule() {
-  const { data, addItem, removeItem } = useFinance();
+  const { data, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const alloc = assetAllocation(data);
 
-  const fields: FieldDef[] = [
-    { name: "name", label: "Investment Name", type: "text", span: 2 },
-    { name: "type", label: "Type", type: "select", options: TYPES, span: 2 },
-    { name: "currentValue", label: "Current Value", type: "number", prefix: cur },
-    { name: "monthlySip", label: "Monthly SIP", type: "number", prefix: cur },
-    { name: "expectedReturn", label: "Expected Return (%)", type: "number" },
-    { name: "horizon", label: "Horizon (years)", type: "number" },
-  ];
+  const fields = investmentFields(undefined, cur);
 
   return (
     <div className="space-y-6">
@@ -64,6 +68,14 @@ export function InvestmentModule() {
                   { label: `Proj. (${inv.horizon}y)`, value: formatCurrency(investmentProjection(inv), cur, true) },
                   { label: "Current", value: formatCurrency(inv.currentValue, cur, true), emphasis: true },
                 ]}
+                actions={
+                  <EntityDialog
+                    title="Edit Investment"
+                    fields={investmentFields(inv, cur)}
+                    trigger={<EditButton />}
+                    onSubmit={(v) => updateItem("investments", inv.id, v)}
+                  />
+                }
                 onDelete={() => removeItem("investments", inv.id)}
               />
             )) : <EmptyState message="Add your first investment" />}

@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: example-postgres
+    container_name: docker-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: example
@@ -19,7 +19,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: example-pgadmin
+    container_name: docker-pgadmin
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
@@ -37,7 +37,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: example-redis
+    container_name: docker-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
@@ -52,12 +52,12 @@ services:
 
   redisinsight:
     image: redis/redisinsight:latest
-    container_name: example-redisinsight
+    container_name: docker-redisinsight
     restart: unless-stopped
     environment:
       RI_REDIS_HOST: redis
       RI_REDIS_PORT: "6379"
-      RI_REDIS_ALIAS: example-redis
+      RI_REDIS_ALIAS: docker-redis
     ports:
       - "5540:5540"
     volumes:
@@ -70,7 +70,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: example-api
+    container_name: docker-api
     restart: unless-stopped
     ports:
       - "5001:5001"
@@ -109,7 +109,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    container_name: example-web
+    container_name: docker-web
     restart: unless-stopped
     ports:
       - "5173:8080"

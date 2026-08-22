@@ -34,6 +34,9 @@ import {
   removeRemoteGoal,
   removeRemoteInvestment,
   removeRemoteLoan,
+  updateRemoteExpense,
+  updateRemoteIncome,
+  updateRemoteInvestment,
   updateRemoteLoan,
   updateRemoteGoal,
   upsertRemoteFinancialProfile,
@@ -335,6 +338,55 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         toast.success("Loan updated");
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not update loan");
+      }
+      return;
+    }
+    if (key === "incomes") {
+      const current = data.incomes.find((income) => income.id === id);
+      if (!current) return;
+      try {
+        const updated = await updateRemoteIncome(id, { ...current, ...(patch as Partial<Income>), id } as Income);
+        setData((d) => ({
+          ...d,
+          incomes: d.incomes.map((income) => (income.id === id ? updated : income)),
+        }));
+        toast.success("Income updated");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not update income");
+      }
+      return;
+    }
+    if (key === "expenses") {
+      const current = data.expenses.find((expense) => expense.id === id);
+      if (!current) return;
+      try {
+        const updated = await updateRemoteExpense(id, { ...current, ...(patch as Partial<Expense>), id } as Expense);
+        setData((d) => ({
+          ...d,
+          expenses: d.expenses.map((expense) => (expense.id === id ? updated : expense)),
+        }));
+        toast.success("Expense updated");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not update expense");
+      }
+      return;
+    }
+    if (key === "investments") {
+      const current = data.investments.find((investment) => investment.id === id);
+      if (!current) return;
+      try {
+        const updated = await updateRemoteInvestment(id, {
+          ...current,
+          ...(patch as Partial<Investment>),
+          id,
+        } as Investment);
+        setData((d) => ({
+          ...d,
+          investments: d.investments.map((investment) => (investment.id === id ? updated : investment)),
+        }));
+        toast.success("Investment updated");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not update investment");
       }
       return;
     }

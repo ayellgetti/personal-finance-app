@@ -5,10 +5,9 @@ import {
 } from "@/lib/finance/calculations";
 import { Loan, LoanType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Panel, ItemRow, EmptyState, Badge } from "./shared";
+import { Panel, ItemRow, EmptyState, Badge, EditButton } from "./shared";
 import { StatCard } from "@/components/StatCard";
-import { Button } from "@/components/ui/button";
-import { Landmark, Percent, CalendarClock, TrendingDown, Pencil } from "lucide-react";
+import { Landmark, Percent, CalendarClock, TrendingDown } from "lucide-react";
 
 const TYPES: LoanType[] = ["Home Loan", "Personal Loan", "Business Loan", "Vehicle Loan", "Education Loan"];
 
@@ -69,11 +68,7 @@ export function LoanModule() {
                   <EntityDialog
                     title="Edit Loan"
                     fields={loanFields(l, cur)}
-                    trigger={
-                      <Button variant="ghost" size="icon" className="text-muted-foreground opacity-60 transition hover:text-foreground hover:opacity-100">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    }
+                    trigger={<EditButton />}
                     onSubmit={(v) => updateItem("loans", l.id, v)}
                   />
                 }

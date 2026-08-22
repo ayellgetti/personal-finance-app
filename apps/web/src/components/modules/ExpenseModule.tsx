@@ -1,8 +1,8 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import { formatCurrency, monthlyExpenses, oneTimeExpenses } from "@/lib/finance/calculations";
-import { ExpenseCategory } from "@/types/finance";
+import { Expense, ExpenseCategory } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Panel, ItemRow, EmptyState, Badge, CHART_COLORS, tooltipStyle } from "./shared";
+import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
 import { StatCard } from "@/components/StatCard";
 import { Receipt, RefreshCw, Coins } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
@@ -12,8 +12,18 @@ const CATEGORIES: ExpenseCategory[] = [
   "Transportation", "LIC Premium", "School Fees", "Entertainment", "Dining Out", "Travel", "Medical", "Other",
 ];
 
+function expenseFields(expense: Expense | undefined, currency: string): FieldDef[] {
+  return [
+    { name: "name", label: "Expense Name", type: "text", span: 2, defaultValue: expense?.name ?? "" },
+    { name: "category", label: "Category", type: "select", options: CATEGORIES, span: 2, defaultValue: expense?.category ?? CATEGORIES[0] },
+    { name: "amount", label: "Amount", type: "number", prefix: currency, defaultValue: expense?.amount ?? 0 },
+    { name: "date", label: "Date", type: "date", defaultValue: expense?.date ?? new Date().toISOString().slice(0, 10) },
+    { name: "recurring", label: "Monthly Recurring (off = one-time)", type: "switch", defaultValue: expense?.recurring ?? true },
+  ];
+}
+
 export function ExpenseModule() {
-  const { data, addItem, removeItem } = useFinance();
+  const { data, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const recurring = monthlyExpenses(data);
   const oneTime = oneTimeExpenses(data);
@@ -23,13 +33,7 @@ export function ExpenseModule() {
     value: data.expenses.filter((e) => e.category === c && e.recurring).reduce((s, e) => s + e.amount, 0),
   })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
 
-  const fields: FieldDef[] = [
-    { name: "name", label: "Expense Name", type: "text", span: 2 },
-    { name: "category", label: "Category", type: "select", options: CATEGORIES, span: 2 },
-    { name: "amount", label: "Amount", type: "number", prefix: cur },
-    { name: "date", label: "Date", type: "date", defaultValue: new Date().toISOString().slice(0, 10) },
-    { name: "recurring", label: "Monthly Recurring (off = one-time)", type: "switch" },
-  ];
+  const fields = expenseFields(undefined, cur);
 
   return (
     <div className="space-y-6">
@@ -64,6 +68,14 @@ export function ExpenseModule() {
                 subtitle={e.category}
                 badge={<Badge tone={e.recurring ? "primary" : "gold"}>{e.recurring ? "Recurring" : "One-time"}</Badge>}
                 values={[{ label: "Amount", value: formatCurrency(e.amount, cur), emphasis: true }]}
+                actions={
+                  <EntityDialog
+                    title="Edit Expense"
+                    fields={expenseFields(e, cur)}
+                    trigger={<EditButton />}
+                    onSubmit={(v) => updateItem("expenses", e.id, v)}
+                  />
+                }
                 onDelete={() => removeItem("expenses", e.id)}
               />
             )) : <EmptyState message="Add your first expense" />}

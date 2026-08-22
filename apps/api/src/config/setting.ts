@@ -19,8 +19,26 @@ export class Setting {
   readonly redis = {
     url: env.REDIS_URL,
   };
+  /** Development escape hatch: never honoured once NODE_ENV is production. */
+  private readonly ignoreAdvisorQuota =
+    env.NODE_ENV !== "production" && env.ADVISOR_IGNORE_QUOTA === true;
   readonly advisor = {
-    allowRefresh: env.ADVISOR_ALLOW_REFRESH === true,
+    allowRefresh: env.ADVISOR_ALLOW_REFRESH === true || this.ignoreAdvisorQuota,
+    ignoreQuota: this.ignoreAdvisorQuota,
+  };
+  readonly mail = {
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    user: env.SMTP_USER,
+    pass: env.SMTP_PASS,
+    from: env.SMTP_FROM ?? env.SMTP_USER,
+  };
+  readonly sms = {
+    accountSid: env.TWILIO_ACCOUNT_SID,
+    authToken: env.TWILIO_AUTH_TOKEN,
+    from: env.TWILIO_FROM,
+    defaultCountryCode: env.SMS_DEFAULT_COUNTRY_CODE,
   };
   readonly upload = {
     directory: env.UPLOAD_DIR,

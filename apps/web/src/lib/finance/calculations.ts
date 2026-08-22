@@ -54,6 +54,15 @@ export function loanPayoffMonths(outstanding: number, annualRatePct: number, emi
   return Math.ceil(n);
 }
 
+// outstanding principal after `months` of scheduled EMIs
+export function loanBalanceAfterMonths(outstanding: number, annualRatePct: number, emi: number, months: number): number {
+  if (months <= 0) return Math.max(0, outstanding);
+  const r = annualRatePct / 100 / 12;
+  if (r === 0) return Math.max(0, outstanding - emi * months);
+  const growth = Math.pow(1 + r, months);
+  return Math.max(0, outstanding * growth - emi * ((growth - 1) / r));
+}
+
 export function totalInterestPaid(loan: Loan): number {
   const months = loanPayoffMonths(loan.outstanding, loan.interestRate, loan.emi);
   if (!isFinite(months)) return Infinity;
@@ -316,16 +325,10 @@ export function forecastNetWorth(d: FinanceData, scenario: Scenario): { year: st
   const currentYear = new Date().getFullYear();
   for (let y = 0; y <= 20; y++) {
     const assets = portfolioFutureValue(d, y, adj) + d.profile.emergencyFund;
-    // debt reduces over time based on average payoff
-    let debt = 0;
-    d.loans.forEach((l) => {
-      const months = loanPayoffMonths(l.outstanding, l.interestRate, l.emi);
-      const remaining = Math.max(0, months - y * 12);
-      if (remaining > 0) {
-        debt += fvLumpSum(l.outstanding, l.interestRate, y) - l.emi * Math.min(months, y * 12) * 0.55;
-      }
-    });
-    debt = Math.max(0, debt);
+    const debt = d.loans.reduce(
+      (sum, l) => sum + loanBalanceAfterMonths(l.outstanding, l.interestRate, l.emi, y * 12),
+      0,
+    );
     out.push({ year: `${currentYear + y}`, netWorth: assets - debt, assets, debt });
   }
   return out;

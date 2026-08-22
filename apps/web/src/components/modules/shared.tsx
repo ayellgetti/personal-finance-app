@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
-import { Trash2, Inbox } from "lucide-react";
+import { forwardRef, ComponentPropsWithoutRef, ReactNode } from "react";
+import { Trash2, Inbox, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const CHART_COLORS = [
@@ -87,6 +87,23 @@ export function ItemRow({
     </div>
   );
 }
+
+export const EditButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<typeof Button>>(
+  function EditButton(props, ref) {
+    return (
+      <Button
+        ref={ref}
+        variant="ghost"
+        size="icon"
+        aria-label="Edit"
+        className="text-muted-foreground opacity-60 transition hover:text-foreground hover:opacity-100"
+        {...props}
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+    );
+  },
+);
 
 export function EmptyState({ message }: { message: string }) {
   return (

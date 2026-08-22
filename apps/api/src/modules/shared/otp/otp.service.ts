@@ -3,6 +3,11 @@ import { setting } from "../../../config/setting";
 import { HttpError } from "../../../utils/http-error.util";
 import { otpModel, type OtpModel } from "../../../models/index";
 import { userService, type UserService } from "../user/user.service";
+import {
+  channelOtpMessenger,
+  type OtpDelivery,
+  type OtpMessenger,
+} from "./otp.messenger";
 import { OTP_TYPE, type GenerateOtpBody, type ResendOtpBody, type VerifyOtpBody } from "./otp.request";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -14,6 +19,7 @@ type IssuedOtp = {
   type: string;
   expiresInSeconds: number;
   retryAfterSeconds: number;
+  delivered: OtpDelivery;
   otp?: number;
 };
 
@@ -27,10 +33,11 @@ export class OtpService {
   constructor(
     private readonly model: OtpModel = otpModel,
     private readonly users: UserService = userService,
+    private readonly messenger: OtpMessenger = channelOtpMessenger,
   ) {}
 
   async generate(input: GenerateOtpBody): Promise<IssuedOtp> {
-    return this.issue(input.mobileNo, input.type);
+    return this.issue(input.mobileNo, input.type, input.email);
   }
 
   async resend(input: ResendOtpBody): Promise<IssuedOtp> {
@@ -46,7 +53,7 @@ export class OtpService {
       });
     }
 
-    return this.issue(input.mobileNo, input.type);
+    return this.issue(input.mobileNo, input.type, input.email);
   }
 
   async verify(input: VerifyOtpBody, consume = false): Promise<VerifiedOtp> {
@@ -81,10 +88,16 @@ export class OtpService {
     };
   }
 
-  private async issue(mobileNo: string, type: string): Promise<IssuedOtp> {
+  private async issue(mobileNo: string, type: string, email?: string): Promise<IssuedOtp> {
     if (type === OTP_TYPE.REGISTER && (await this.users.findByMobileNo(mobileNo))) {
       throw new HttpError(409, "Duplicate mobileNo is not allowed");
     }
+    if (type === OTP_TYPE.REGISTER && email && (await this.users.findByEmail(email))) {
+      throw new HttpError(409, "Duplicate email is not allowed");
+    }
+
+    const destinationEmail = email ?? (await this.lookupEmail(mobileNo));
+    const requireEmail = type === OTP_TYPE.REGISTER;
 
     await this.model.updateMany({ mobileNo, type, isActive: 1 }, { isActive: 0 });
 
@@ -97,11 +110,26 @@ export class OtpService {
       isActive: 1,
     });
 
+    let delivered: OtpDelivery;
+    try {
+      delivered = await this.messenger.deliver({
+        mobileNo,
+        email: destinationEmail,
+        code: no,
+        type,
+        requireEmail,
+      });
+    } catch (error) {
+      await this.model.updateMany({ mobileNo, type, isActive: 1 }, { isActive: 0 });
+      throw error;
+    }
+
     const payload: IssuedOtp = {
       mobileNo,
       type,
       expiresInSeconds: OTP_TTL_MS / 1000,
       retryAfterSeconds: OTP_RESEND_COOLDOWN_MS / 1000,
+      delivered,
     };
 
     if (!setting.isProduction) {
@@ -109,6 +137,11 @@ export class OtpService {
     }
 
     return payload;
+  }
+
+  private async lookupEmail(mobileNo: string): Promise<string | undefined> {
+    const user = await this.users.findByMobileNo(mobileNo);
+    return user?.email;
   }
 
   private latest(mobileNo: string, type: string) {

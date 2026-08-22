@@ -2,7 +2,7 @@ import { useFinance, newId } from "@/lib/finance/store";
 import { formatCurrency, analyzeGoal } from "@/lib/finance/calculations";
 import { FIRE_GOAL_DESCRIPTIONS, EMERGENCY_FUND_GOAL_ID, FireGoalType, Goal, Priority, USER_GOAL_TYPES } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Panel, EmptyState, Badge } from "./shared";
+import { Panel, EmptyState, Badge, EditButton } from "./shared";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Trash2, Target } from "lucide-react";
@@ -10,21 +10,25 @@ import { EmergencyFundModule } from "./EmergencyFundModule";
 
 const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
 
+function goalFields(goal: Goal | undefined, currency: string): FieldDef[] {
+  return [
+    { name: "name", label: "Goal Name", type: "text", span: 2, defaultValue: goal?.name ?? "" },
+    { name: "type", label: "Goal Type", type: "select", options: USER_GOAL_TYPES, optionDescriptions: FIRE_GOAL_DESCRIPTIONS, span: 2, defaultValue: goal?.type ?? USER_GOAL_TYPES[0] },
+    { name: "targetAmount", label: "Target Amount", type: "number", prefix: currency, defaultValue: goal?.targetAmount ?? 0 },
+    { name: "currentSaved", label: "Already Saved", type: "number", prefix: currency, defaultValue: goal?.currentSaved ?? 0 },
+    { name: "targetDate", label: "Target Date", type: "date", defaultValue: goal?.targetDate ?? new Date(Date.now() + 5 * 31536000000).toISOString().slice(0, 10) },
+    { name: "priority", label: "Priority", type: "select", options: PRIORITIES, defaultValue: goal?.priority ?? PRIORITIES[0] },
+  ];
+}
+
 export function GoalsModule() {
-  const { data, addItem, removeItem } = useFinance();
+  const { data, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const lifeGoals = data.goals;
   const isEmergencyGoal = (goal: Goal) =>
     goal.id === EMERGENCY_FUND_GOAL_ID || goal.type === "Emergency Fund";
 
-  const fields: FieldDef[] = [
-    { name: "name", label: "Goal Name", type: "text", span: 2 },
-    { name: "type", label: "Goal Type", type: "select", options: USER_GOAL_TYPES, optionDescriptions: FIRE_GOAL_DESCRIPTIONS, span: 2 },
-    { name: "targetAmount", label: "Target Amount", type: "number", prefix: cur },
-    { name: "currentSaved", label: "Already Saved", type: "number", prefix: cur },
-    { name: "targetDate", label: "Target Date", type: "date", defaultValue: new Date(Date.now() + 5 * 31536000000).toISOString().slice(0, 10) },
-    { name: "priority", label: "Priority", type: "select", options: PRIORITIES },
-  ];
+  const fields = goalFields(undefined, cur);
 
   return (
     <div className="space-y-8">
@@ -61,9 +65,17 @@ export function GoalsModule() {
                       </div>
                     </div>
                     {!isEmergencyGoal(g) && (
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-danger" onClick={() => removeItem("goals", g.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center">
+                        <EntityDialog
+                          title="Edit Goal"
+                          fields={goalFields(g, cur)}
+                          trigger={<EditButton />}
+                          onSubmit={(v) => updateItem("goals", g.id, v)}
+                        />
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-danger" onClick={() => removeItem("goals", g.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
 

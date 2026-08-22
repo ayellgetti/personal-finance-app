@@ -383,36 +383,63 @@ export async function removeRemoteLoan(id: string): Promise<void> {
   });
 }
 
+export function incomeToApiBody(input: Income) {
+  return {
+    type: "income",
+    category: "income",
+    subcategory: INCOME_SUBCATEGORIES[input.type] ?? "other",
+    title: input.name.trim() || "Income",
+    amount: Number(input.monthlyAmount) || 0,
+    monthDay: 1,
+  };
+}
+
+export function expenseToApiBody(input: Expense) {
+  return {
+    type: "expense",
+    category: "expense",
+    subcategory: EXPENSE_SUBCATEGORIES[input.category] ?? "other",
+    title: input.name.trim() || "Expense",
+    amount: Number(input.amount) || 0,
+    monthDay: input.recurring ? 1 : null,
+  };
+}
+
 export async function createRemoteIncome(input: Income): Promise<Income> {
   if (!isSignedIn()) throw new Error("Not signed in");
   const result = await api<{ budget: ApiBudget }>("/api/budgets", {
     method: "POST",
-    body: {
-      type: "income",
-      category: "income",
-      subcategory: INCOME_SUBCATEGORIES[input.type] ?? "other",
-      title: input.name.trim() || "Income",
-      amount: Number(input.monthlyAmount) || 0,
-      monthDay: 1,
-    },
+    body: incomeToApiBody(input),
   });
   return mapBudgetToIncome(result.budget);
+}
+
+export async function updateRemoteIncome(id: string, input: Income): Promise<Income> {
+  if (!isSignedIn()) throw new Error("Not signed in");
+  const result = await api<{ budget: ApiBudget }>(`/api/budgets/${id}`, {
+    method: "PATCH",
+    body: incomeToApiBody(input),
+  });
+  // growthRate and startDate have no budget column, so keep what the user entered.
+  return { ...mapBudgetToIncome(result.budget), growthRate: input.growthRate, startDate: input.startDate };
 }
 
 export async function createRemoteExpense(input: Expense): Promise<Expense> {
   if (!isSignedIn()) throw new Error("Not signed in");
   const result = await api<{ budget: ApiBudget }>("/api/budgets", {
     method: "POST",
-    body: {
-      type: "expense",
-      category: "expense",
-      subcategory: EXPENSE_SUBCATEGORIES[input.category] ?? "other",
-      title: input.name.trim() || "Expense",
-      amount: Number(input.amount) || 0,
-      monthDay: input.recurring ? 1 : null,
-    },
+    body: expenseToApiBody(input),
   });
   return mapBudgetToExpense(result.budget);
+}
+
+export async function updateRemoteExpense(id: string, input: Expense): Promise<Expense> {
+  if (!isSignedIn()) throw new Error("Not signed in");
+  const result = await api<{ budget: ApiBudget }>(`/api/budgets/${id}`, {
+    method: "PATCH",
+    body: expenseToApiBody(input),
+  });
+  return { ...mapBudgetToExpense(result.budget), date: input.date };
 }
 
 export async function removeRemoteBudget(id: string): Promise<void> {
@@ -423,20 +450,33 @@ export async function removeRemoteBudget(id: string): Promise<void> {
   });
 }
 
+export function investmentToApiBody(input: Investment) {
+  return {
+    category: "investment",
+    subcategory: INVESTMENT_SUBCATEGORIES[input.type] ?? "other",
+    title: input.name.trim() || "Investment",
+    accumulatedAmount: Number(input.currentValue) || 0,
+    roi: Number(input.expectedReturn) || 0,
+    remainingMonths: Math.min(600, Math.max(1, Math.round(Number(input.horizon) || 1) * 12)),
+    investmentAmount: Number(input.monthlySip) || 0,
+    monthDay: 1,
+  };
+}
+
 export async function createRemoteInvestment(input: Investment): Promise<Investment> {
   if (!isSignedIn()) throw new Error("Not signed in");
   const result = await api<{ investment: ApiInvestment }>("/api/investments", {
     method: "POST",
-    body: {
-      category: "investment",
-      subcategory: INVESTMENT_SUBCATEGORIES[input.type] ?? "other",
-      title: input.name.trim() || "Investment",
-      accumulatedAmount: Number(input.currentValue) || 0,
-      roi: Number(input.expectedReturn) || 0,
-      remainingMonths: Math.min(600, Math.max(1, Math.round(Number(input.horizon) || 1) * 12)),
-      investmentAmount: Number(input.monthlySip) || 0,
-      monthDay: 1,
-    },
+    body: investmentToApiBody(input),
+  });
+  return mapInvestment(result.investment);
+}
+
+export async function updateRemoteInvestment(id: string, input: Investment): Promise<Investment> {
+  if (!isSignedIn()) throw new Error("Not signed in");
+  const result = await api<{ investment: ApiInvestment }>(`/api/investments/${id}`, {
+    method: "PATCH",
+    body: investmentToApiBody(input),
   });
   return mapInvestment(result.investment);
 }

@@ -21,6 +21,7 @@ import {
   userAdvisorQuotaStore,
   type AdvisorQuota,
   type AdvisorQuotaStore,
+  type AdvisorQuotaView,
 } from "./advisor.quota";
 import {
   advisorReportSchema,
@@ -32,7 +33,7 @@ export type AdvisorReportResult = {
   advice: AdvisorReport;
   source: "openai" | "cache";
   generatedAt: string;
-  quota: AdvisorQuota;
+  quota: AdvisorQuotaView;
 };
 
 export class AdvisorService {
@@ -42,7 +43,12 @@ export class AdvisorService {
     private readonly store: AdvisorReportStore = redisAdvisorStore,
     private readonly quotas: AdvisorQuotaStore = userAdvisorQuotaStore,
     private readonly allowRefresh: boolean = setting.advisor.allowRefresh,
+    private readonly ignoreQuota: boolean = setting.advisor.ignoreQuota,
   ) {}
+
+  private view(quota: AdvisorQuota): AdvisorQuotaView {
+    return { ...quota, unlimited: this.ignoreQuota };
+  }
 
   async report(
     userId: string,
@@ -52,7 +58,7 @@ export class AdvisorService {
     const planner = await this.planner.report(userId);
     const contextHash = hashAdvisorContext(planner);
     const cached = await this.store.findByUserId(userId);
-    let quota = await this.quotas.read(userId);
+    let quota = this.view(await this.quotas.read(userId));
     const refresh = Boolean(options.refresh && this.allowRefresh);
 
     if (!refresh && cached?.contextHash === contextHash) {
@@ -65,7 +71,7 @@ export class AdvisorService {
       };
     }
 
-    if (refresh && quota.remaining <= 0) {
+    if (refresh && !this.ignoreQuota && quota.remaining <= 0) {
       throw new HttpError(402, "Your AI report refreshes are used up", {
         code: "AI_REPORT_LIMIT_REACHED",
         quota,
@@ -97,8 +103,8 @@ export class AdvisorService {
         advice: parsed.data,
       });
 
-      if (refresh) {
-        quota = await this.quotas.consume(userId);
+      if (refresh && !this.ignoreQuota) {
+        quota = this.view(await this.quotas.consume(userId));
       }
 
       return {

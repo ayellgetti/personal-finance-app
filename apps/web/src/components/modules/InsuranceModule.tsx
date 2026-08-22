@@ -1,27 +1,31 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import { formatCurrency, analyzeInsurance } from "@/lib/finance/calculations";
-import { InsuranceType } from "@/types/finance";
+import { Insurance, InsuranceType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Panel, ItemRow, EmptyState, Badge } from "./shared";
+import { Panel, ItemRow, EmptyState, Badge, EditButton } from "./shared";
 import { Progress } from "@/components/ui/progress";
 import { ShieldCheck, ShieldAlert } from "lucide-react";
 
 const TYPES: InsuranceType[] = ["Term Insurance", "Health Insurance", "Car Insurance", "Bike Insurance", "Home Insurance"];
 
+function insuranceFields(insurance: Insurance | undefined, currency: string): FieldDef[] {
+  return [
+    { name: "name", label: "Policy Name", type: "text", span: 2, defaultValue: insurance?.name ?? "" },
+    { name: "type", label: "Type", type: "select", options: TYPES, span: 2, defaultValue: insurance?.type ?? TYPES[0] },
+    { name: "coverage", label: "Coverage Amount", type: "number", prefix: currency, defaultValue: insurance?.coverage ?? 0 },
+    { name: "annualPremium", label: "Annual Premium", type: "number", prefix: currency, defaultValue: insurance?.annualPremium ?? 0 },
+    { name: "expiryDate", label: "Expiry Date", type: "date", span: 2, defaultValue: insurance?.expiryDate ?? new Date().toISOString().slice(0, 10) },
+  ];
+}
+
 export function InsuranceModule() {
-  const { data, addItem, removeItem } = useFinance();
+  const { data, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const a = analyzeInsurance(data);
   const termPct = a.recommendedTermCover ? Math.min(100, (a.currentTermCover / a.recommendedTermCover) * 100) : 0;
   const healthPct = a.recommendedHealthCover ? Math.min(100, (a.currentHealthCover / a.recommendedHealthCover) * 100) : 0;
 
-  const fields: FieldDef[] = [
-    { name: "name", label: "Policy Name", type: "text", span: 2 },
-    { name: "type", label: "Type", type: "select", options: TYPES, span: 2 },
-    { name: "coverage", label: "Coverage Amount", type: "number", prefix: cur },
-    { name: "annualPremium", label: "Annual Premium", type: "number", prefix: cur },
-    { name: "expiryDate", label: "Expiry Date", type: "date", span: 2, defaultValue: new Date().toISOString().slice(0, 10) },
-  ];
+  const fields = insuranceFields(undefined, cur);
 
   const AdequacyCard = ({ title, pct, current, recommended, gap }: { title: string; pct: number; current: number; recommended: number; gap: number }) => (
     <Panel title={title}>
@@ -59,6 +63,14 @@ export function InsuranceModule() {
                   { label: "Premium/yr", value: formatCurrency(ins.annualPremium, cur) },
                   { label: "Coverage", value: formatCurrency(ins.coverage, cur, true), emphasis: true },
                 ]}
+                actions={
+                  <EntityDialog
+                    title="Edit Insurance"
+                    fields={insuranceFields(ins, cur)}
+                    trigger={<EditButton />}
+                    onSubmit={(v) => updateItem("insurances", ins.id, v)}
+                  />
+                }
                 onDelete={() => removeItem("insurances", ins.id)}
               />
             );

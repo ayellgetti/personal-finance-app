@@ -75,6 +75,8 @@ export type AdvisorQuota = {
   used: number;
   limit: number;
   remaining: number;
+  /** Set by the API when the development quota override is enabled. */
+  unlimited?: boolean;
 };
 
 export type AdvisorResult = {
@@ -268,7 +270,7 @@ export function useAdvisorReport(data: FinanceData, enabled = true) {
   });
 
   const quota = query.data?.quota;
-  const canRefresh = !quota || quota.remaining > 0;
+  const canRefresh = !quota || quota.unlimited === true || quota.remaining > 0;
 
   const requestRefresh = async () => {
     if (!canRefresh) {
