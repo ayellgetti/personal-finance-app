@@ -119,7 +119,7 @@ Exists: `packages/tsconfig` only.
 
 Prisma: `apps/api/prisma/schema.prisma` + migrations. Client: `apps/api/src/utils/prisma.util.ts`. Postgres in Compose.
 
-Models in use: `User`, auth sessions/OTP, `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `FailureLog`.
+Models in use: `User`, auth sessions/OTP, `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `FailureLog`, `StatementImport`, `StatementLine`, `TaxScenario`.
 
 **Not created (Track C):** `Role`, `Permission`, `UserRole`, `RolePermission`, generic `Log`, `packages/database`, `pnpm db:seed`.
 
@@ -267,6 +267,17 @@ Do not start until B1 is done unless explicitly asked:
 - TradingView / market feed
 - Shared household accounts
 - Learning-hub progress
+
+### Phase B5 — Statement analyzer and tax planner
+
+**Status: COMPLETED**
+
+Approved product surfaces (not bank aggregation or tax filing):
+
+1. Bank / phone statement analyzer: CSV or pasted SMS/UPI text → categorized lines, credit/debit summary, stored as `StatementImport` + `StatementLine`. Routes `/api/statements`. Web: Plan → Statements.
+2. Country-wise tax planner: slab catalog (India old/new FY 2024-25 and 2025-26, US federal 2025 single, UK England FY 2025-26), preview + saved `TaxScenario`. Routes `/api/tax`. Web: Plan → Tax Planner.
+
+**Validate:** `pnpm --filter api test` (includes `statement-tax.test.ts`), `pnpm typecheck`, migrate `20260822120000_statement_and_tax`.
 
 ---
 

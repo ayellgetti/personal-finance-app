@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/store";
 import { ageFromDob } from "@/lib/finance/profile";
 import {
   EmploymentType,
+  EXPENSE_CATEGORIES,
   FIRE_GOAL_DESCRIPTIONS,
   FIRE_GOAL_TYPES,
   FIRE_POST_RETIREMENT_YEARS,
@@ -15,6 +16,7 @@ import {
 } from "@/types/finance";
 import { FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge } from "./shared";
+import { ExpenseQuickAdd } from "./ExpenseQuickAdd";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -113,9 +115,10 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
     },
     {
       key: "expenses", label: "Expenses", icon: Receipt,
+      // Expenses use the category-first ExpenseQuickAdd form instead of the generic field grid.
       fields: [
         { name: "name", label: "Expense Name", type: "text", span: 2 },
-        { name: "category", label: "Category", type: "select", span: 2, options: ["House Rent / EMI", "Electricity Bill", "Water Bill", "Internet", "Mobile", "Groceries", "Fuel", "Transportation", "LIC Premium", "School Fees", "Entertainment", "Dining Out", "Travel", "Medical", "Other"] },
+        { name: "category", label: "Category", type: "select", span: 2, options: EXPENSE_CATEGORIES },
         { name: "amount", label: "Amount", type: "number", prefix: cur },
         { name: "recurring", label: "Monthly Recurring", type: "switch" },
         { name: "date", label: "Date", type: "date", span: 2, defaultValue: today },
@@ -621,6 +624,15 @@ function EntitySection({
     setValues(init());
   };
 
+  if (stepDef.key === "expenses") {
+    return (
+      <div className="space-y-5">
+        <ExpenseQuickAdd currency={cur} onAdd={onAdd} />
+        <EntityList stepDef={stepDef} items={items} cur={cur} onRemove={onRemove} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-4 rounded-xl border border-dashed border-border p-4">
@@ -668,20 +680,33 @@ function EntitySection({
         </div>
       </div>
 
-      <div className="space-y-3">
-        {items.length ? items.map((item) => {
-          const s = stepDef.summary(item, cur);
-          return (
-            <ItemRow
-              key={item.id}
-              title={s.title}
-              badge={s.badge ? <Badge tone="primary">{s.badge}</Badge> : undefined}
-              values={[{ label: "Value", value: s.value, emphasis: true }]}
-              onDelete={() => onRemove(item.id)}
-            />
-          );
-        }) : <EmptyState message={`No ${stepDef.label.toLowerCase()} saved yet — optional, you can skip`} />}
-      </div>
+      <EntityList stepDef={stepDef} items={items} cur={cur} onRemove={onRemove} />
+    </div>
+  );
+}
+
+function EntityList({
+  stepDef, items, cur, onRemove,
+}: {
+  stepDef: EntityStep;
+  items: { id: string }[];
+  cur: string;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      {items.length ? items.map((item) => {
+        const s = stepDef.summary(item, cur);
+        return (
+          <ItemRow
+            key={item.id}
+            title={s.title}
+            badge={s.badge ? <Badge tone="primary">{s.badge}</Badge> : undefined}
+            values={[{ label: "Value", value: s.value, emphasis: true }]}
+            onDelete={() => onRemove(item.id)}
+          />
+        );
+      }) : <EmptyState message={`No ${stepDef.label.toLowerCase()} saved yet — optional, you can skip`} />}
     </div>
   );
 }

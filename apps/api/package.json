@@ -28,6 +28,8 @@
     "openai": "^7.5.0",
     "redis": "^6.2.1",
     "swagger-ui-express": "^5.0.1",
+    "unpdf": "^1.8.1",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

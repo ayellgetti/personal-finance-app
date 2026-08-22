@@ -16,6 +16,8 @@ import {
   GraduationCap,
   CalendarClock,
   ClipboardList,
+  FileSpreadsheet,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -35,6 +37,8 @@ export type ViewId =
   | "investments"
   | "insurance"
   | "goals"
+  | "statements"
+  | "tax"
   | "freedom"
   | "forecast"
   | "advisor"
@@ -50,6 +54,8 @@ export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; gro
   { id: "investments", label: "Investments", icon: TrendingUp, group: "Manage" },
   { id: "insurance", label: "Insurance", icon: ShieldCheck, group: "Manage" },
   { id: "goals", label: "Goals", icon: Target, group: "Manage" },
+  { id: "statements", label: "Statements", icon: FileSpreadsheet, group: "Plan" },
+  { id: "tax", label: "Tax Planner", icon: Calculator, group: "Plan" },
   { id: "daily", label: "Daily Tracker", icon: CalendarClock, group: "Plan" },
   { id: "freedom", label: "Freedom Calculator", icon: Rocket, group: "Plan" },
   { id: "forecast", label: "Forecast Engine", icon: LineChart, group: "Plan" },

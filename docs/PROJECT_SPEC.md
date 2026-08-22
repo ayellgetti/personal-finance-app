@@ -187,7 +187,7 @@ Zod lives in `*.request.ts` (advisor JSON uses `advisor.schema.ts`).
 
 Applications besides `api` must not grow a second Prisma schema.
 
-Use generated Prisma types. Prefer UUIDs, FKs, indexes, `createdAt` / `updatedAt` where the neighboring models already do.
+Use generated Prisma types. Prefer UUIDs, FKs, and indexes. Every table includes the User audit set: `isActive`, `createdBy`, `createdAt`, `updatedBy`, `updatedAt`, `deletedBy`, `deletedAt` (`createdBy` / `updatedBy` / `deletedBy` are optional strings).
 
 ---
 
@@ -197,7 +197,7 @@ This is **not** a greenfield “User + Role + Permission only” scaffold. Finan
 
 **Auth / platform:** `User`, `RefreshSession`, `Otp`, `Session`, `FailureLog`
 
-**Finance:** `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`
+**Finance:** `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `StatementImport`, `StatementLine`, `TaxScenario`
 
 **Unused / stub (do not build UI on these unless the plan says so):** `Contact`, conversation tables, `Notification`, `Device`, `Socket`, `TradingView`, `Categories`, `Constant`, generic `Transaction`
 
@@ -227,7 +227,7 @@ Never rewrite migration history. Never reset a shared database without approval.
 
 **Request / app logs:** stdout JSON (`logger.util.ts`) with requestId, method, path, status, duration where the request logger runs.
 
-**DB:** `FailureLog` (`id`, `requestId`, `method`, `path`, `statusCode`, `message`, `stack`, `details`, `body`, `userId`, `createdAt`).
+**DB:** `FailureLog` (`id`, `requestId`, `method`, `path`, `statusCode`, `message`, `stack`, `details`, `body`, `userId`, plus the shared audit columns).
 
 Do not store passwords, JWTs, OTPs, or API keys in `details` / `body` / metadata.
 
@@ -241,7 +241,7 @@ Logging must not dominate request latency (current failure-log write is acceptab
 
 Base path: **`/api`** (not `/api/v1`).
 
-Examples: `/api/auth/login`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`.
+Examples: `/api/auth/login`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`, `/api/statements`, `/api/tax`.
 
 Also: `GET /health`.
 
@@ -457,12 +457,14 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | Profile | Retirement age, dependents, inflation, employment, currency |
 | Planner | Server cash-flow / net-worth engine |
 | AI advisor | OpenAI JSON from planner snapshot; Redis cache |
+| Statements | Bank or phone/UPI statements as PDF, CSV/TSV, Excel or pasted text (password-protected PDF/Excel supported); categorized lines (not live bank aggregation, no OCR for scanned PDFs) |
+| Tax planner | Country-wise slabs (India first, plus US/UK estimates); saved scenarios — not e-filing |
 | Learning hub | Static lessons |
 | Report | AI summary + client PDF |
 
 ### Out (product)
 
-- Bank/UPI aggregation, PAN/Aadhaar KYC, tax filing
+- Live bank/UPI aggregation, PAN/Aadhaar KYC, tax **filing** (planning/estimates are in scope)
 - Live market / TradingView
 - Chat, contacts, push, sockets
 - Shared household accounts
@@ -484,7 +486,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 3. Quick setup (`User.quickStep`)  
 4. Dashboard  
 5. Manage: income, expenses, loans, investments, insurance, goals  
-6. Plan: daily tracker, freedom calculator, forecast, AI advisor, learning hub  
+6. Plan: daily tracker, statement analyzer, tax planner, freedom calculator, forecast, AI advisor, learning hub  
 7. Report + PDF  
 
 Dark theme by default. Nav: Overview / Manage / Plan / Report.

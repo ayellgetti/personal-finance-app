@@ -30,6 +30,14 @@ export const openApiDocument = {
       name: "Advisor",
       description: "OpenAI-assisted financial guidance grounded in planner calculations",
     },
+    {
+      name: "Statements",
+      description: "Bank and phone statement upload, parse, and category summary",
+    },
+    {
+      name: "Tax",
+      description: "Country-wise tax slab catalog, estimates, and saved scenarios",
+    },
   ],
   components: {
     securitySchemes: {
@@ -385,6 +393,71 @@ export const openApiDocument = {
         properties: {
           id: { type: "string", format: "uuid" },
         },
+      },
+      CreateStatementRequest: {
+        type: "object",
+        required: ["sourceType"],
+        properties: {
+          sourceType: { type: "string", enum: ["bank", "phone"] },
+          text: { type: "string", description: "CSV or pasted SMS/UPI text when no file is uploaded" },
+          fileName: { type: "string" },
+        },
+      },
+      UpdateStatementLineRequest: {
+        type: "object",
+        required: ["category"],
+        properties: {
+          category: {
+            type: "string",
+            enum: [
+              "salary",
+              "transfer",
+              "upi",
+              "food",
+              "groceries",
+              "fuel",
+              "shopping",
+              "rent",
+              "utilities",
+              "entertainment",
+              "travel",
+              "insurance",
+              "investment",
+              "emi",
+              "cash_atm",
+              "fees",
+              "income",
+              "other",
+            ],
+          },
+        },
+      },
+      TaxPlanInputRequest: {
+        type: "object",
+        required: ["countryCode", "regimeCode", "grossSalary"],
+        properties: {
+          countryCode: { type: "string", example: "IN" },
+          regimeCode: { type: "string", example: "in_new_fy2025_26" },
+          grossSalary: { type: "number", minimum: 0 },
+          otherIncome: { type: "number", minimum: 0 },
+          section80C: { type: "number", minimum: 0 },
+          section80D: { type: "number", minimum: 0 },
+          hraExemption: { type: "number", minimum: 0 },
+          homeLoanInterest: { type: "number", minimum: 0 },
+          nps80Ccd: { type: "number", minimum: 0 },
+          otherDeductions: { type: "number", minimum: 0 },
+        },
+      },
+      CreateTaxScenarioRequest: {
+        allOf: [
+          { $ref: "#/components/schemas/TaxPlanInputRequest" },
+          {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+            },
+          },
+        ],
       },
       Investment: {
         type: "object",
@@ -2183,6 +2256,338 @@ export const openApiDocument = {
           "502": { $ref: "#/components/responses/EnvelopeError" },
           "503": { $ref: "#/components/responses/EnvelopeError" },
           "504": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/statements": {
+      get: {
+        tags: ["Statements"],
+        summary: "List analyzed bank and phone statements",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          {
+            name: "page",
+            in: "query",
+            schema: { type: "integer", minimum: 1, default: 1 },
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, maximum: 100, default: 25 },
+          },
+          {
+            name: "sourceType",
+            in: "query",
+            schema: { type: "string", enum: ["bank", "phone"] },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Paginated statement imports",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Statements"],
+        summary: "Analyze a bank or phone statement",
+        description:
+          "Paste CSV or SMS/UPI text. Original statement text is not stored; categorized lines and a summary are saved.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateStatementRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Statement analyzed",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/statements/upload": {
+      post: {
+        tags: ["Statements"],
+        summary: "Analyze an uploaded PDF, CSV, Excel or text statement",
+        description:
+          "Multipart field `file` plus `sourceType` (`bank` or `phone`). Accepts PDF, CSV/TSV, plain text and Excel (`.xlsx`/`.xls`) statements; scanned PDFs without a text layer are rejected. Send `password` for protected files. The file is deleted after parse and the password is never stored.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["sourceType", "file"],
+                properties: {
+                  sourceType: { type: "string", enum: ["bank", "phone"] },
+                  file: { type: "string", format: "binary" },
+                  fileName: { type: "string" },
+                  password: { type: "string", maxLength: 128, description: "Password for a protected PDF or Excel statement" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Statement analyzed",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/statements/remove": {
+      post: {
+        tags: ["Statements"],
+        summary: "Soft-delete a statement import",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RemoveByIdRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Statement deactivated",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/statements/{id}": {
+      get: {
+        tags: ["Statements"],
+        summary: "Get a statement import and its summary",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": {
+            description: "Statement import",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/statements/{id}/lines": {
+      get: {
+        tags: ["Statements"],
+        summary: "List parsed lines for a statement",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 50 } },
+        ],
+        responses: {
+          "200": {
+            description: "Paginated lines",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/statements/{id}/lines/{lineId}": {
+      patch: {
+        tags: ["Statements"],
+        summary: "Recategorize a statement line",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "lineId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateStatementLineRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Updated line",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/tax/catalog": {
+      get: {
+        tags: ["Tax"],
+        summary: "List countries and tax regimes",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        responses: {
+          "200": {
+            description: "Country-wise slab catalog",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+    },
+    "/api/tax/preview": {
+      post: {
+        tags: ["Tax"],
+        summary: "Compute a tax estimate without saving",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/TaxPlanInputRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Tax estimate",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/tax/scenarios": {
+      get: {
+        tags: ["Tax"],
+        summary: "List saved tax scenarios",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 25 } },
+          { name: "countryCode", in: "query", schema: { type: "string", example: "IN" } },
+        ],
+        responses: {
+          "200": {
+            description: "Paginated scenarios",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Tax"],
+        summary: "Compute and save a tax scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateTaxScenarioRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Scenario saved",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/tax/scenarios/remove": {
+      post: {
+        tags: ["Tax"],
+        summary: "Soft-delete a tax scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RemoveByIdRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Scenario deactivated",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/tax/scenarios/{id}": {
+      get: {
+        tags: ["Tax"],
+        summary: "Get a saved tax scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": {
+            description: "Tax scenario",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+      patch: {
+        tags: ["Tax"],
+        summary: "Update and recompute a tax scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateTaxScenarioRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Updated scenario",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
         },
       },
     },

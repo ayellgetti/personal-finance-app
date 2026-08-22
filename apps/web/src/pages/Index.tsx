@@ -15,6 +15,8 @@ import { ForecastEngine } from "@/components/modules/ForecastEngine";
 import { AIAdvisor } from "@/components/modules/AIAdvisor";
 import { LearningHubModule } from "@/components/modules/LearningHubModule";
 import { ReportModule } from "@/components/modules/ReportModule";
+import { StatementAnalyzerModule } from "@/components/modules/StatementAnalyzerModule";
+import { TaxPlannerModule } from "@/components/modules/TaxPlannerModule";
 import { useAuth } from "@/lib/auth/store";
 import { toast } from "sonner";
 
@@ -29,6 +31,8 @@ const META: Record<ViewId, { title: string; description: string }> = {
   investments: { title: "Investment Management", description: "Portfolio, allocation and growth projections" },
   insurance: { title: "Insurance Management", description: "Coverage adequacy and protection gaps" },
   goals: { title: "Goals", description: "Emergency fund and the milestones you are saving toward" },
+  statements: { title: "Statement Analyzer", description: "Bank and phone/UPI statements, categorized automatically" },
+  tax: { title: "Tax Planner", description: "Country-wise slabs — India old/new regime, plus US and UK estimates" },
   freedom: { title: "Financial Freedom Calculator", description: "When can you retire and live free?" },
   forecast: { title: "Smart Forecast Engine", description: "Project wealth across market scenarios" },
   advisor: { title: "AI Financial Advisor", description: "Personalised, actionable recommendations" },
@@ -76,6 +80,8 @@ const Index = () => {
         {visibleView === "investments" && <InvestmentModule />}
         {visibleView === "insurance" && <InsuranceModule />}
         {visibleView === "goals" && <GoalsModule />}
+        {visibleView === "statements" && <StatementAnalyzerModule />}
+        {visibleView === "tax" && <TaxPlannerModule />}
         {visibleView === "freedom" && <FreedomCalculator />}
         {visibleView === "forecast" && <ForecastEngine />}
         {visibleView === "advisor" && <AIAdvisor />}

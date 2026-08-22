@@ -77,23 +77,7 @@ async function resolveAccessToken(tokenOverride?: string | null): Promise<string
   return refreshed ?? current;
 }
 
-async function sendJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, token, skipAuth: _skipAuth, headers: headerInit, ...rest } = options;
-  const headers = new Headers(headerInit);
-  headers.set("Accept", "application/json");
-  if (body !== undefined) {
-    headers.set("Content-Type", "application/json");
-  }
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  const response = await fetch(path, {
-    ...rest,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
+async function readEnvelope<T>(response: Response): Promise<T> {
   let envelope: Envelope<T> | undefined;
   try {
     envelope = (await response.json()) as Envelope<T>;
@@ -106,6 +90,42 @@ async function sendJson<T>(path: string, options: RequestOptions = {}): Promise<
   }
 
   return envelope.data;
+}
+
+async function sendJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { body, token, skipAuth: _skipAuth, headers: headerInit, ...rest } = options;
+  const headers = new Headers(headerInit);
+  headers.set("Accept", "application/json");
+  if (body !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (token) {
+    headers.set("Authorization", "Bearer " + token);
+  }
+
+  const response = await fetch(path, {
+    ...rest,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  return readEnvelope<T>(response);
+}
+
+async function sendForm<T>(path: string, form: FormData, token?: string | null): Promise<T> {
+  const headers = new Headers();
+  headers.set("Accept", "application/json");
+  if (token) {
+    headers.set("Authorization", "Bearer " + token);
+  }
+
+  const response = await fetch(path, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+
+  return readEnvelope<T>(response);
 }
 
 export async function api<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -126,5 +146,19 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     const nextToken = await refreshSession();
     if (!nextToken) throw error;
     return sendJson<T>(path, { ...options, token: nextToken });
+  }
+}
+
+export async function apiForm<T>(path: string, form: FormData): Promise<T> {
+  const token = await resolveAccessToken();
+
+  try {
+    return await sendForm<T>(path, form, token);
+  } catch (error) {
+    const canRetry = error instanceof ApiError && error.status === 401 && Boolean(getRefreshToken());
+    if (!canRetry) throw error;
+    const nextToken = await refreshSession();
+    if (!nextToken) throw error;
+    return sendForm<T>(path, form, nextToken);
   }
 }

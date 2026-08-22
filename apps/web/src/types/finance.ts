@@ -35,6 +35,24 @@ export type ExpenseCategory =
   | "Medical"
   | "Other";
 
+export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  "House Rent / EMI",
+  "Electricity Bill",
+  "Water Bill",
+  "Internet",
+  "Mobile",
+  "Groceries",
+  "Fuel",
+  "Transportation",
+  "LIC Premium",
+  "School Fees",
+  "Entertainment",
+  "Dining Out",
+  "Travel",
+  "Medical",
+  "Other",
+];
+
 export interface Expense {
   id: ID;
   name: string;

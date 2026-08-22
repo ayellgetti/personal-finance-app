@@ -1,24 +1,29 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import { formatCurrency, monthlyExpenses, oneTimeExpenses } from "@/lib/finance/calculations";
-import { Expense, ExpenseCategory } from "@/types/finance";
+import { EXPENSE_CATEGORIES, Expense } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
+import { ExpenseQuickAdd } from "./ExpenseQuickAdd";
 import { StatCard } from "@/components/StatCard";
-import { Receipt, RefreshCw, Coins } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Receipt, RefreshCw, Coins, Plus } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
 
-const CATEGORIES: ExpenseCategory[] = [
-  "House Rent / EMI", "Electricity Bill", "Water Bill", "Internet", "Mobile", "Groceries", "Fuel",
-  "Transportation", "LIC Premium", "School Fees", "Entertainment", "Dining Out", "Travel", "Medical", "Other",
-];
-
-function expenseFields(expense: Expense | undefined, currency: string): FieldDef[] {
+function expenseFields(expense: Expense, currency: string): FieldDef[] {
   return [
-    { name: "name", label: "Expense Name", type: "text", span: 2, defaultValue: expense?.name ?? "" },
-    { name: "category", label: "Category", type: "select", options: CATEGORIES, span: 2, defaultValue: expense?.category ?? CATEGORIES[0] },
-    { name: "amount", label: "Amount", type: "number", prefix: currency, defaultValue: expense?.amount ?? 0 },
-    { name: "date", label: "Date", type: "date", defaultValue: expense?.date ?? new Date().toISOString().slice(0, 10) },
-    { name: "recurring", label: "Monthly Recurring (off = one-time)", type: "switch", defaultValue: expense?.recurring ?? true },
+    { name: "name", label: "Expense Name", type: "text", span: 2, defaultValue: expense.name },
+    { name: "category", label: "Category", type: "select", options: EXPENSE_CATEGORIES, span: 2, defaultValue: expense.category },
+    { name: "amount", label: "Amount", type: "number", prefix: currency, defaultValue: expense.amount },
+    { name: "date", label: "Date", type: "date", defaultValue: expense.date },
+    { name: "recurring", label: "Monthly Recurring (off = one-time)", type: "switch", defaultValue: expense.recurring },
   ];
 }
 
@@ -28,12 +33,30 @@ export function ExpenseModule() {
   const recurring = monthlyExpenses(data);
   const oneTime = oneTimeExpenses(data);
 
-  const byCat = CATEGORIES.map((c) => ({
+  const byCat = EXPENSE_CATEGORIES.map((c) => ({
     name: c,
     value: data.expenses.filter((e) => e.category === c && e.recurring).reduce((s, e) => s + e.amount, 0),
   })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
 
-  const fields = expenseFields(undefined, cur);
+  const addExpense = (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button className="gap-2 rounded-xl">
+          <Plus className="h-4 w-4" /> Add Expense
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display">Quick Expense Entry</DialogTitle>
+          <DialogDescription>
+            Pick a category, then log as many entries as you need before closing.
+          </DialogDescription>
+        </DialogHeader>
+        {/* Category-first entry: fields appear once a category is chosen */}
+        <ExpenseQuickAdd currency={cur} onAdd={(expense) => addItem("expenses", { id: newId(), ...expense })} />
+      </DialogContent>
+    </Dialog>
+  );
 
   return (
     <div className="space-y-6">
@@ -59,7 +82,7 @@ export function ExpenseModule() {
           ) : <EmptyState message="No expenses yet" />}
         </Panel>
 
-        <Panel className="lg:col-span-3" title="All Expenses" action={<EntityDialog title="Add Expense" fields={fields} triggerLabel="Add Expense" onSubmit={(v) => addItem("expenses", { id: newId(), ...v } as any)} />}>
+        <Panel className="lg:col-span-3" title="All Expenses" action={addExpense}>
           <div className="max-h-[360px] space-y-3 overflow-y-auto pr-1">
             {data.expenses.length ? data.expenses.map((e) => (
               <ItemRow

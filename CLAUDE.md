@@ -220,7 +220,7 @@ Do not invent root `db:seed` / `db:format` scripts unless that is the task.
 
 Use PostgreSQL-native features where they fit: UUIDs, FKs, indexes, unique constraints, timestamps, JSON only when justified.
 
-Existing models often include `id`, `isActive`, `createdBy`, `createdAt`, `updatedBy`, `updatedAt`, `deletedBy`, `deletedAt`, and Match the nearest model; 
+Every model includes `id` (or another primary key), `isActive`, `createdBy`, `createdAt`, `updatedBy`, `updatedAt`, `deletedBy`, and `deletedAt`. Actor columns (`createdBy`, `updatedBy`, `deletedBy`) are optional strings. 
 
 Prefer Prisma enums when introducing a closed set of string values on a new field; do not rewrite existing string columns in the same PR.
 
@@ -345,7 +345,7 @@ Do not put Prisma queries in controllers.
 
 **Current prefix:** `/api/...` (not `/api/v1`).
 
-Examples: `/api/auth/login`, `/api/loans`, `/api/advisor`.
+Examples: `/api/auth/login`, `/api/loans`, `/api/advisor`, `/api/statements`, `/api/tax`.
 
 Do not introduce `/api/v1` without an approved migration of all clients.
 
@@ -629,6 +629,9 @@ Agents must not:
 When adding a finance entity: Prisma migrate → model/service/route → OpenAPI → `remote.ts` + store + UI.
 
 Planner math: `apps/api/src/modules/personal-finance/planner/planner.engine.ts`.
+Tax slabs: `apps/api/src/modules/personal-finance/tax/tax.engine.ts` + `tax.catalog.ts`.
+Statement file decode (PDF/Excel/text): `apps/api/src/modules/personal-finance/statement/statement.extract.ts`.
+Statement parse: `apps/api/src/modules/personal-finance/statement/statement.parser.ts`.
 
 Advisor: prompt + `advisor.schema.ts` together; cache in Redis.
 

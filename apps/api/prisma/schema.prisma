@@ -25,10 +25,10 @@ model User {
   aiReportLimit     Int      @default(1)
   isActive          Int      @default(1)
   createdBy         String?
-  updatedBy         String?
-  deletedBy         String?
   createdAt         DateTime @default(now())
+  updatedBy         String?
   updatedAt         DateTime @updatedAt
+  deletedBy         String?
   deletedAt         DateTime?
 
   refreshSessions            RefreshSession[]
@@ -49,6 +49,9 @@ model User {
   conversationMembers        ConversationMember[]
   conversationMessages       ConversationMessage[]
   conversationMessageStatus  ConversationMessageStatus[]
+  statementImports           StatementImport[]
+  statementLines             StatementLine[]
+  taxScenarios               TaxScenario[]
 }
 
 model FinancialProfile {
@@ -60,8 +63,12 @@ model FinancialProfile {
   employmentType String   @default("Salaried")
   currency       String   @default("₹")
   isActive       Int      @default(1)
+  createdBy      String?
   createdAt      DateTime @default(now())
+  updatedBy      String?
   updatedAt      DateTime @updatedAt
+  deletedBy      String?
+  deletedAt      DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -69,18 +76,24 @@ model FinancialProfile {
 }
 
 model RefreshSession {
-  jti       String   @id
+  jti       String    @id
   userId    String
   tokenHash String
   expiresAt DateTime
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive  Int       @default(1)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model FailureLog {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   requestId  String
   method     String
   path       String
@@ -90,8 +103,14 @@ model FailureLog {
   details    Json?
   body       Json?
   userId     String?
-  createdAt  DateTime @default(now())
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  isActive   Int       @default(1)
+  createdBy  String?
+  createdAt  DateTime  @default(now())
+  updatedBy  String?
+  updatedAt  DateTime  @updatedAt
+  deletedBy  String?
+  deletedAt  DateTime?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([requestId])
   @@index([createdAt])
@@ -99,31 +118,35 @@ model FailureLog {
 }
 
 model Session {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  valid     Boolean  @default(true)
+  valid     Boolean   @default(true)
   userAgent String?
-  isActive  Int      @default(1)
+  isActive  Int       @default(1)
   createdBy String?
+  createdAt DateTime  @default(now())
   updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model Otp {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   mobileNo  String
   no        Int
   type      String
-  try       Int      @default(0)
-  isActive  Int      @default(1)
+  try       Int       @default(0)
+  isActive  Int       @default(1)
   createdBy String?
+  createdAt DateTime  @default(now())
   updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
 
   @@index([mobileNo, type])
 }
@@ -141,11 +164,11 @@ model Contact {
   avatar           String?
   avatarBackground String?
   isActive         Int       @default(1)
-  createdBy        Int?
-  updatedBy        Int?
-  deletedBy        Int?
+  createdBy        String?
   createdAt        DateTime  @default(now())
+  updatedBy        String?
   updatedAt        DateTime  @updatedAt
+  deletedBy        String?
   deletedAt        DateTime?
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -163,11 +186,11 @@ model Constant {
   value     String?
   desc      String?
   isActive  Int       @default(1)
-  createdBy Int?
-  updatedBy Int?
-  deletedBy Int?
+  createdBy String?
   createdAt DateTime  @default(now())
+  updatedBy String?
   updatedAt DateTime  @updatedAt
+  deletedBy String?
   deletedAt DateTime?
 
   @@index([column])
@@ -182,11 +205,13 @@ model Categories {
   description String
   icon        String
   color       String
-  isActive    Int      @default(1)
+  isActive    Int       @default(1)
   createdBy   String?
+  createdAt   DateTime  @default(now())
   updatedBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+  deletedBy   String?
+  deletedAt   DateTime?
 
   parent        Categories?  @relation("CategoryTree", fields: [parentCode], references: [code], onDelete: SetNull)
   subcategories Categories[] @relation("CategoryTree")
@@ -207,11 +232,11 @@ model Budget {
   weekDay     Int?
   repeatCount Int?
   isActive    Int       @default(1)
-  createdBy   Int?
-  updatedBy   Int?
-  deletedBy   Int?
+  createdBy   String?
   createdAt   DateTime  @default(now())
+  updatedBy   String?
   updatedAt   DateTime  @updatedAt
+  deletedBy   String?
   deletedAt   DateTime?
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -231,11 +256,11 @@ model Loan {
   emiAmount              Float
   emiDay                 Int
   isActive               Int       @default(1)
-  createdBy              Int?
-  updatedBy              Int?
-  deletedBy              Int?
+  createdBy              String?
   createdAt              DateTime  @default(now())
+  updatedBy              String?
   updatedAt              DateTime  @updatedAt
+  deletedBy              String?
   deletedAt              DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -256,11 +281,11 @@ model Investment {
   monthDay           Int
   onHold             Int       @default(0)
   isActive           Int       @default(1)
-  createdBy          Int?
-  updatedBy          Int?
-  deletedBy          Int?
+  createdBy          String?
   createdAt          DateTime  @default(now())
+  updatedBy          String?
   updatedAt          DateTime  @updatedAt
+  deletedBy          String?
   deletedAt          DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -277,11 +302,11 @@ model Insurance {
   annualPremium   Float
   expiryDate      DateTime
   isActive        Int       @default(1)
-  createdBy       Int?
-  updatedBy       Int?
-  deletedBy       Int?
+  createdBy       String?
   createdAt       DateTime  @default(now())
+  updatedBy       String?
   updatedAt       DateTime  @updatedAt
+  deletedBy       String?
   deletedAt       DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -304,11 +329,11 @@ model Goal {
   currentAge      Int?
   targetAge       Int?
   isActive        Int       @default(1)
-  createdBy       Int?
-  updatedBy       Int?
-  deletedBy       Int?
+  createdBy       String?
   createdAt       DateTime  @default(now())
+  updatedBy       String?
   updatedAt       DateTime  @updatedAt
+  deletedBy       String?
   deletedAt       DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -329,11 +354,11 @@ model Planner {
   tenure          Int
   data            Json?
   isActive        Int       @default(1)
-  createdBy       Int?
-  updatedBy       Int?
-  deletedBy       Int?
+  createdBy       String?
   createdAt       DateTime  @default(now())
+  updatedBy       String?
   updatedAt       DateTime  @updatedAt
+  deletedBy       String?
   deletedAt       DateTime?
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -349,15 +374,94 @@ model Transaction {
   title       String
   description String?
   data        Json
-  isActive    Int      @default(1)
+  isActive    Int       @default(1)
   createdBy   String?
+  createdAt   DateTime  @default(now())
   updatedBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+  deletedBy   String?
+  deletedAt   DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model StatementImport {
+  id         String    @id @default(uuid())
+  userId     String
+  sourceType String
+  fileName   String?
+  periodFrom DateTime?
+  periodTo   DateTime?
+  currency   String    @default("INR")
+  status     String
+  summary    Json
+  lineCount  Int       @default(0)
+  isActive   Int       @default(1)
+  createdBy  String?
+  createdAt  DateTime  @default(now())
+  updatedBy  String?
+  updatedAt  DateTime  @updatedAt
+  deletedBy  String?
+  deletedAt  DateTime?
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lines StatementLine[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model StatementLine {
+  id          String    @id @default(uuid())
+  userId      String
+  importId    String
+  postedOn    DateTime?
+  description String
+  amount      Float
+  direction   String
+  category    String
+  merchant    String?
+  raw         Json?
+  isActive    Int       @default(1)
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedBy   String?
+  updatedAt   DateTime  @updatedAt
+  deletedBy   String?
+  deletedAt   DateTime?
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  statementImport StatementImport @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([importId])
+  @@index([userId, category])
+}
+
+model TaxScenario {
+  id             String    @id @default(uuid())
+  userId         String
+  countryCode    String
+  regimeCode     String
+  financialYear  String
+  assessmentYear String
+  title          String
+  input          Json
+  result         Json
+  isActive       Int       @default(1)
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedBy      String?
+  updatedAt      DateTime  @updatedAt
+  deletedBy      String?
+  deletedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isActive])
 }
 
 model Device {
@@ -369,11 +473,13 @@ model Device {
   version    String?
   token      String?
   data       Json
-  isActive   Int      @default(1)
+  isActive   Int       @default(1)
   createdBy  String?
+  createdAt  DateTime  @default(now())
   updatedBy  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime  @updatedAt
+  deletedBy  String?
+  deletedAt  DateTime?
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   sockets Socket[]
@@ -386,11 +492,13 @@ model Socket {
   userId    String
   socketId  String
   deviceId  String?
-  isActive  Int      @default(1)
+  isActive  Int       @default(1)
   createdBy String?
+  createdAt DateTime  @default(now())
   updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
@@ -401,15 +509,18 @@ model Socket {
 }
 
 model Notification {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   description String
   recipientId String
-  read        Int      @default(0)
+  read        Int       @default(0)
+  isActive    Int       @default(1)
   createdBy   String?
+  createdAt   DateTime  @default(now())
   updatedBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime  @updatedAt
+  deletedBy   String?
+  deletedAt   DateTime?
 
   recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
@@ -417,14 +528,16 @@ model Notification {
 }
 
 model Conversation {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   type      String
   name      String?
-  isActive  Int      @default(1)
+  isActive  Int       @default(1)
   createdBy String?
+  createdAt DateTime  @default(now())
   updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
 
   members        ConversationMember[]
   messages       ConversationMessage[]
@@ -436,11 +549,13 @@ model ConversationMember {
   id             String   @id @default(uuid())
   conversationId String
   userId         String
-  isActive       Int      @default(1)
+  isActive       Int       @default(1)
   createdBy      String?
+  createdAt      DateTime  @default(now())
   updatedBy      String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime  @updatedAt
+  deletedBy      String?
+  deletedAt      DateTime?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -455,11 +570,13 @@ model ConversationMessage {
   userId         String
   type           String
   message        String
-  isActive       Int      @default(1)
+  isActive       Int       @default(1)
   createdBy      String?
+  createdAt      DateTime  @default(now())
   updatedBy      String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime  @updatedAt
+  deletedBy      String?
+  deletedAt      DateTime?
 
   conversation Conversation                @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -475,11 +592,13 @@ model ConversationMessageStatus {
   conversationId        String
   userId                String
   type                  String
-  isActive              Int      @default(1)
+  isActive              Int       @default(1)
   createdBy             String?
+  createdAt             DateTime  @default(now())
   updatedBy             String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  updatedAt             DateTime  @updatedAt
+  deletedBy             String?
+  deletedAt             DateTime?
 
   message      ConversationMessage @relation(fields: [conversationMessageId], references: [id], onDelete: Cascade)
   conversation Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -501,11 +620,13 @@ model Tradingview {
   symbol    String?
   price     Float?
   volume    Float?
-  isActive  Int      @default(1)
+  isActive  Int       @default(1)
   createdBy String?
+  createdAt DateTime  @default(now())
   updatedBy String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
 
   @@index([symbol])
   @@index([timestamp])

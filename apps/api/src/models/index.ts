@@ -20,6 +20,18 @@ export { FinancialProfileModel, financialProfileModel } from "./personal-finance
 export { GoalModel, goalModel } from "./personal-finance/goal.model";
 export { PlannerModel, plannerModel } from "./planner.model";
 export { TransactionModel, transactionModel } from "./personal-finance/transaction.model";
+export {
+  StatementImportModel,
+  statementImportModel,
+} from "./personal-finance/statement-import.model";
+export {
+  StatementLineModel,
+  statementLineModel,
+} from "./personal-finance/statement-line.model";
+export {
+  TaxScenarioModel,
+  taxScenarioModel,
+} from "./personal-finance/tax-scenario.model";
 export { DeviceModel, deviceModel } from "./shared/device.model";
 export { SocketModel, socketModel } from "./socket.model";
 export { NotificationModel, notificationModel } from "./shared/notification.model";

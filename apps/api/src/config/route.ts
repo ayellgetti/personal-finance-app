@@ -11,6 +11,8 @@ import { investmentRouter } from "../modules/personal-finance/investment/investm
 import { loanRouter } from "../modules/personal-finance/loan/loan.route";
 import { plannerRouter } from "../modules/personal-finance/planner/planner.route";
 import { setupRouter } from "../modules/personal-finance/setup/setup.route";
+import { statementRouter } from "../modules/personal-finance/statement/statement.route";
+import { taxRouter } from "../modules/personal-finance/tax/tax.route";
 import { authRouter } from "../modules/shared/auth/auth.route";
 import { deviceRouter } from "../modules/shared/device/device.route";
 import { otpRouter } from "../modules/shared/otp/otp.route";
@@ -52,6 +54,8 @@ export class Route {
     app.use("/api/financial-profile", financialProfileRouter);
     app.use("/api/planner", plannerRouter);
     app.use("/api/advisor", advisorRouter);
+    app.use("/api/statements", statementRouter);
+    app.use("/api/tax", taxRouter);
   }
 }
 
