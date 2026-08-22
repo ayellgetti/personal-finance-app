@@ -3,6 +3,8 @@ import { formatCurrency, formatPercent, monthlyIncome } from "@/lib/finance/calc
 import { Income, IncomeType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge, EditButton, CHART_COLORS, tooltipStyle } from "./shared";
+import { QuickAddDialog } from "./QuickTypePicker";
+import { IncomeQuickAdd } from "./IncomeQuickAdd";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const TYPES: IncomeType[] = [
@@ -29,7 +31,15 @@ export function IncomeModule() {
     value: data.incomes.filter((i) => i.type === t).reduce((s, i) => s + i.monthlyAmount, 0),
   })).filter((x) => x.value > 0);
 
-  const fields = incomeFields(undefined, cur);
+  const addIncome = (
+    <QuickAddDialog
+      title="Quick Income Entry"
+      description="Pick a source, then add as many income streams as you need before closing."
+      triggerLabel="Add Income"
+    >
+      <IncomeQuickAdd currency={cur} onAdd={(income) => addItem("incomes", { id: newId(), ...income })} />
+    </QuickAddDialog>
+  );
 
   return (
     <div className="space-y-6">
@@ -52,7 +62,7 @@ export function IncomeModule() {
           </div>
         </Panel>
 
-        <Panel className="lg:col-span-2" title="Income Sources" action={<EntityDialog title="Add Income Source" fields={fields} triggerLabel="Add Income" onSubmit={(v) => addItem("incomes", { id: newId(), ...v } as any)} />}>
+        <Panel className="lg:col-span-2" title="Income Sources" action={addIncome}>
           <div className="space-y-3">
             {data.incomes.length ? data.incomes.map((i) => (
               <ItemRow
