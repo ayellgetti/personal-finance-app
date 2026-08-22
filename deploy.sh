@@ -85,7 +85,10 @@ env_set() {
 }
 
 is_placeholder() {
-  local value="$1"
+  # PUBLIC_ORIGIN ships as http://REPLACE_WITH_EC2_PUBLIC_IP, so compare
+  # without the scheme or the placeholder reads as a real value.
+  local value="${1#http://}"
+  value="${value#https://}"
   case "${value}" in
     ""|replace-with-*|REPLACE_WITH_*) return 0 ;;
     *) return 1 ;;
@@ -205,6 +208,46 @@ esac
 compose() {
   docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
 }
+
+port_listening() {
+  local port="$1"
+  if command -v ss >/dev/null 2>&1; then
+    if ss -ltn 2>/dev/null | awk '{ print $4 }' | grep -qE "[:.]${port}$"; then
+      return 0
+    fi
+    return 1
+  fi
+  if command -v lsof >/dev/null 2>&1; then
+    if lsof -nP -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1; then
+      return 0
+    fi
+    return 1
+  fi
+  if (exec 3<>"/dev/tcp/127.0.0.1/${port}") >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
+# A repeat deploy sees its own web container on the port; Compose recreates that
+# one, so only a foreign listener is a real conflict.
+own_web_publishes_port() {
+  local port="$1" id
+  id="$(compose ps -q web 2>/dev/null || true)"
+  [[ -n "${id}" ]] || return 1
+  if docker inspect -f \
+    '{{range $port, $bindings := .NetworkSettings.Ports}}{{range $bindings}}{{println .HostPort}}{{end}}{{end}}' \
+    "${id}" 2>/dev/null | grep -qx "${port}"; then
+    return 0
+  fi
+  return 1
+}
+
+if port_listening "${PUBLIC_PORT}" && ! own_web_publishes_port "${PUBLIC_PORT}"; then
+  die "Host port ${PUBLIC_PORT} is already in use, so nginx cannot bind it.
+  On a development machine this is usually the local stack: docker compose -f docker-compose.yml stop nginx
+  Otherwise stop the other listener (host nginx, Apache) or pick another port: ./deploy.sh --port 8080 --origin http://localhost:8080"
+fi
 
 if [[ "${NO_BUILD}" -eq 1 ]]; then
   log "Starting stack without rebuild..."

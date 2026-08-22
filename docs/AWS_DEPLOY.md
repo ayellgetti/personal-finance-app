@@ -33,6 +33,8 @@ chmod +x deploy.sh docker-setup.sh
 
 Optional flags: `--origin https://your.domain`, `--port 80`, `--no-build`. Edit `.env.prod` yourself for `OPENAI_API_KEY` and SMTP/Twilio.
 
+`deploy.sh` stops before building if `PUBLIC_PORT` is already bound by something other than this stack's own web container. On a development machine that is usually nginx from the local `docker-compose.yml`; stop it (`docker compose -f docker-compose.yml stop nginx`) or deploy on another port with `--port 8080 --origin http://localhost:8080`.
+
 Open `http://<public-ip>/`. Health: `http://<public-ip>/health`.
 
 Rebuild after API or web changes:
