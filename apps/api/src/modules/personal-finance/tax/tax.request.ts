@@ -12,18 +12,38 @@ export const listTaxScenariosQuerySchema = z.object({
 
 const money = z.number().nonnegative().max(1_000_000_000);
 
-export const taxPlanInputSchema = z.object({
-  countryCode: z.string().trim().min(2).max(8),
-  regimeCode: z.string().trim().min(1).max(80),
-  grossSalary: money,
-  otherIncome: money.optional().default(0),
+const deductionAmounts = {
   section80C: money.optional(),
   section80D: money.optional(),
   hraExemption: money.optional(),
   homeLoanInterest: money.optional(),
   nps80Ccd: money.optional(),
   employerNps80Ccd2: money.optional(),
+  section80E: money.optional(),
+  section80Eea: money.optional(),
+  section80Gg: money.optional(),
+  section80Tta: money.optional(),
   otherDeductions: money.optional(),
+};
+
+export const taxDeductionAmountsSchema = z.object(deductionAmounts);
+
+export const taxPlanInputSchema = z.object({
+  countryCode: z.string().trim().min(2).max(8),
+  regimeCode: z.string().trim().min(1).max(80),
+  grossSalary: money,
+  otherIncome: money.optional().default(0),
+  ...deductionAmounts,
+});
+
+export const taxCompareInputSchema = z.object({
+  countryCode: z.string().trim().min(2).max(8),
+  financialYear: z.string().trim().min(4).max(16),
+  grossSalary: money,
+  otherIncome: money.optional().default(0),
+  ...deductionAmounts,
+  /** Planned amounts drive the "With Planner" column; defaults to the actual amounts. */
+  planned: taxDeductionAmountsSchema.optional(),
 });
 
 export const createTaxScenarioBodySchema = taxPlanInputSchema.extend({
@@ -43,6 +63,8 @@ export const removeTaxScenarioBodySchema = z.object({
 export type TaxIdParams = z.infer<typeof taxIdParamsSchema>;
 export type ListTaxScenariosQuery = z.infer<typeof listTaxScenariosQuerySchema>;
 export type TaxPlanInputBody = z.infer<typeof taxPlanInputSchema>;
+export type TaxDeductionAmountsBody = z.infer<typeof taxDeductionAmountsSchema>;
+export type TaxCompareInputBody = z.infer<typeof taxCompareInputSchema>;
 export type CreateTaxScenarioBody = z.infer<typeof createTaxScenarioBodySchema>;
 export type UpdateTaxScenarioBody = z.infer<typeof updateTaxScenarioBodySchema>;
 export type RemoveTaxScenarioBody = z.infer<typeof removeTaxScenarioBodySchema>;

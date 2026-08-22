@@ -5,6 +5,7 @@ import type {
   CreateTaxScenarioBody,
   ListTaxScenariosQuery,
   RemoveTaxScenarioBody,
+  TaxCompareInputBody,
   TaxPlanInputBody,
   UpdateTaxScenarioBody,
 } from "./tax.request";
@@ -31,6 +32,12 @@ export class TaxController extends BaseController {
     const body = req.body as TaxPlanInputBody;
     const result = this.service.preview(body);
     this.sendSuccess(req, res, { result }, "Tax estimate computed");
+  }
+
+  compare(req: Request, res: Response) {
+    const body = req.body as TaxCompareInputBody;
+    const comparison = this.service.compare(body);
+    this.sendSuccess(req, res, { comparison }, "Tax comparison computed");
   }
 
   async list(req: Request, res: Response) {

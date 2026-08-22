@@ -1,15 +1,26 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useFinance } from "@/lib/finance/store";
 import { coachInsights } from "@/lib/finance/calculations";
-import { LEARN_CATEGORIES, THUMB_RULES, Lesson, LearnCategory } from "@/lib/finance/learnContent";
+import { LEARN_CATEGORIES, THUMB_RULES, Lesson } from "@/lib/finance/learnContent";
 import { Panel, Badge } from "./shared";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
-  Sparkles, BookOpen, Clock, CheckCircle2, AlertCircle, XCircle, GraduationCap,
+  Sparkles, BookOpen, Clock, CheckCircle2, AlertCircle, XCircle, GraduationCap, LayoutGrid,
 } from "lucide-react";
+
+const ALL_TAB_ID = "all";
+
+const ALL_TAB = {
+  id: ALL_TAB_ID,
+  title: "All",
+  icon: LayoutGrid,
+  blurb: "Every lesson across budgeting, investing, insurance, and more.",
+} as const;
+
+type LessonCard = Lesson & { categoryId: string; categoryTitle: string };
 
 const FORMAT_TONE: Record<string, "primary" | "gold" | "success" | "muted" | "danger"> = {
   "2-min read": "primary",
@@ -22,8 +33,25 @@ const FORMAT_TONE: Record<string, "primary" | "gold" | "success" | "muted" | "da
 export function LearningHubModule() {
   const { data } = useFinance();
   const insights = coachInsights(data);
-  const [activeCat, setActiveCat] = useState<LearnCategory>(LEARN_CATEGORIES[0]);
+  const [activeId, setActiveId] = useState(ALL_TAB_ID);
   const [lesson, setLesson] = useState<Lesson | null>(null);
+
+  const activeCat = LEARN_CATEGORIES.find((c) => c.id === activeId);
+  const header = activeCat ?? ALL_TAB;
+  const HeaderIcon = header.icon;
+
+  const lessons = useMemo((): LessonCard[] => {
+    if (activeCat) {
+      return activeCat.lessons.map((l) => ({
+        ...l,
+        categoryId: activeCat.id,
+        categoryTitle: activeCat.title,
+      }));
+    }
+    return LEARN_CATEGORIES.flatMap((c) =>
+      c.lessons.map((l) => ({ ...l, categoryId: c.id, categoryTitle: c.title })),
+    );
+  }, [activeCat]);
 
   const StatusIcon = { good: CheckCircle2, warning: AlertCircle, bad: XCircle };
 
@@ -80,13 +108,14 @@ export function LearningHubModule() {
       <div>
         <h3 className="mb-3 font-display text-lg font-semibold">Learning Hub</h3>
         <div className="flex flex-wrap gap-2">
-          {LEARN_CATEGORIES.map((c) => {
+          {[ALL_TAB, ...LEARN_CATEGORIES].map((c) => {
             const Icon = c.icon;
-            const active = c.id === activeCat.id;
+            const active = c.id === activeId;
             return (
               <button
                 key={c.id}
-                onClick={() => setActiveCat(c)}
+                type="button"
+                onClick={() => setActiveId(c.id)}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition",
                   active
@@ -104,23 +133,29 @@ export function LearningHubModule() {
         <div className="mt-5 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <activeCat.icon className="h-5 w-5" />
+              <HeaderIcon className="h-5 w-5" />
             </div>
             <div>
-              <p className="font-display text-lg font-semibold">{activeCat.title}</p>
-              <p className="text-sm text-muted-foreground">{activeCat.blurb}</p>
+              <p className="font-display text-lg font-semibold">{header.title}</p>
+              <p className="text-sm text-muted-foreground">{header.blurb}</p>
             </div>
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {activeCat.lessons.map((l) => (
+            {lessons.map((l) => (
               <button
-                key={l.title}
+                key={`${l.categoryId}-${l.title}`}
+                type="button"
                 onClick={() => setLesson(l)}
                 className="group flex flex-col gap-2 rounded-xl border border-border bg-background/40 p-4 text-left transition hover:border-primary/40 hover:shadow-[var(--shadow-card)]"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <Badge tone={FORMAT_TONE[l.format] || "muted"}>{l.format}</Badge>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge tone={FORMAT_TONE[l.format] || "muted"}>{l.format}</Badge>
+                    {activeId === ALL_TAB_ID && (
+                      <span className="text-xs text-muted-foreground">{l.categoryTitle}</span>
+                    )}
+                  </div>
                   <span className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" /> {l.minutes} min
                   </span>

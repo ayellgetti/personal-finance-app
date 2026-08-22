@@ -4,12 +4,20 @@ import {
   taxScenarioModel,
   type TaxScenarioModel,
 } from "../../../models/index";
-import { findTaxRegime, listTaxCatalog } from "./tax.catalog";
+import {
+  findTaxFinancialYear,
+  findTaxRegime,
+  listTaxCatalog,
+  TAX_DEDUCTION_CODES,
+  type TaxDeductionCode,
+} from "./tax.catalog";
+import { buildTaxComparison, type TaxDeductionAmounts } from "./tax.compare";
 import { computeTaxPlan } from "./tax.engine";
 import type {
   CreateTaxScenarioBody,
   ListTaxScenariosQuery,
   RemoveTaxScenarioBody,
+  TaxCompareInputBody,
   TaxPlanInputBody,
   UpdateTaxScenarioBody,
 } from "./tax.request";
@@ -24,6 +32,21 @@ export class TaxService {
   preview(input: TaxPlanInputBody) {
     this.requireRegime(input.countryCode, input.regimeCode);
     return computeTaxPlan(input);
+  }
+
+  compare(input: TaxCompareInputBody) {
+    if (!findTaxFinancialYear(input.countryCode, input.financialYear)) {
+      throw new HttpError(422, "Unknown tax country or financial year");
+    }
+
+    return buildTaxComparison({
+      countryCode: input.countryCode,
+      financialYear: input.financialYear,
+      grossSalary: input.grossSalary,
+      otherIncome: input.otherIncome,
+      actual: pickDeductions(input),
+      planned: input.planned ? pickDeductions(input.planned) : undefined,
+    });
   }
 
   list(userId: string, query: ListTaxScenariosQuery) {
@@ -70,13 +93,8 @@ export class TaxService {
       regimeCode: input.regimeCode ?? existing.regimeCode,
       grossSalary: input.grossSalary ?? existingInput.grossSalary,
       otherIncome: input.otherIncome ?? existingInput.otherIncome ?? 0,
-      section80C: input.section80C ?? existingInput.section80C,
-      section80D: input.section80D ?? existingInput.section80D,
-      hraExemption: input.hraExemption ?? existingInput.hraExemption,
-      homeLoanInterest: input.homeLoanInterest ?? existingInput.homeLoanInterest,
-      nps80Ccd: input.nps80Ccd ?? existingInput.nps80Ccd,
-      employerNps80Ccd2: input.employerNps80Ccd2 ?? existingInput.employerNps80Ccd2,
-      otherDeductions: input.otherDeductions ?? existingInput.otherDeductions,
+      ...pickDeductions(existingInput),
+      ...pickDeductions(input),
     };
     const regime = this.requireRegime(merged.countryCode, merged.regimeCode);
     const result = computeTaxPlan(merged);
@@ -122,6 +140,18 @@ export class TaxService {
   }
 }
 
+/** Copies only the deduction sections that carry a numeric amount. */
+function pickDeductions(source: Record<string, unknown>): TaxDeductionAmounts {
+  const amounts: TaxDeductionAmounts = {};
+  for (const code of TAX_DEDUCTION_CODES) {
+    const value = source[code];
+    if (typeof value === "number") {
+      amounts[code as TaxDeductionCode] = value;
+    }
+  }
+  return amounts;
+}
+
 function asPlanInput(value: unknown): TaxPlanInputBody {
   if (typeof value !== "object" || value === null) {
     return {
@@ -138,16 +168,7 @@ function asPlanInput(value: unknown): TaxPlanInputBody {
       typeof record.regimeCode === "string" ? record.regimeCode : "in_new_fy2025_26",
     grossSalary: typeof record.grossSalary === "number" ? record.grossSalary : 0,
     otherIncome: typeof record.otherIncome === "number" ? record.otherIncome : 0,
-    section80C: typeof record.section80C === "number" ? record.section80C : undefined,
-    section80D: typeof record.section80D === "number" ? record.section80D : undefined,
-    hraExemption: typeof record.hraExemption === "number" ? record.hraExemption : undefined,
-    homeLoanInterest:
-      typeof record.homeLoanInterest === "number" ? record.homeLoanInterest : undefined,
-      nps80Ccd: typeof record.nps80Ccd === "number" ? record.nps80Ccd : undefined,
-      employerNps80Ccd2:
-        typeof record.employerNps80Ccd2 === "number" ? record.employerNps80Ccd2 : undefined,
-      otherDeductions:
-        typeof record.otherDeductions === "number" ? record.otherDeductions : undefined,
+    ...pickDeductions(record),
   };
 }
 

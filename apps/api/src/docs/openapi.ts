@@ -446,7 +446,52 @@ export const openApiDocument = {
           homeLoanInterest: { type: "number", minimum: 0 },
           nps80Ccd: { type: "number", minimum: 0 },
           employerNps80Ccd2: { type: "number", minimum: 0 },
+          section80E: { type: "number", minimum: 0 },
+          section80Eea: { type: "number", minimum: 0 },
+          section80Gg: { type: "number", minimum: 0 },
+          section80Tta: { type: "number", minimum: 0 },
           otherDeductions: { type: "number", minimum: 0 },
+        },
+      },
+      TaxDeductionAmounts: {
+        type: "object",
+        description: "Per-section deduction amounts.",
+        properties: {
+          section80C: { type: "number", minimum: 0 },
+          section80D: { type: "number", minimum: 0 },
+          hraExemption: { type: "number", minimum: 0 },
+          homeLoanInterest: { type: "number", minimum: 0 },
+          nps80Ccd: { type: "number", minimum: 0 },
+          employerNps80Ccd2: { type: "number", minimum: 0 },
+          section80E: { type: "number", minimum: 0 },
+          section80Eea: { type: "number", minimum: 0 },
+          section80Gg: { type: "number", minimum: 0 },
+          section80Tta: { type: "number", minimum: 0 },
+          otherDeductions: { type: "number", minimum: 0 },
+        },
+      },
+      TaxCompareRequest: {
+        type: "object",
+        required: ["countryCode", "financialYear", "grossSalary"],
+        description:
+          "Computes every regime available for a financial year side by side. Top-level deduction amounts are the actual ones; `planned` drives the \"With Planner\" column and falls back to the actual amount per section.",
+        properties: {
+          countryCode: { type: "string", example: "IN" },
+          financialYear: { type: "string", example: "2025-26" },
+          grossSalary: { type: "number", minimum: 0 },
+          otherIncome: { type: "number", minimum: 0 },
+          section80C: { type: "number", minimum: 0 },
+          section80D: { type: "number", minimum: 0 },
+          hraExemption: { type: "number", minimum: 0 },
+          homeLoanInterest: { type: "number", minimum: 0 },
+          nps80Ccd: { type: "number", minimum: 0 },
+          employerNps80Ccd2: { type: "number", minimum: 0 },
+          section80E: { type: "number", minimum: 0 },
+          section80Eea: { type: "number", minimum: 0 },
+          section80Gg: { type: "number", minimum: 0 },
+          section80Tta: { type: "number", minimum: 0 },
+          otherDeductions: { type: "number", minimum: 0 },
+          planned: { $ref: "#/components/schemas/TaxDeductionAmounts" },
         },
       },
       CreateTaxScenarioRequest: {
@@ -2481,6 +2526,32 @@ export const openApiDocument = {
         responses: {
           "200": {
             description: "Tax estimate",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/tax/compare": {
+      post: {
+        tags: ["Tax"],
+        summary: "Compare every regime for a financial year as a computation sheet",
+        description:
+          "Returns one column per available regime plus a \"With Planner\" column, and the row-by-row income, exemption, Chapter VI-A, surcharge, and cess breakdown for rendering a comparison table.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/TaxCompareRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Regime comparison",
             content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
           },
           "401": { $ref: "#/components/responses/Unauthorized" },

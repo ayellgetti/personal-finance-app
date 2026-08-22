@@ -1,7 +1,32 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {
+  buildTaxComparison,
+  type TaxComparison,
+} from "../modules/personal-finance/tax/tax.compare";
 import { computeTaxPlan } from "../modules/personal-finance/tax/tax.engine";
 import { parseStatementText } from "../modules/personal-finance/statement/statement.parser";
+
+function rowValues(comparison: TaxComparison, key: string): (number | null)[] {
+  const row = comparison.rows.find((item) => item.key === key);
+  assert.ok(row, `comparison is missing the "${key}" row`);
+  return row.values;
+}
+
+function assertMoney(actual: (number | null)[], expected: (number | null)[]) {
+  assert.equal(actual.length, expected.length, "column count mismatch");
+  actual.forEach((value, index) => {
+    const want = expected[index];
+    if (value === null || want === null || want === undefined) {
+      assert.equal(value, want);
+      return;
+    }
+    assert.ok(
+      Math.abs(value - want) < 0.01,
+      `column ${index}: expected ${want}, got ${value}`,
+    );
+  });
+}
 
 test("India new regime FY 2025-26 zeros tax at 12 lakh taxable income", () => {
   const result = computeTaxPlan({
@@ -89,6 +114,180 @@ test("US federal 2025 single uses USD brackets", () => {
   assert.equal(result.taxableIncome, 65_000);
   assert.ok(result.totalTax > 0);
   assert.equal(result.cess, 0);
+});
+
+test("India old regime deducts HRA and 24b interest before gross total income", () => {
+  const result = computeTaxPlan({
+    countryCode: "IN",
+    regimeCode: "in_old_fy2025_26",
+    grossSalary: 3_200_000,
+    otherIncome: 0,
+    hraExemption: 236_429,
+    homeLoanInterest: 200_000,
+    section80C: 150_000,
+  });
+
+  assert.equal(result.exemptions, 436_429);
+  assert.equal(result.grossTotalIncome, 2_713_571);
+  assert.equal(result.chapterViaDeductions, 150_000);
+  assert.equal(result.taxableIncome, 2_563_571);
+});
+
+test("India old regime caps 80EEA, 80GG, and 80TTA but not 80E", () => {
+  const result = computeTaxPlan({
+    countryCode: "IN",
+    regimeCode: "in_old_fy2025_26",
+    grossSalary: 2_000_000,
+    otherIncome: 0,
+    section80E: 90_000,
+    section80Eea: 200_000,
+    section80Gg: 100_000,
+    section80Tta: 25_000,
+  });
+
+  const allowed = new Map(result.deductionLines.map((line) => [line.code, line.allowed]));
+  assert.equal(allowed.get("section80E"), 90_000);
+  assert.equal(allowed.get("section80Eea"), 150_000);
+  assert.equal(allowed.get("section80Gg"), 60_000);
+  assert.equal(allowed.get("section80Tta"), 10_000);
+  assert.equal(result.chapterViaDeductions, 310_000);
+  assert.equal(result.taxableIncome, 1_640_000);
+});
+
+test("India new regime offers no section beyond employer NPS", () => {
+  const result = computeTaxPlan({
+    countryCode: "IN",
+    regimeCode: "in_new_fy2025_26",
+    grossSalary: 2_000_000,
+    otherIncome: 0,
+    section80E: 90_000,
+    section80Gg: 100_000,
+  });
+
+  assert.deepEqual(
+    result.deductionLines.map((line) => line.code),
+    ["employerNps80Ccd2"],
+  );
+  assert.equal(result.chapterViaDeductions, 0);
+});
+
+test("India old regime adds 10 percent surcharge above 50 lakh", () => {
+  const result = computeTaxPlan({
+    countryCode: "IN",
+    regimeCode: "in_old_fy2025_26",
+    grossSalary: 6_000_000,
+    otherIncome: 0,
+  });
+
+  assert.equal(result.taxableIncome, 5_950_000);
+  assert.equal(result.taxBeforeRebate, 1_597_500);
+  assert.equal(result.surcharge, 159_750);
+  assert.equal(result.cess, 70_290);
+  assert.equal(result.totalTax, 1_827_540);
+});
+
+test("surcharge marginal relief caps the jump just above 50 lakh", () => {
+  const result = computeTaxPlan({
+    countryCode: "IN",
+    regimeCode: "in_old_fy2025_26",
+    grossSalary: 5_060_000,
+    otherIncome: 0,
+  });
+
+  assert.equal(result.taxableIncome, 5_010_000);
+  assert.equal(result.taxBeforeRebate, 1_315_500);
+  // Without relief this would be 131,550.
+  assert.equal(result.surcharge, 7_000);
+  assert.equal(result.totalTax, 1_375_400);
+});
+
+test("comparison lays out old, planner, and new regimes as a computation sheet", () => {
+  const comparison = buildTaxComparison({
+    countryCode: "IN",
+    financialYear: "2025-26",
+    grossSalary: 3_200_000,
+    otherIncome: 0,
+    actual: {
+      hraExemption: 236_429,
+      homeLoanInterest: 200_000,
+      section80C: 150_000,
+      employerNps80Ccd2: 8_000,
+      nps80Ccd: 10_000,
+      section80D: 25_000,
+    },
+    planned: { nps80Ccd: 50_000 },
+  });
+
+  assert.deepEqual(
+    comparison.columns.map((column) => column.key),
+    ["old", "planner", "new"],
+  );
+
+  assertMoney(rowValues(comparison, "grossIncome"), [3_200_000, 3_200_000, 3_200_000]);
+  assertMoney(rowValues(comparison, "hraExemption"), [236_429, 236_429, null]);
+  assertMoney(rowValues(comparison, "standardDeduction"), [50_000, 50_000, 75_000]);
+  assertMoney(rowValues(comparison, "homeLoanInterest"), [200_000, 200_000, null]);
+  assertMoney(
+    rowValues(comparison, "grossTotalIncome"),
+    [2_713_571, 2_713_571, 3_125_000],
+  );
+  assertMoney(rowValues(comparison, "section80C"), [150_000, 150_000, null]);
+  assertMoney(rowValues(comparison, "employerNps80Ccd2"), [8_000, 8_000, 8_000]);
+  assertMoney(rowValues(comparison, "nps80Ccd"), [10_000, 50_000, null]);
+  assertMoney(rowValues(comparison, "section80E"), [0, 0, null]);
+  assertMoney(
+    rowValues(comparison, "taxableIncome"),
+    [2_520_571, 2_480_571, 3_117_000],
+  );
+  assertMoney(
+    rowValues(comparison, "taxBeforeRebate"),
+    [568_671.3, 556_671.3, 515_100],
+  );
+  assertMoney(rowValues(comparison, "surcharge"), [0, 0, 0]);
+  assertMoney(rowValues(comparison, "cess"), [22_746.85, 22_266.85, 20_604]);
+  assertMoney(
+    rowValues(comparison, "totalTax"),
+    [591_418.15, 578_938.15, 535_704],
+  );
+
+  assert.equal(comparison.bestColumnKey, "new");
+  assert.equal(comparison.rows.find((row) => row.key === "cess")?.label, "Cess @ 4%");
+});
+
+test("comparison planner column keeps actual amounts for unplanned sections", () => {
+  const comparison = buildTaxComparison({
+    countryCode: "IN",
+    financialYear: "2025-26",
+    grossSalary: 1_800_000,
+    otherIncome: 0,
+    actual: { section80C: 150_000, section80D: 25_000 },
+  });
+
+  const old = comparison.columns.find((column) => column.key === "old");
+  const planner = comparison.columns.find((column) => column.key === "planner");
+  assert.ok(old && planner);
+  assert.equal(planner.result.totalTax, old.result.totalTax);
+  assert.equal(planner.regimeCode, old.regimeCode);
+});
+
+test("comparison for a single-regime country drops the old and new columns", () => {
+  const comparison = buildTaxComparison({
+    countryCode: "US",
+    financialYear: "2025",
+    grossSalary: 120_000,
+    otherIncome: 0,
+    actual: { otherDeductions: 5_000 },
+    planned: { otherDeductions: 12_000 },
+  });
+
+  assert.deepEqual(
+    comparison.columns.map((column) => column.key),
+    ["single", "planner"],
+  );
+  assertMoney(rowValues(comparison, "otherDeductions"), [5_000, 12_000]);
+  // No cess and no surcharge concept, so those rows stay out of the sheet.
+  assert.equal(comparison.rows.some((row) => row.key === "cess"), false);
+  assert.equal(comparison.rows.some((row) => row.key === "surcharge"), false);
 });
 
 test("bank CSV parser splits debit and credit columns", () => {

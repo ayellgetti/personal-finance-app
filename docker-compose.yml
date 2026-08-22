@@ -1,3 +1,6 @@
+# Local development stack (Vite on 5173, bind mounts, admin UIs).
+# AWS / public hosts: docker-compose.prod.yml — see docs/AWS_DEPLOY.md.
+
 services:
   postgres:
     image: postgres:16-alpine

@@ -1,4 +1,11 @@
-import { findTaxRegime, type TaxDeductionCode, type TaxRegime, type TaxSlab } from "./tax.catalog";
+import {
+  findTaxRegime,
+  type TaxDeductionCode,
+  type TaxDeductionGroup,
+  type TaxRegime,
+  type TaxSlab,
+  type TaxSurchargeTier,
+} from "./tax.catalog";
 
 export type TaxPlanInput = {
   countryCode: string;
@@ -11,6 +18,10 @@ export type TaxPlanInput = {
   homeLoanInterest?: number;
   nps80Ccd?: number;
   employerNps80Ccd2?: number;
+  section80E?: number;
+  section80Eea?: number;
+  section80Gg?: number;
+  section80Tta?: number;
   otherDeductions?: number;
 };
 
@@ -22,6 +33,15 @@ export type TaxSlabResult = {
   tax: number;
 };
 
+export type TaxDeductionLine = {
+  code: TaxDeductionCode;
+  label: string;
+  group: TaxDeductionGroup;
+  entered: number;
+  allowed: number;
+  capped: boolean;
+};
+
 export type TaxPlanResult = {
   countryCode: string;
   regimeCode: string;
@@ -30,11 +50,16 @@ export type TaxPlanResult = {
   currency: string;
   grossIncome: number;
   standardDeduction: number;
+  exemptions: number;
+  grossTotalIncome: number;
   chapterViaDeductions: number;
+  deductionLines: TaxDeductionLine[];
   taxableIncome: number;
   taxBeforeRebate: number;
   rebate: number;
   taxAfterRebate: number;
+  surcharge: number;
+  cessRate: number;
   cess: number;
   totalTax: number;
   effectiveRate: number;
@@ -123,23 +148,88 @@ function inputAmount(code: TaxDeductionCode, input: TaxPlanInput): number {
       return clampNonNegative(input.nps80Ccd);
     case "employerNps80Ccd2":
       return clampNonNegative(input.employerNps80Ccd2);
+    case "section80E":
+      return clampNonNegative(input.section80E);
+    case "section80Eea":
+      return clampNonNegative(input.section80Eea);
+    case "section80Gg":
+      return clampNonNegative(input.section80Gg);
+    case "section80Tta":
+      return clampNonNegative(input.section80Tta);
     case "otherDeductions":
       return clampNonNegative(input.otherDeductions);
   }
 }
 
-function chapterViaDeductions(regime: TaxRegime, input: TaxPlanInput): number {
+/** Deductions the regime does not list are silently unavailable, not zero. */
+function deductionLines(regime: TaxRegime, input: TaxPlanInput): TaxDeductionLine[] {
   const salary = clampNonNegative(input.grossSalary);
-  return regime.deductions.reduce((total, deduction) => {
-    let value = inputAmount(deduction.code, input);
+  return regime.deductions.map((deduction) => {
+    const entered = inputAmount(deduction.code, input);
+    let allowed = entered;
     if (deduction.cap != null) {
-      value = Math.min(value, deduction.cap);
+      allowed = Math.min(allowed, deduction.cap);
     }
     if (deduction.salaryCapRate != null) {
-      value = Math.min(value, salary * deduction.salaryCapRate);
+      allowed = Math.min(allowed, salary * deduction.salaryCapRate);
     }
-    return total + value;
-  }, 0);
+    return {
+      code: deduction.code,
+      label: deduction.label,
+      group: deduction.group,
+      entered: roundMoney(entered),
+      allowed: roundMoney(allowed),
+      capped: allowed < entered,
+    };
+  });
+}
+
+function sumGroup(lines: TaxDeductionLine[], group: TaxDeductionGroup): number {
+  return lines.reduce(
+    (total, line) => (line.group === group ? total + line.allowed : total),
+    0,
+  );
+}
+
+function surchargeRateAt(taxable: number, tiers: TaxSurchargeTier[]): { rate: number; threshold: number } {
+  let rate = 0;
+  let threshold = 0;
+  for (const tier of tiers) {
+    if (taxable > tier.above) {
+      rate = tier.rate;
+      threshold = tier.above;
+    }
+  }
+  return { rate, threshold };
+}
+
+/**
+ * Marginal relief caps surcharge so that crossing a threshold never costs more
+ * in extra tax than the income earned above it.
+ */
+function applySurcharge(tax: number, taxable: number, regime: TaxRegime): number {
+  const rule = regime.surcharge;
+  if (!rule || tax <= 0) {
+    return 0;
+  }
+
+  const { rate, threshold } = surchargeRateAt(taxable, rule.tiers);
+  if (rate === 0) {
+    return 0;
+  }
+
+  let surcharge = tax * rate;
+  if (rule.marginalRelief) {
+    const taxAtThreshold = taxFromSlabs(threshold, regime.slabs).tax;
+    const previousRate = surchargeRateAt(threshold, rule.tiers).rate;
+    const ceiling =
+      taxAtThreshold + taxAtThreshold * previousRate + (taxable - threshold);
+    if (tax + surcharge > ceiling) {
+      surcharge = Math.max(0, ceiling - tax);
+    }
+  }
+
+  return roundMoney(surcharge);
 }
 
 export function computeTaxPlan(input: TaxPlanInput): TaxPlanResult {
@@ -152,12 +242,20 @@ export function computeTaxPlan(input: TaxPlanInput): TaxPlanResult {
   const otherIncome = clampNonNegative(input.otherIncome);
   const grossIncome = roundMoney(grossSalary + otherIncome);
   const standardDeduction = Math.min(regime.standardDeduction, grossSalary);
-  const chapterViaDeductionsAmount = chapterViaDeductions(regime, input);
-  const taxableIncome = roundMoney(Math.max(0, grossIncome - standardDeduction - chapterViaDeductionsAmount));
+  const lines = deductionLines(regime, input);
+  const exemptions = sumGroup(lines, "exemption");
+  const chapterViaDeductionsAmount = sumGroup(lines, "chapterVia");
+  const grossTotalIncome = roundMoney(
+    Math.max(0, grossIncome - standardDeduction - exemptions),
+  );
+  const taxableIncome = roundMoney(
+    Math.max(0, grossTotalIncome - chapterViaDeductionsAmount),
+  );
   const { tax: taxBeforeRebate, breakdown } = taxFromSlabs(taxableIncome, regime.slabs);
   const rebated = applyRebate(taxBeforeRebate, taxableIncome, regime);
-  const cess = roundMoney(rebated.tax * regime.cessRate);
-  const totalTax = roundMoney(rebated.tax + cess);
+  const surcharge = applySurcharge(rebated.tax, taxableIncome, regime);
+  const cess = roundMoney((rebated.tax + surcharge) * regime.cessRate);
+  const totalTax = roundMoney(rebated.tax + surcharge + cess);
   const takeHomeAnnual = roundMoney(grossIncome - totalTax);
 
   return {
@@ -168,11 +266,16 @@ export function computeTaxPlan(input: TaxPlanInput): TaxPlanResult {
     currency: regime.currency,
     grossIncome,
     standardDeduction: roundMoney(standardDeduction),
+    exemptions: roundMoney(exemptions),
+    grossTotalIncome,
     chapterViaDeductions: roundMoney(chapterViaDeductionsAmount),
+    deductionLines: lines,
     taxableIncome,
     taxBeforeRebate,
     rebate: rebated.rebate,
     taxAfterRebate: rebated.tax,
+    surcharge,
+    cessRate: regime.cessRate,
     cess,
     totalTax,
     effectiveRate: grossIncome > 0 ? roundMoney((totalTax / grossIncome) * 100) : 0,

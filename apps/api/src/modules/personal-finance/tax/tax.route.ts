@@ -7,6 +7,7 @@ import {
   createTaxScenarioBodySchema,
   listTaxScenariosQuerySchema,
   removeTaxScenarioBodySchema,
+  taxCompareInputSchema,
   taxIdParamsSchema,
   taxPlanInputSchema,
   updateTaxScenarioBodySchema,
@@ -25,6 +26,14 @@ taxRouter.post(
   validateBody(taxPlanInputSchema),
   (req, res) => {
     taxController.preview(req, res);
+  },
+);
+
+taxRouter.post(
+  "/compare",
+  validateBody(taxCompareInputSchema),
+  (req, res) => {
+    taxController.compare(req, res);
   },
 );
 

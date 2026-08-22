@@ -458,7 +458,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | Planner | Server cash-flow / net-worth engine |
 | AI advisor | OpenAI JSON from planner snapshot; Redis cache |
 | Statements | Bank or phone/UPI statements as PDF, CSV/TSV, Excel or pasted text (password-protected PDF/Excel supported); categorized lines (not live bank aggregation, no OCR for scanned PDFs) |
-| Tax planner | Country-wise slabs and regime-specific deductions (India old/new, US/UK estimates); saved scenarios — not e-filing |
+| Tax planner | Country-wise slabs and regime-specific deductions (India old/new, US/UK estimates); side-by-side "Old Regime / With Planner / New Regime" computation sheet per financial year, surcharge with marginal relief, saved scenarios — not e-filing |
 | Learning hub | Static lessons |
 | Report | AI summary + client PDF |
 
@@ -495,6 +495,8 @@ Dark theme by default. Nav: Overview / Manage / Plan / Report.
 
 ## 36. Runtime topology
 
+Local (`docker-compose.yml`):
+
 ```text
 Browser (Vite :5173)
     → /api proxy
@@ -503,6 +505,8 @@ Express (:5001)
     → Redis (:6379) — advisor cache
     → OpenAI (optional)
 ```
+
+AWS (`docker-compose.prod.yml`): nginx :80 serves the built SPA and proxies `/api` to Express. Postgres and Redis stay on the Compose network. See `docs/AWS_DEPLOY.md`.
 
 Planner output is computed, not the source of truth. Advisor JSON lives in Redis, not a durable advice table.
 

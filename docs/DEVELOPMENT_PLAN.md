@@ -276,8 +276,9 @@ Approved product surfaces (not bank aggregation or tax filing):
 
 1. Bank / phone statement analyzer: CSV or pasted SMS/UPI text → categorized lines, credit/debit summary, stored as `StatementImport` + `StatementLine`. Routes `/api/statements`. Web: Plan → Statements.
 2. Country-wise tax planner: slab catalog (India old/new FY 2024-25 and 2025-26, US federal 2025 single, UK England FY 2025-26), preview + saved `TaxScenario`. Routes `/api/tax`. Web: Plan → Tax Planner.
+3. Regime comparison sheet: `POST /api/tax/compare` returns one column per regime for a financial year plus a "With Planner" column driven by separate planned amounts, and the row-by-row income / exemption / Chapter VI-A / surcharge / cess breakdown. Adds 80E, 80EEA, 80GG, 80TTA, surcharge with marginal relief, and per-section `deductionLines` on `TaxPlanResult`. Web selects a financial year (not a single regime) and splits income and deduction entry into separate panels.
 
-**Validate:** `pnpm --filter api test` (includes `statement-tax.test.ts`), `pnpm typecheck`, migrate `20260822120000_statement_and_tax`.
+**Validate:** `pnpm --filter api test` (includes `statement-tax.test.ts`), `pnpm --filter web test` (includes `TaxPlannerModule.test.tsx`), `pnpm typecheck`, migrate `20260822120000_statement_and_tax`.
 
 ---
 
