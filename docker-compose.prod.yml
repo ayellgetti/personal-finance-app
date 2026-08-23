@@ -1,8 +1,13 @@
 # AWS / production Compose. Local development stays in docker-compose.yml.
 # Usage: docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 #
-# Public surface is nginx on port 80 (SPA + /api proxy). Postgres, Redis, and
-# the API stay on the Compose network and are not published to the host.
+# Public surface is the web image (nginx + built SPA + /api proxy) on
+# PUBLIC_PORT (default 80). Postgres, Redis, and the API stay on the Compose
+# network and are not published to the host.
+#
+# Do not add a second nginx service here. The local stack already uses
+# container_name docker-nginx and host port 80; a copy in this file races
+# the web container for the same bind.
 
 # Distinct project name: keeps images, containers, and data volumes separate
 # from the local stack in docker-compose.yml.
