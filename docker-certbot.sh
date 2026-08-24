@@ -8,4 +8,5 @@ docker run --rm \
   --email ayellgetti@gmail.com \
   --agree-tos \
   --no-eff-email \
-  -d myfinancefreedom.com
+  -d myfinancefreedom.com \
+  -d www.myfinancefreedom.com
