@@ -19,5 +19,5 @@ services:
         trap exit TERM
         while :; do
           certbot renew --webroot -w /var/www/certbot --quiet || true
-          sleep 12h
+          sleep 43200
         done

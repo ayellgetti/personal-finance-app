@@ -17,10 +17,21 @@ render() {
 CERT="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 KEY="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
 
-if [ -n "${DOMAIN}" ] && [ -f "${CERT}" ] && [ -f "${KEY}" ]; then
+use_tls=0
+if [ -n "${DOMAIN}" ] && [ -s "${CERT}" ] && [ -s "${KEY}" ]; then
     render "${AVAILABLE}/tls.conf"
-else
+    if nginx -t; then
+        use_tls=1
+        echo "nginx: TLS enabled for ${DOMAIN}"
+    else
+        echo "nginx: TLS config failed (certs present but unusable); serving HTTP" >&2
+        render "${AVAILABLE}/http.conf"
+    fi
+fi
+
+if [ "${use_tls}" -eq 0 ]; then
     render "${AVAILABLE}/http.conf"
+    echo "nginx: HTTP config (TLS_DOMAIN=${DOMAIN:-empty})"
 fi
 
 nginx -t
