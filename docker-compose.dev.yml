@@ -15,11 +15,10 @@ services:
       # nginx.dev.conf proxies to Vite; nginx.conf serves a built dist in prod.
       # - ./deploy/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
       # - ./deploy/snippets:/etc/nginx/snippets:ro
-      - ./containers/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./containers/nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
       - ./containers/nginx/ssl:/etc/nginx/ssl:ro
       - ./containers/certbot/letsencrypt:/etc/letsencrypt
       - ./containers/certbot/www:/var/www/certbot
-      - ./apps/web/dist:/usr/share/nginx/html
     depends_on:
       api:
         condition: service_healthy
