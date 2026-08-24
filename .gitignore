@@ -3,7 +3,9 @@ dist
 .turbo
 .env
 .env.local
+.env.dev
 .env.prod
+.env.prod.bkp
 *.log
 .DS_Store
 node_modules
