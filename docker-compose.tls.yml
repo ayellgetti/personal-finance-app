@@ -4,7 +4,7 @@
 services:
   web:
     ports:
-      - "${TLS_PORT:-443}:443"
+      - "0.0.0.0:${TLS_PORT:-443}:443"
 
   certbot:
     image: certbot/certbot
