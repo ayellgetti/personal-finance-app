@@ -6,7 +6,7 @@
     <title>Why Freedom Planner exists — problem, objective, vision</title>
     <meta
       name="description"
-      content="Internal brief: the problem Freedom Planner solves, what the app is for, and where loans, insurance, and mutual funds fit later."
+      content="Internal brief: the problem Freedom Planner solves, what the app is for, and how it will evolve into a financial decision and distribution platform."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,6 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
+
     <script>
       (function () {
         var theme = "light";
@@ -26,10 +27,12 @@
             else if (parentHtml.classList.contains("dark")) theme = "dark";
           }
         } catch (e) {}
+
         document.documentElement.classList.toggle("dark", theme === "dark");
         document.documentElement.dataset.theme = theme;
       })();
     </script>
+
     <style>
       :root {
         color-scheme: light;
@@ -64,6 +67,9 @@
         --low-fg: #146c4a;
         --shadow: 0 18px 48px -18px rgba(21, 32, 40, 0.18);
         --hero: linear-gradient(135deg, #142833 0%, #1a4a42 100%);
+        --partner-bg: #f7fbf9;
+        --partner-icon: #e3f3eb;
+        --flow-line: #b9dccc;
       }
 
       html.dark {
@@ -98,10 +104,19 @@
         --low-bg: rgba(52, 201, 138, 0.16);
         --low-fg: #34c98a;
         --shadow: 0 18px 48px -18px rgba(8, 24, 28, 0.55);
+        --partner-bg: #122028;
+        --partner-icon: #1a3a34;
+        --flow-line: #2a5c48;
       }
 
-      * { box-sizing: border-box; }
-      html { scroll-behavior: smooth; }
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
       body {
         margin: 0;
         font-family: Inter, system-ui, sans-serif;
@@ -109,11 +124,28 @@
         color: var(--text);
         line-height: 1.55;
       }
-      h1, h2, h3, .display { font-family: Sora, Inter, sans-serif; letter-spacing: -0.02em; }
-      a { color: var(--primary-2); }
-      img { max-width: 100%; }
 
-      .wrap { width: min(1040px, calc(100% - 32px)); margin: 0 auto; }
+      h1,
+      h2,
+      h3,
+      .display {
+        font-family: Sora, Inter, sans-serif;
+        letter-spacing: -0.02em;
+      }
+
+      a {
+        color: var(--primary-2);
+      }
+
+      img {
+        max-width: 100%;
+      }
+
+      .wrap {
+        width: min(1040px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
       header.top {
         position: sticky;
         top: 0;
@@ -122,6 +154,7 @@
         background: var(--header-bg);
         border-bottom: 1px solid var(--line);
       }
+
       .top-inner {
         display: flex;
         align-items: center;
@@ -129,17 +162,42 @@
         gap: 16px;
         padding: 14px 0;
       }
-      .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: inherit;
+        text-decoration: none;
+      }
+
       .gem {
-        width: 36px; height: 36px; border-radius: 10px;
-        display: grid; place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
         background: linear-gradient(135deg, #1c9b6a, #2bb57e);
         box-shadow: 0 0 24px -6px rgba(43, 181, 126, 0.7);
         font-size: 16px;
       }
-      .brand strong { display: block; font-size: 15px; }
-      .brand span { font-size: 12px; color: var(--muted); }
-      nav.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+
+      .brand strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .brand span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      nav.toc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
       nav.toc a {
         color: var(--muted);
         text-decoration: none;
@@ -148,8 +206,18 @@
         padding: 6px 10px;
         border-radius: 999px;
       }
-      nav.toc a:hover { color: var(--text); background: var(--toc-hover); }
-      .header-actions { display: flex; align-items: center; gap: 8px; }
+
+      nav.toc a:hover {
+        color: var(--text);
+        background: var(--toc-hover);
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
       .theme-btn {
         width: 40px;
         height: 40px;
@@ -162,8 +230,15 @@
         display: grid;
         place-items: center;
       }
-      html.dark .theme-btn .sun { display: none; }
-      html:not(.dark) .theme-btn .moon { display: none; }
+
+      html.dark .theme-btn .sun {
+        display: none;
+      }
+
+      html:not(.dark) .theme-btn .moon {
+        display: none;
+      }
+
       .btn {
         display: inline-flex;
         align-items: center;
@@ -179,6 +254,7 @@
         border: 0;
         cursor: pointer;
       }
+
       .btn.ghost {
         background: transparent;
         border: 1px solid var(--line);
@@ -193,6 +269,7 @@
         box-shadow: var(--shadow);
         color: #e8f2ee;
       }
+
       .kicker {
         text-transform: uppercase;
         letter-spacing: 0.12em;
@@ -201,31 +278,100 @@
         color: #b7d8cc;
         margin: 0 0 10px;
       }
-      .hero h1 { font-size: clamp(28px, 4vw, 42px); margin: 0 0 12px; color: #fff; }
-      .hero p { margin: 0; max-width: 62ch; color: #d5e6e0; }
-      .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-      .hero .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, 0.35); }
 
-      section { margin: 48px 0; }
-      section h2 { font-size: 26px; margin: 0 0 8px; }
-      .lede { color: var(--muted); margin: 0 0 22px; max-width: 70ch; }
+      .hero h1 {
+        font-size: clamp(28px, 4vw, 42px);
+        margin: 0 0 12px;
+        color: #fff;
+      }
 
-      .grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .hero p {
+        margin: 0;
+        max-width: 68ch;
+        color: #d5e6e0;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .hero .btn.ghost {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.35);
+      }
+
+      section {
+        margin: 48px 0;
+      }
+
+      section h2 {
+        font-size: 26px;
+        margin: 0 0 8px;
+      }
+
+      .lede {
+        color: var(--muted);
+        margin: 0 0 22px;
+        max-width: 72ch;
+      }
+
+      .grid-2 {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
       .card {
         background: var(--card);
         border: 1px solid var(--line);
         border-radius: 20px;
         padding: 18px;
       }
-      .card h3 { margin: 0 0 8px; font-size: 16px; }
-      .card p { margin: 0; color: var(--muted); font-size: 14px; }
-      .muted { color: var(--muted); }
-      .ok { color: var(--ok); }
-      .warn { color: var(--warn); }
-      .bad { color: var(--danger); }
 
-      ol.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+      .card h3 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .ok {
+        color: var(--ok);
+      }
+
+      .warn {
+        color: var(--warn);
+      }
+
+      .bad {
+        color: var(--danger);
+      }
+
+      ol.steps {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 12px;
+      }
+
       ol.steps li {
         display: grid;
         grid-template-columns: 36px 1fr;
@@ -236,15 +382,38 @@
         border-radius: 16px;
         padding: 14px 16px;
       }
+
       .n {
-        width: 36px; height: 36px; border-radius: 10px;
-        background: var(--n-bg); color: var(--primary-2);
-        display: grid; place-items: center; font-weight: 800;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--n-bg);
+        color: var(--primary-2);
+        display: grid;
+        place-items: center;
+        font-weight: 800;
       }
 
-      table { width: 100%; border-collapse: collapse; font-size: 14px; }
-      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
-      th { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
 
       .shot {
         margin: 18px 0 8px;
@@ -254,6 +423,7 @@
         overflow: hidden;
         box-shadow: var(--shadow);
       }
+
       .chrome {
         display: flex;
         align-items: center;
@@ -264,12 +434,34 @@
         color: var(--muted);
         font-size: 12px;
       }
-      .dot { width: 9px; height: 9px; border-radius: 50%; }
-      .d1 { background: #e24b4b; }
-      .d2 { background: #f0a429; }
-      .d3 { background: #34c98a; }
-      .shot-body { padding: 16px; }
-      .caption { font-size: 13px; color: var(--muted); margin: 0 0 28px; }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+      }
+
+      .d1 {
+        background: #e24b4b;
+      }
+
+      .d2 {
+        background: #f0a429;
+      }
+
+      .d3 {
+        background: #34c98a;
+      }
+
+      .shot-body {
+        padding: 16px;
+      }
+
+      .caption {
+        font-size: 13px;
+        color: var(--muted);
+        margin: 0 0 28px;
+      }
 
       .rec {
         display: grid;
@@ -281,6 +473,7 @@
         background: var(--rec-bg);
         margin-bottom: 10px;
       }
+
       .tag {
         align-self: start;
         font-size: 11px;
@@ -291,11 +484,32 @@
         border-radius: 999px;
         text-align: center;
       }
-      .high { background: var(--high-bg); color: var(--high-fg); }
-      .med { background: var(--med-bg); color: var(--med-fg); }
-      .low { background: var(--low-bg); color: var(--low-fg); }
-      .rec h3 { margin: 0 0 4px; font-size: 15px; }
-      .rec p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .high {
+        background: var(--high-bg);
+        color: var(--high-fg);
+      }
+
+      .med {
+        background: var(--med-bg);
+        color: var(--med-fg);
+      }
+
+      .low {
+        background: var(--low-bg);
+        color: var(--low-fg);
+      }
+
+      .rec h3 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+
+      .rec p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
 
       .note {
         background: var(--note-bg);
@@ -306,6 +520,199 @@
         font-size: 14px;
       }
 
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        align-items: stretch;
+        margin-top: 20px;
+      }
+
+      .flow-step {
+        position: relative;
+        background: var(--partner-bg);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px 10px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 118px;
+      }
+
+      .flow-step:not(:last-child)::after {
+        content: "→";
+        position: absolute;
+        right: -13px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 18px;
+      }
+
+      .flow-icon {
+        width: 34px;
+        height: 34px;
+        margin: 0 auto 8px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: var(--partner-icon);
+        color: var(--primary-2);
+        font-weight: 800;
+        font-size: 13px;
+      }
+
+      .flow-step strong {
+        font-size: 12px;
+        line-height: 1.3;
+      }
+
+      .flow-step span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 4px;
+        line-height: 1.3;
+      }
+
+      .ecosystem {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 20px;
+      }
+
+      .partner {
+        background: var(--partner-bg);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .partner-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: var(--partner-icon);
+        display: grid;
+        place-items: center;
+        color: var(--primary-2);
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+
+      .partner h3 {
+        margin: 0 0 5px;
+        font-size: 15px;
+      }
+
+      .partner p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .model {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 20px;
+      }
+
+      .model-card {
+        position: relative;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 20px;
+      }
+
+      .model-card .number {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        border-radius: 9px;
+        background: var(--n-bg);
+        color: var(--primary-2);
+        font-size: 13px;
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+
+      .model-card h3 {
+        margin: 0 0 7px;
+        font-size: 16px;
+      }
+
+      .model-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .flywheel {
+        margin-top: 20px;
+        padding: 22px;
+        background: var(--hero);
+        border-radius: 20px;
+        color: #e8f2ee;
+      }
+
+      .flywheel h3 {
+        color: #fff;
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .flywheel-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .flywheel-pill {
+        padding: 9px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .flywheel-arrow {
+        color: #9fe3c4;
+        font-weight: 800;
+      }
+
+      .principle {
+        margin-top: 18px;
+        padding: 20px;
+        border-radius: 18px;
+        background: var(--note-bg);
+        border: 1px solid var(--note-line);
+        text-align: center;
+      }
+
+      .principle strong {
+        display: block;
+        color: var(--note-text);
+        font-family: Sora, Inter, sans-serif;
+        font-size: clamp(17px, 2vw, 22px);
+        margin-bottom: 6px;
+      }
+
+      .principle span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
       footer.page {
         border-top: 1px solid var(--line);
         padding: 28px 0 40px;
@@ -313,13 +720,47 @@
         font-size: 13px;
       }
 
+      @media (max-width: 900px) {
+        .flow {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .flow-step:not(:last-child)::after {
+          display: none;
+        }
+      }
+
       @media (max-width: 800px) {
-        .grid-2, .grid-3 { grid-template-columns: 1fr; }
-        nav.toc { display: none; }
-        .hero { padding: 24px 18px; }
+        .grid-2,
+        .grid-3,
+        .ecosystem,
+        .model {
+          grid-template-columns: 1fr;
+        }
+
+        nav.toc {
+          display: none;
+        }
+
+        .hero {
+          padding: 24px 18px;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .rec {
+          grid-template-columns: 1fr;
+        }
+
+        .tag {
+          width: fit-content;
+        }
       }
     </style>
   </head>
+
   <body>
     <header class="top">
       <div class="wrap top-inner">
@@ -330,57 +771,91 @@
             <span>Internal brief</span>
           </div>
         </a>
+
         <nav class="toc" aria-label="On this page">
           <a href="#problem">Problem</a>
           <a href="#objective">Objective</a>
           <a href="#today">Today</a>
           <a href="#vision">Vision</a>
+          <a href="#business-model">Business Model</a>
         </nav>
+
         <div class="header-actions">
-          <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch color theme">
+          <button
+            type="button"
+            class="theme-btn"
+            id="theme-toggle"
+            aria-label="Switch color theme"
+          >
             <span class="sun" aria-hidden="true">☀</span>
             <span class="moon" aria-hidden="true">☾</span>
           </button>
+
           <a class="btn" href="/login" target="_top">Open the app</a>
         </div>
       </div>
     </header>
 
     <main class="wrap">
+      <!-- HERO -->
       <div class="hero">
         <p class="kicker">Internal · share this link</p>
-        <h1>The problem we solve, the job of the app, and where it goes next.</h1>
+
+        <h1>
+          The problem we solve, the job of the app, and the financial ecosystem
+          we are building.
+        </h1>
+
         <p>
-          Freedom Planner is not another expense tracker and not a product catalogue.
-          It exists so a household in India can see surplus, debt, cover, tax, and FIRE as one picture —
-          then act on that picture. This page is the internal brief. The Arjun Mehta walkthrough is at
-          <a href="/guide" target="_top" style="color:#9fe3c4">/guide</a>.
+          Freedom Planner is not another expense tracker and not simply a
+          financial product marketplace. It exists to help a household in
+          India understand its complete financial picture — income, expenses,
+          debt, insurance, investments, tax, goals and FIRE — and then take
+          the right financial action.
         </p>
+
+        <p style="margin-top: 12px">
+          Over time, Freedom Planner will connect customers with banks,
+          mutual-fund providers, insurers and other financial partners. The
+          plan comes first; the right financial product follows the need.
+        </p>
+
         <div class="hero-actions">
           <a class="btn" href="#problem">Read the problem</a>
           <a class="btn ghost" href="#vision">Jump to the vision</a>
         </div>
       </div>
 
+      <!-- PROBLEM -->
       <section id="problem">
         <h2>Problem statement</h2>
+
         <p class="lede">
-          Households already have the pieces of a financial life. They do not have one system that
-          turns those pieces into answers they can use.
+          Households already have the pieces of a financial life. They do not
+          have one system that turns those pieces into answers they can use.
         </p>
 
         <p class="note">
-          <strong>Exact problem:</strong> a salaried or self-employed adult in India cannot see,
-          in one place, what is left after EMIs and SIPs, whether debt and insurance match their
-          income and dependents, whether investments fund their goals and FIRE date, or which tax
-          regime is cheaper for <em>their</em> year. Advice and product sales happen without that picture.
+          <strong>Exact problem:</strong>
+          A salaried or self-employed adult in India cannot see, in one place,
+          what is left after EMIs and SIPs, whether debt and insurance match
+          their income and dependents, whether investments fund their goals
+          and FIRE date, or which tax regime is cheaper for
+          <em>their</em> year. Advice and product sales often happen without
+          that complete picture.
         </p>
 
-        <div class="shot" aria-label="Where money lives today versus what people still cannot see">
+        <div
+          class="shot"
+          aria-label="Where money lives today versus what people still cannot see"
+        >
           <div class="chrome">
-            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="dot d3"></span>
             <span>Freedom Planner · the split picture we are replacing</span>
           </div>
+
           <div class="shot-body">
             <table>
               <thead>
@@ -389,94 +864,152 @@
                   <th>What they still cannot see</th>
                 </tr>
               </thead>
+
               <tbody>
                 <tr>
                   <td>Salary in the bank app</td>
-                  <td>True monthly surplus after EMIs, premiums, and SIPs</td>
+                  <td>
+                    True monthly surplus after EMIs, premiums, and SIPs
+                  </td>
                 </tr>
+
                 <tr>
                   <td>EMIs in another app or Excel</td>
-                  <td>Debt burden, and which loan is the expensive one</td>
+                  <td>
+                    Debt burden, and which loan is the expensive one
+                  </td>
                 </tr>
+
                 <tr>
                   <td>SIPs on a broker or AMC site</td>
-                  <td>Whether the portfolio actually funds the dated goal</td>
+                  <td>
+                    Whether the portfolio actually funds the dated goal
+                  </td>
                 </tr>
+
                 <tr>
                   <td>Policy PDFs in email</td>
-                  <td>Cover vs income, dependents, and outstanding loans</td>
+                  <td>
+                    Cover vs income, dependents, and outstanding loans
+                  </td>
                 </tr>
+
                 <tr>
-                  <td>Tax in a CA spreadsheet or last year’s return</td>
-                  <td>Old vs new regime with this year’s deductions</td>
+                  <td>Tax in a CA spreadsheet or last year's return</td>
+                  <td>
+                    Old vs new regime with this year's deductions
+                  </td>
                 </tr>
+
                 <tr>
-                  <td>Advice from relatives, YouTube, or a relationship manager</td>
-                  <td>A plan tied to their numbers, not a product quota</td>
+                  <td>
+                    Advice from relatives, YouTube, or a relationship manager
+                  </td>
+                  <td>
+                    A plan tied to their numbers, not a product quota
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+
         <p class="caption">
-          The problem is not “people do not have apps.” They have too many fragments and no household ledger.
+          The problem is not "people do not have apps." They have too many
+          fragments and no household financial decision system.
         </p>
 
         <div class="grid-2">
           <article class="card">
             <h3>What that causes</h3>
+
             <p>
-              Surplus, emergency months, insurance adequacy, and retirement year stay guesses.
-              “Start a SIP” or “buy term” is generic. A new job, EMI, or child does not update a plan
-              because there is no plan — only scattered balances.
+              Surplus, emergency months, insurance adequacy, and retirement
+              year stay guesses. "Start a SIP", "buy term", or "take a loan"
+              can become generic advice. A new job, EMI, dependent, or goal
+              does not automatically update the financial plan.
             </p>
           </article>
+
           <article class="card">
-            <h3>What we are not solving</h3>
+            <h3>What we are not solving first</h3>
+
             <p>
-              We are not building live bank aggregation, PAN/Aadhaar KYC, tax filing, or a marketplace
-              as the first job. Those can come later. The first job is a trusted picture of the household.
+              We are not starting with live bank aggregation, PAN/Aadhaar KYC,
+              tax filing, or a marketplace. Those can come later. The first
+              job is to build a trusted financial picture and use it to make
+              better decisions.
             </p>
           </article>
         </div>
       </section>
 
+      <!-- OBJECTIVE -->
       <section id="objective">
         <h2>Objective of the app</h2>
+
         <p class="lede">
-          Give that adult a living financial picture — then turn it into a forecast and a plan of action
-          that is computed from their records, not guessed in a chat.
+          Give the customer a living financial picture — then turn it into a
+          forecast and a plan of action computed from their records, not
+          guessed in a chat.
         </p>
 
         <ol class="steps">
           <li>
             <div class="n">1</div>
+
             <div>
               <strong>Capture the household</strong>
+
               <p class="muted">
-                Profile, income, expenses, loans, investments, insurance, a required emergency fund,
-                one FIRE path (Lean, Fat, or Coast), and other goals. Defaults: ₹, 6% inflation, retire at 60.
+                Profile, income, expenses, loans, investments, insurance,
+                emergency fund, one FIRE path (Lean, Fat, or Coast), and other
+                goals. Defaults: ₹, 6% inflation, retire at 60.
               </p>
             </div>
           </li>
+
           <li>
             <div class="n">2</div>
+
             <div>
               <strong>Show one picture</strong>
+
               <p class="muted">
-                Net worth, surplus, debt-to-income, coverage, and goal progress on a dashboard.
-                Bank or UPI statements become categorized lines. Tax compares old vs new for their year.
+                Net worth, surplus, debt-to-income, coverage, and goal progress
+                on a dashboard. Bank or UPI statements become categorized
+                lines. Tax compares old vs new for their year.
               </p>
             </div>
           </li>
+
           <li>
             <div class="n">3</div>
+
             <div>
               <strong>Project and advise</strong>
+
               <p class="muted">
-                A deterministic cash-flow / net-worth engine, then a structured AI report on that snapshot,
-                plus a PDF they can keep. Suggestions must name the expensive loan, the cover gap, or the
-                unfinished emergency fund — not generic tips.
+                A deterministic cash-flow and net-worth engine produces the
+                financial picture. A structured AI advisor explains that
+                picture and identifies actions such as reducing expensive debt,
+                completing the emergency fund, improving protection, or
+                increasing investments.
+              </p>
+            </div>
+          </li>
+
+          <li>
+            <div class="n">4</div>
+
+            <div>
+              <strong>Eventually help execute the decision</strong>
+
+              <p class="muted">
+                Once the customer has a validated need, Freedom Planner can
+                connect them to the appropriate bank, mutual-fund provider,
+                insurer, or other regulated financial partner and track the
+                resulting product back inside the financial plan.
               </p>
             </div>
           </li>
@@ -485,167 +1018,669 @@
         <div class="grid-3" style="margin-top: 22px">
           <article class="card">
             <h3>Who it is for</h3>
-            <p>Salaried or self-employed adult in India who wants FIRE, a house, education funding, or simply not to be surprised by EMIs and tax.</p>
+
+            <p>
+              Salaried or self-employed adults in India who want FIRE, a house,
+              education funding, better debt management, appropriate
+              protection, or simply more control over their money.
+            </p>
           </article>
+
           <article class="card">
-            <h3>What “done” means today</h3>
-            <p>They finish setup, see a coherent dashboard from saved records, regenerate an advisor report when numbers change, and download a PDF.</p>
+            <h3>What "done" means today</h3>
+
+            <p>
+              They finish setup, see a coherent dashboard from saved records,
+              regenerate an advisor report when numbers change, and download a
+              PDF.
+            </p>
           </article>
+
           <article class="card">
             <h3>How we stay honest</h3>
-            <p>Planner math is the source of the picture. AI fills a schema on top of that math. We do not let a model invent surplus or EMI.</p>
+
+            <p>
+              Planner math is the source of the picture. AI fills a structured
+              schema on top of that math. We do not let a model invent surplus,
+              EMI, coverage, or investment values.
+            </p>
           </article>
         </div>
       </section>
 
+      <!-- TODAY -->
       <section id="today">
         <h2>What the app does today</h2>
+
         <p class="lede">
-          This is the working product. Use it as the contract for what “Freedom Planner” means before
-          any distribution work.
+          This is the working product. Use it as the contract for what
+          "Freedom Planner" means before distribution and partner integrations
+          begin.
         </p>
 
         <div class="shot" aria-label="Current product surfaces">
           <div class="chrome">
-            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="dot d3"></span>
             <span>Freedom Planner · surfaces in the app</span>
           </div>
+
           <div class="shot-body">
             <div class="grid-2">
               <div>
-                <h3 style="margin:0 0 8px">Manage</h3>
-                <p class="muted">Income, expenses, daily tracker, loans, investments, insurance, goals.</p>
+                <h3 style="margin: 0 0 8px">Manage</h3>
+
+                <p class="muted">
+                  Income, expenses, daily tracker, loans, investments,
+                  insurance, and goals.
+                </p>
               </div>
+
               <div>
-                <h3 style="margin:0 0 8px">Plan</h3>
-                <p class="muted">Statements, tax planner, freedom calculator, forecast, AI advisor, learning hub.</p>
+                <h3 style="margin: 0 0 8px">Plan</h3>
+
+                <p class="muted">
+                  Statements, tax planner, freedom calculator, forecast, AI
+                  advisor, and learning hub.
+                </p>
               </div>
             </div>
           </div>
         </div>
+
         <p class="caption">
-          Users sign up with OTP, complete Quick Setup, then move Overview → Manage → Plan → Report.
-          See the sample household on <a href="/guide" target="_top">/guide</a>.
+          Users sign up with OTP, complete Quick Setup, then move Overview →
+          Manage → Plan → Report. See the sample household on
+          <a href="/guide" target="_top">/guide</a>.
         </p>
       </section>
 
+      <!-- VISION -->
       <section id="vision">
-        <h2>Vision for later</h2>
+        <h2>Vision: From financial planner to financial decision platform</h2>
+
         <p class="lede">
-          Once the ledger is trusted, the same picture can recommend the next action — and later let
-          the user take it in-app. The plan stays primary. A loan, policy, or fund is offered only
-          when the household numbers support it.
+          The long-term vision is bigger than tracking money. Freedom Planner
+          becomes the financial decision layer between the customer and the
+          financial ecosystem — understanding the customer's needs first,
+          recommending the right action, and then helping the customer execute
+          that decision through an appropriate partner.
         </p>
 
-        <div class="shot" aria-label="How surplus should sequence the next product">
+        <div class="note">
+          <strong>The core principle:</strong>
+          The product follows the need. The need does not follow the product.
+          Freedom Planner should never recommend a loan, mutual fund, or
+          insurance policy simply because it can earn a commission from it.
+        </div>
+
+        <!-- CUSTOMER FLOW -->
+        <div class="shot" style="margin-top: 22px">
           <div class="chrome">
-            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
-            <span>Freedom Planner · future sequence, not a product banner</span>
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="dot d3"></span>
+            <span>
+              Freedom Planner · future customer journey
+            </span>
           </div>
+
           <div class="shot-body">
-            <p class="kicker" style="margin-top:0">Need → product</p>
-            <h3 style="margin:0 0 14px">Sell only what the plan already says they need.</h3>
+            <p class="kicker" style="margin-top: 0">
+              From financial data to financial action
+            </p>
+
+            <div class="flow">
+              <div class="flow-step">
+                <div class="flow-icon">01</div>
+                <strong>Understand</strong>
+                <span>Financial picture</span>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon">02</div>
+                <strong>Analyse</strong>
+                <span>Financial health</span>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon">03</div>
+                <strong>Identify</strong>
+                <span>Actual need</span>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon">04</div>
+                <strong>Recommend</strong>
+                <span>Right action</span>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon">05</div>
+                <strong>Connect</strong>
+                <span>Right partner</span>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon">06</div>
+                <strong>Transact</strong>
+                <span>Customer acts</span>
+              </div>
+
+              <div class="flow-step">
+                <div class="flow-icon">07</div>
+                <strong>Track</strong>
+                <span>Plan stays updated</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="caption">
+          The financial plan remains the source of truth. Products are
+          introduced only when the customer's financial position indicates a
+          genuine need.
+        </p>
+
+        <!-- NEED TO PRODUCT -->
+        <div class="shot">
+          <div class="chrome">
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="dot d3"></span>
+            <span>
+              Freedom Planner · need → recommendation → partner
+            </span>
+          </div>
+
+          <div class="shot-body">
+            <p class="kicker" style="margin-top: 0">
+              Need → product
+            </p>
+
+            <h3 style="margin: 0 0 14px">
+              Sell only what the financial plan already says the customer
+              needs.
+            </h3>
 
             <div class="rec">
               <span class="tag high">Cover</span>
+
               <div>
                 <h3>Insurance</h3>
+
                 <p>
-                  If term or health is short vs income and dependents, quote and buy (or renew) through a
-                  licensed partner, then write the policy back onto the insurance list. Do not push a
-                  policy when cover is already enough.
+                  If life or health protection is insufficient relative to
+                  income, dependents, liabilities, and goals, identify the
+                  protection gap and connect the customer with an appropriate
+                  insurance partner. If cover is already adequate, do not push
+                  another policy.
                 </p>
               </div>
             </div>
+
             <div class="rec">
               <span class="tag med">Goals</span>
+
               <div>
                 <h3>Mutual funds</h3>
+
                 <p>
-                  If emergency months are done and surplus remains, start or raise a goal SIP. Skip equity
-                  when the buffer is empty or EMI ratio is already high. New SIPs must appear on the
-                  investment list so the planner stays true.
+                  If the emergency fund is complete, debt is manageable, and
+                  sustainable surplus remains, identify the investment need and
+                  help the customer start or increase goal-based investments
+                  through an appropriate investment partner.
                 </p>
               </div>
             </div>
+
             <div class="rec">
               <span class="tag low">Debt</span>
+
               <div>
                 <h3>Loans</h3>
+
                 <p>
-                  Refinance or balance-transfer when a cheaper EMI is justified. Top-up only when surplus
-                  and a dated goal support it. If unsecured EMI is already heavy, the correct product is
-                  “do not borrow.”
+                  If an existing loan is expensive and refinancing or a balance
+                  transfer genuinely improves the customer's position, connect
+                  them with an appropriate lending partner. If debt is already
+                  too heavy, the correct recommendation may simply be
+                  <strong>do not borrow</strong>.
                 </p>
               </div>
             </div>
           </div>
         </div>
-        <p class="caption">
-          Insurance gap first, then goal SIPs, then loan refinance. That order matches how cash flow
-          actually works. Partners transact; we keep the plan.
+
+        <!-- PARTNER ECOSYSTEM -->
+        <h3 style="margin-top: 28px">
+          Building the financial partner ecosystem
+        </h3>
+
+        <p class="lede">
+          As the platform matures, Freedom Planner will integrate with multiple
+          banks, NBFCs, mutual-fund providers, insurers, and other relevant
+          financial institutions. The goal is not to promote one institution;
+          it is to make the right product available when the customer's plan
+          identifies a genuine need.
         </p>
 
-        <div class="grid-3">
-          <article class="card">
-            <h3>Why these three</h3>
+        <div class="ecosystem">
+          <article class="partner">
+            <div class="partner-icon">₹</div>
+
+            <h3>Loan Partners</h3>
+
             <p>
-              Banks, insurers, and AMCs sell them as separate products. For a household they are one
-              surplus decision. Only a ledger that already holds loans, cover, and investments can
-              sequence them honestly.
+              Banks and NBFCs for personal loans, home loans, business loans,
+              refinancing, balance transfers, and other appropriate credit
+              products.
             </p>
           </article>
-          <article class="card">
-            <h3>How we earn later</h3>
+
+          <article class="partner">
+            <div class="partner-icon">↗</div>
+
+            <h3>Investment Partners</h3>
+
             <p>
-              Need-based distribution: origination on loans, commission on insurance, trail on funds —
-              through licensed partners. Extra AI reports can stay a product fee. We do not become the
-              lender or the insurer.
+              Mutual-fund platforms, AMCs, and other investment partners for
+              goal-based investing, SIPs, and long-term wealth creation.
             </p>
           </article>
-          <article class="card">
-            <h3>What stays out until we mean it</h3>
+
+          <article class="partner">
+            <div class="partner-icon">+</div>
+
+            <h3>Insurance Partners</h3>
+
             <p>
-              Native mobile, live bank/UPI aggregation, household sharing, in-app KYC, and tax filing
-              are later platform work. They are not required to prove the core loop.
+              Life, term, health, and other appropriate protection products
+              where the customer's financial plan identifies a genuine
+              coverage requirement.
             </p>
           </article>
         </div>
       </section>
 
+      <!-- BUSINESS MODEL -->
+      <section id="business-model">
+        <h2>Business model: a win-win financial ecosystem</h2>
+
+        <p class="lede">
+          Freedom Planner can build a sustainable business by helping customers
+          make better financial decisions and earning revenue when those
+          decisions result in suitable financial products being successfully
+          purchased through partner institutions.
+        </p>
+
+        <div class="model">
+          <article class="model-card">
+            <div class="number">01</div>
+
+            <h3>Customer gets value</h3>
+
+            <p>
+              The customer gets a complete financial picture, personalised
+              recommendations, access to relevant financial products, and
+              continued tracking of the impact of those decisions.
+            </p>
+          </article>
+
+          <article class="model-card">
+            <div class="number">02</div>
+
+            <h3>Partner gets qualified demand</h3>
+
+            <p>
+              Banks, mutual-fund providers, insurers, and other partners
+              receive customers whose financial situation has already created
+              a relevant need for their product.
+            </p>
+          </article>
+
+          <article class="model-card">
+            <div class="number">03</div>
+
+            <h3>Freedom Planner earns</h3>
+
+            <p>
+              When the customer successfully takes a suitable product through
+              an eligible partner channel, Freedom Planner can earn the
+              applicable commission, referral fee, trail, or distribution
+              revenue.
+            </p>
+          </article>
+        </div>
+
+        <div class="shot" style="margin-top: 22px">
+          <div class="chrome">
+            <span class="dot d1"></span>
+            <span class="dot d2"></span>
+            <span class="dot d3"></span>
+            <span>
+              Freedom Planner · revenue should follow customer value
+            </span>
+          </div>
+
+          <div class="shot-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer need</th>
+                  <th>Possible action</th>
+                  <th>Partner</th>
+                  <th>Freedom Planner revenue</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td>Expensive loan</td>
+                  <td>Refinance / balance transfer</td>
+                  <td>Bank / NBFC</td>
+                  <td>Loan origination / referral economics</td>
+                </tr>
+
+                <tr>
+                  <td>Protection gap</td>
+                  <td>Appropriate insurance cover</td>
+                  <td>Insurance partner</td>
+                  <td>Applicable insurance commission</td>
+                </tr>
+
+                <tr>
+                  <td>Long-term surplus</td>
+                  <td>Goal-based SIP / investment</td>
+                  <td>AMC / investment partner</td>
+                  <td>Applicable distribution / trail economics</td>
+                </tr>
+
+                <tr>
+                  <td>No product required</td>
+                  <td>Do nothing / continue current plan</td>
+                  <td>None</td>
+                  <td>₹0 — customer outcome comes first</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p class="caption">
+          The last row is important: Freedom Planner should be willing to
+          recommend no product when that is the financially correct answer.
+          That is what makes the recommendation engine trustworthy.
+        </p>
+
+        <!-- FLYWHEEL -->
+        <div class="flywheel">
+          <h3>The long-term Freedom Planner flywheel</h3>
+
+          <div class="flywheel-row">
+            <span class="flywheel-pill">Customer financial data</span>
+            <span class="flywheel-arrow">→</span>
+
+            <span class="flywheel-pill">Financial analysis</span>
+            <span class="flywheel-arrow">→</span>
+
+            <span class="flywheel-pill">Need identified</span>
+            <span class="flywheel-arrow">→</span>
+
+            <span class="flywheel-pill">Right recommendation</span>
+            <span class="flywheel-arrow">→</span>
+
+            <span class="flywheel-pill">Partner product</span>
+            <span class="flywheel-arrow">→</span>
+
+            <span class="flywheel-pill">Customer action</span>
+            <span class="flywheel-arrow">→</span>
+
+            <span class="flywheel-pill">Plan updated</span>
+          </div>
+        </div>
+
+        <div class="principle">
+          <strong>
+            Plan first. Product second. Customer outcome always first.
+          </strong>
+
+          <span>
+            The business succeeds when the customer succeeds — and the
+            customer's financial plan remains the foundation of every
+            recommendation.
+          </span>
+        </div>
+
+        <!-- RECOMMENDATION ENGINE -->
+        <div style="margin-top: 32px">
+          <h3>The recommendation engine becomes the moat</h3>
+
+          <p class="lede">
+            Access to financial institutions alone is not the long-term
+            advantage. The advantage is understanding the customer's complete
+            financial situation before recommending a product.
+          </p>
+
+          <div class="grid-3">
+            <article class="card">
+              <h3>Emergency fund incomplete</h3>
+              <p>
+                Prioritise building the cash buffer instead of pushing an
+                aggressive investment product.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Debt burden too high</h3>
+              <p>
+                Prioritise reducing expensive debt or exploring a justified
+                refinance. Additional borrowing may be inappropriate.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Protection gap exists</h3>
+              <p>
+                Prioritise appropriate insurance before increasing discretionary
+                investments.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Surplus is healthy</h3>
+              <p>
+                Once the financial foundation is sound, identify appropriate
+                goal-based investment opportunities.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>Loan is expensive</h3>
+              <p>
+                Explore refinancing or balance transfer where the numbers
+                justify the action.
+              </p>
+            </article>
+
+            <article class="card">
+              <h3>No need exists</h3>
+              <p>
+                Tell the customer to continue their current plan. No product
+                should be forced into the journey.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRUST -->
+      <section>
+        <h2>Trust is the foundation of the business</h2>
+
+        <p class="lede">
+          Commission-based distribution can only work long-term if the customer
+          believes that recommendations are driven by their financial position,
+          not by the commission available to Freedom Planner.
+        </p>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>What we should always do</h3>
+
+            <p>
+              Explain why a product is being recommended, show the relevant
+              financial gap or opportunity, compare appropriate alternatives
+              where possible, and keep the customer's financial plan updated
+              after the transaction.
+            </p>
+          </article>
+
+          <article class="card">
+            <h3>What we should never do</h3>
+
+            <p>
+              Push a product because it pays more commission, recommend
+              unnecessary debt, sell insurance when coverage is already
+              adequate, or encourage investments before the customer's basic
+              financial foundation is ready.
+            </p>
+          </article>
+        </div>
+
+        <div class="note" style="margin-top: 16px">
+          <strong>Regulatory principle:</strong>
+          Any future distribution, referral, commission, advisory, or partner
+          model must be implemented through the appropriate licensed entities,
+          registrations, disclosures, agreements, and applicable Indian
+          regulatory requirements. The product vision should not assume that
+          every financial product can be distributed directly by Freedom
+          Planner.
+        </div>
+      </section>
+
+      <!-- ULTIMATE VISION -->
+      <section>
+        <div class="hero" style="margin: 0">
+          <p class="kicker">The ultimate vision</p>
+
+          <h2
+            style="
+              color: #fff;
+              font-size: clamp(24px, 3vw, 34px);
+              margin-bottom: 14px;
+            "
+          >
+            "What should I do with my money next?"
+          </h2>
+
+          <p>
+            The customer should be able to ask Freedom Planner that question
+            and receive an answer based on their actual financial life.
+          </p>
+
+          <p style="margin-top: 12px">
+            Freedom Planner understands the customer's income, spending, debt,
+            insurance, investments, goals, tax position, emergency fund, and
+            FIRE target. It calculates what matters, explains why, recommends
+            the next appropriate action, and eventually helps the customer
+            execute that action through the right financial partner.
+          </p>
+
+          <p style="margin-top: 12px">
+            That is the transition from a financial tracker to a financial
+            decision platform — and ultimately to a trusted distribution
+            ecosystem connecting customers with the right banks,
+            mutual-fund providers, insurers, and other financial institutions.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn" href="/guide" target="_top">
+              Open the product walkthrough
+            </a>
+
+            <a class="btn ghost" href="#problem">
+              Back to the problem
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- HOW TO USE -->
       <section>
         <h2>How to use this page</h2>
+
         <p class="lede">
-          Share <strong>/why</strong> when someone asks what problem we solve and where the product is going.
-          Share <strong>/guide</strong> when someone needs to see the screens with sample rupees.
+          Share <strong>/why</strong> when someone asks what problem Freedom
+          Planner solves, what the product does, how the business works, and
+          where the platform is going. Share <strong>/guide</strong> when
+          someone needs to see the actual product screens with sample rupees.
         </p>
+
         <div class="hero-actions">
-          <a class="btn" href="/guide" target="_top">Open the product walkthrough</a>
-          <a class="btn ghost" href="#problem">Back to the problem</a>
+          <a class="btn" href="/guide" target="_top">
+            Open the product walkthrough
+          </a>
+
+          <a class="btn ghost" href="#vision">
+            Back to the vision
+          </a>
         </div>
       </section>
     </main>
 
     <footer class="page">
       <div class="wrap">
-        Freedom Planner · internal brief · not a customer walkthrough · sample household lives on /guide.
+        Freedom Planner · internal brief · not a customer walkthrough · sample
+        household lives on /guide.
       </div>
     </footer>
+
     <script>
       (function () {
         var button = document.getElementById("theme-toggle");
+
         if (!button) return;
+
         function apply(theme) {
           var dark = theme === "dark";
+
           document.documentElement.classList.toggle("dark", dark);
           document.documentElement.dataset.theme = theme;
-          button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
-          try { localStorage.setItem("fp-theme", theme); } catch (e) {}
-          try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
+
+          button.setAttribute(
+            "aria-label",
+            dark ? "Switch to light theme" : "Switch to dark theme"
+          );
+
+          try {
+            localStorage.setItem("fp-theme", theme);
+          } catch (e) {}
+
+          try {
+            window.parent.postMessage(
+              {
+                type: "guide-theme",
+                theme: theme
+              },
+              "*"
+            );
+          } catch (e) {}
         }
-        apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
+
+        apply(
+          document.documentElement.classList.contains("dark")
+            ? "dark"
+            : "light"
+        );
+
         button.addEventListener("click", function () {
-          apply(document.documentElement.classList.contains("dark") ? "light" : "dark");
+          apply(
+            document.documentElement.classList.contains("dark")
+              ? "light"
+              : "dark"
+          );
         });
       })();
     </script>
