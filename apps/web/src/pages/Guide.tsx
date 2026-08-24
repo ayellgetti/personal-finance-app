@@ -5,7 +5,7 @@ import guideHtml from "./guide.html?raw";
 export default function Guide() {
   const { resolvedTheme, setTheme } = useTheme();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const dark = resolvedTheme !== "light";
+  const dark = resolvedTheme === "dark";
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {

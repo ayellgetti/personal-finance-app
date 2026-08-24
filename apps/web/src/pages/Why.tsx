@@ -5,7 +5,7 @@ import whyHtml from "./why.html?raw";
 export default function Why() {
   const { resolvedTheme, setTheme } = useTheme();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const dark = resolvedTheme !== "light";
+  const dark = resolvedTheme === "dark";
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {

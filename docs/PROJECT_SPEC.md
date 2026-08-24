@@ -490,7 +490,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 7. Plan: daily tracker, statement analyzer, tax planner, freedom calculator, forecast, AI advisor, learning hub  
 8. Report + PDF  
 
-Dark theme by default. Nav: Overview / Manage / Plan / Report.
+Light theme by default (dark is opt-in via the header toggle; the choice persists under the `fp-theme` key, shared with `/guide` and `/why`). Nav: Overview / Manage / Plan / Report.
 
 ---
 

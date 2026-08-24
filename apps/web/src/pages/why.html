@@ -16,9 +16,9 @@
     />
     <script>
       (function () {
-        var theme = "dark";
+        var theme = "light";
         try {
-          var stored = localStorage.getItem("theme");
+          var stored = localStorage.getItem("fp-theme");
           if (stored === "light" || stored === "dark") theme = stored;
           else if (window.parent && window.parent !== window) {
             var parentHtml = window.parent.document.documentElement;
@@ -341,7 +341,6 @@
             <span class="sun" aria-hidden="true">☀</span>
             <span class="moon" aria-hidden="true">☾</span>
           </button>
-          <a class="btn ghost" href="/guide" target="_top">Product walkthrough</a>
           <a class="btn" href="/login" target="_top">Open the app</a>
         </div>
       </div>
@@ -641,7 +640,7 @@
           document.documentElement.classList.toggle("dark", dark);
           document.documentElement.dataset.theme = theme;
           button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
-          try { localStorage.setItem("theme", theme); } catch (e) {}
+          try { localStorage.setItem("fp-theme", theme); } catch (e) {}
           try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
         }
         apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
