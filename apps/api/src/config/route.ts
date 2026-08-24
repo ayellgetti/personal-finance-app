@@ -33,9 +33,11 @@ export class Route {
       res.sendFile(path.join(publicDir, "planner.html"));
     });
 
-    app.get("/health", (req, res) => {
+    const health = (req: express.Request, res: express.Response) => {
       Api.success(req, res, { ok: true }, "API is healthy");
-    });
+    };
+    app.get("/health", health);
+    app.get("/api/health", health);
 
     app.get("/api/hello", (req, res) => {
       Api.success(req, res, { message: "Hello from the API" });

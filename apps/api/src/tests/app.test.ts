@@ -20,6 +20,10 @@ test("health route is mounted on the initialized app", async () => {
     assert(address && typeof address !== "string");
 
     const response = await fetch(`http://127.0.0.1:${address.port}/health`);
+    const viaApiPrefix = await fetch(
+      `http://127.0.0.1:${address.port}/api/health`,
+    );
+    assert.equal(viaApiPrefix.status, 200);
     const body = (await response.json()) as {
       code: number;
       success: boolean;

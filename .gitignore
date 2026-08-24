@@ -10,3 +10,7 @@ dist
 .DS_Store
 node_modules
 apps/api/uploads/
+containers/postgres/postgres_data/
+containers/postgres/pgadmin_data/
+containers/redis/redis_data/
+containers/redisinsight/redisinsight_data/

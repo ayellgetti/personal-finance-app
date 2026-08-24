@@ -932,6 +932,30 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/health": {
+      get: {
+        tags: ["Health"],
+        summary: "Health check (same-origin /api prefix)",
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        responses: {
+          "200": {
+            description: "API is up",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+                example: {
+                  status: true,
+                  data: { ok: true },
+                  message: "API is healthy",
+                  timestamp: "2026-08-20T13:00:00.000Z",
+                  requestId: "84cd23aa-0b1e-4f2e-b222-6dc63cf84cb8",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/hello": {
       get: {
         tags: ["Health"],
