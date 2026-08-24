@@ -63,19 +63,19 @@ export class ChannelOtpMessenger implements OtpMessenger {
       throw new HttpError(400, "Email is required to send this OTP");
     }
 
-    const [email, sms] = await Promise.all([
-      this.sendEmail(message),
+    const [sms] = await Promise.all([
+      // this.sendEmail(message),
       this.sendSms(message),
     ]);
 
-    if (message.requireEmail && !email) {
-      throw new HttpError(502, "Could not send the OTP by email");
-    }
+    // if (message.requireEmail && !email) {
+    //   throw new HttpError(502, "Could not send the OTP by email");
+    // }
     if (!sms) {
       throw new HttpError(502, "Could not send the OTP by SMS");
     }
 
-    return { email, sms };
+    return { email: false, sms };
   }
 
   private async sendEmail(message: OtpMessage): Promise<boolean> {
