@@ -1,0 +1,4 @@
+postgres_data/
+pgadmin_data/
+redis_data/
+redisinsight_data/

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ChannelOtpMessenger } from "../modules/shared/otp/otp.messenger";
-import { generateOtpBodySchema, OTP_TYPE } from "../modules/shared/otp/otp.request";
+import { generateOtpBodySchema, OTP_TYPE, verifyOtpBodySchema } from "../modules/shared/otp/otp.request";
 
 test("registration OTP requires an email address", () => {
   const missing = generateOtpBodySchema.safeParse({
@@ -16,6 +16,15 @@ test("registration OTP requires an email address", () => {
     type: OTP_TYPE.REGISTER,
   });
   assert.equal(complete.success, true);
+});
+
+test("OTP verify does not require email for registration", () => {
+  const parsed = verifyOtpBodySchema.safeParse({
+    mobileNo: "9876543210",
+    type: OTP_TYPE.REGISTER,
+    no: 123456,
+  });
+  assert.equal(parsed.success, true);
 });
 
 test("OTP messenger treats email and SMS as delivered in development without providers", async () => {

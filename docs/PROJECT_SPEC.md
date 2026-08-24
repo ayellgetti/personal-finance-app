@@ -95,7 +95,7 @@ Redis is already used for advisor caching. Do not add BullMQ or a second queue u
 
 Prisma lives at `apps/api/prisma/`, not `packages/database/`.
 
-Env example: `apps/api/.env.example` (not a root `.env.example` yet).
+Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.example` (host-side API).
 
 ---
 

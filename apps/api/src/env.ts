@@ -53,7 +53,17 @@ const envSchema = z.object({
     return value;
   }, z.boolean().default(false)),
   SMTP_USER: optionalString,
-  SMTP_PASS: optionalString,
+  SMTP_PASS: z.preprocess((value) => {
+    if (typeof value !== "string" || value.trim() === "") return undefined;
+    const trimmed = value.trim();
+    if (
+      (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.length >= 2) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2)
+    ) {
+      return trimmed.slice(1, -1);
+    }
+    return trimmed;
+  }, z.string().min(1).optional()),
   SMTP_FROM: optionalString,
   TWILIO_ACCOUNT_SID: optionalString,
   TWILIO_AUTH_TOKEN: optionalString,
