@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import Guide from "./pages/Guide.tsx";
+import Why from "./pages/Why.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,8 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/guide" element={<Guide />} />
                 <Route path="/guide.html" element={<Guide />} />
+                <Route path="/why" element={<Why />} />
+                <Route path="/why.html" element={<Why />} />
                 <Route
                   path="/"
                   element={

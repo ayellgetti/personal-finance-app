@@ -5,7 +5,7 @@ pnpm + Turborepo monorepo with a TypeScript Express API, Vite React web app, and
 ## Apps
 
 - `apps/api` — Express API on port `5001` (Swagger UI at `http://localhost:5001/docs`)
-- `apps/web` — Vite + React on port `5173` (proxies `/api` to the API). Product walkthrough: `/guide`
+- `apps/web` — Vite + React on port `5173` (proxies `/api` to the API). Product walkthrough: `/guide`. Internal brief (problem, objective, vision): `/why`
 
 Local Postgres is exposed on **5433** (avoids clashing with an existing 5432 instance). Connection string is in `apps/api/.env`.
 

@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Why Freedom Planner exists — problem, objective, vision</title>
+    <meta
+      name="description"
+      content="Internal brief: the problem Freedom Planner solves, what the app is for, and where loans, insurance, and mutual funds fit later."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        var theme = "dark";
+        try {
+          var stored = localStorage.getItem("theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+          else if (window.parent && window.parent !== window) {
+            var parentHtml = window.parent.document.documentElement;
+            if (parentHtml.classList.contains("light")) theme = "light";
+            else if (parentHtml.classList.contains("dark")) theme = "dark";
+          }
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4faf7;
+        --card: #ffffff;
+        --line: #d5e4dc;
+        --text: #152028;
+        --muted: #5b6f78;
+        --primary: #1c9b6a;
+        --primary-2: #178a5d;
+        --ok: #178a5d;
+        --warn: #c47b10;
+        --danger: #c43c3c;
+        --header-bg: rgba(255, 255, 255, 0.88);
+        --toc-hover: #e8f4ee;
+        --shot-bg: #ffffff;
+        --chrome-bg: #eef4f1;
+        --side-bg: #f3f8f5;
+        --side-g: #6d838c;
+        --n-bg: #e3f3eb;
+        --pill-bg: #f7fbf9;
+        --track-bg: #e2ece7;
+        --rec-bg: #f7fbf9;
+        --note-bg: #e8f6ee;
+        --note-line: #b7e0c8;
+        --note-text: #1a3d2e;
+        --high-bg: rgba(196, 60, 60, 0.12);
+        --high-fg: #b42323;
+        --med-bg: rgba(196, 123, 16, 0.14);
+        --med-fg: #9a620c;
+        --low-bg: rgba(23, 138, 93, 0.12);
+        --low-fg: #146c4a;
+        --shadow: 0 18px 48px -18px rgba(21, 32, 40, 0.18);
+        --hero: linear-gradient(135deg, #142833 0%, #1a4a42 100%);
+      }
+
+      html.dark {
+        color-scheme: dark;
+        --bg: #0b161c;
+        --card: #14242c;
+        --line: #234048;
+        --text: #e8f2ee;
+        --muted: #8aa0aa;
+        --primary: #1c9b6a;
+        --primary-2: #2bb57e;
+        --ok: #34c98a;
+        --warn: #f0a429;
+        --danger: #e24b4b;
+        --header-bg: rgba(11, 22, 28, 0.82);
+        --toc-hover: #1a2d34;
+        --shot-bg: #0e1a20;
+        --chrome-bg: #0a1419;
+        --side-bg: #101c22;
+        --side-g: #6d838c;
+        --n-bg: #1a3a34;
+        --pill-bg: #122028;
+        --track-bg: #1a2c33;
+        --rec-bg: #122028;
+        --note-bg: #173128;
+        --note-line: #2a5c48;
+        --note-text: #d7efe4;
+        --high-bg: rgba(226, 75, 75, 0.18);
+        --high-fg: #ff8b8b;
+        --med-bg: rgba(240, 164, 41, 0.16);
+        --med-fg: #f0a429;
+        --low-bg: rgba(52, 201, 138, 0.16);
+        --low-fg: #34c98a;
+        --shadow: 0 18px 48px -18px rgba(8, 24, 28, 0.55);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+      }
+      h1, h2, h3, .display { font-family: Sora, Inter, sans-serif; letter-spacing: -0.02em; }
+      a { color: var(--primary-2); }
+      img { max-width: 100%; }
+
+      .wrap { width: min(1040px, calc(100% - 32px)); margin: 0 auto; }
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(16px);
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .top-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 0;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+      .gem {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, #1c9b6a, #2bb57e);
+        box-shadow: 0 0 24px -6px rgba(43, 181, 126, 0.7);
+        font-size: 16px;
+      }
+      .brand strong { display: block; font-size: 15px; }
+      .brand span { font-size: 12px; color: var(--muted); }
+      nav.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+      nav.toc a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 10px;
+        border-radius: 999px;
+      }
+      nav.toc a:hover { color: var(--text); background: var(--toc-hover); }
+      .header-actions { display: flex; align-items: center; gap: 8px; }
+      .theme-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--text);
+        cursor: pointer;
+        font-size: 16px;
+        display: grid;
+        place-items: center;
+      }
+      html.dark .theme-btn .sun { display: none; }
+      html:not(.dark) .theme-btn .moon { display: none; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: linear-gradient(135deg, #1c9b6a, #2bb57e);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 14px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        border: 0;
+        cursor: pointer;
+      }
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--text);
+      }
+
+      .hero {
+        margin: 36px 0 28px;
+        padding: 36px 32px;
+        border-radius: 28px;
+        background: var(--hero);
+        box-shadow: var(--shadow);
+        color: #e8f2ee;
+      }
+      .kicker {
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        font-weight: 700;
+        color: #b7d8cc;
+        margin: 0 0 10px;
+      }
+      .hero h1 { font-size: clamp(28px, 4vw, 42px); margin: 0 0 12px; color: #fff; }
+      .hero p { margin: 0; max-width: 62ch; color: #d5e6e0; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+      .hero .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+
+      section { margin: 48px 0; }
+      section h2 { font-size: 26px; margin: 0 0 8px; }
+      .lede { color: var(--muted); margin: 0 0 22px; max-width: 70ch; }
+
+      .grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+      }
+      .card h3 { margin: 0 0 8px; font-size: 16px; }
+      .card p { margin: 0; color: var(--muted); font-size: 14px; }
+      .muted { color: var(--muted); }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .bad { color: var(--danger); }
+
+      ol.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+      ol.steps li {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 12px;
+        align-items: start;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 16px;
+      }
+      .n {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: var(--n-bg); color: var(--primary-2);
+        display: grid; place-items: center; font-weight: 800;
+      }
+
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+      th { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+      .shot {
+        margin: 18px 0 8px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--shot-bg);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+      .chrome {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        background: var(--chrome-bg);
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .dot { width: 9px; height: 9px; border-radius: 50%; }
+      .d1 { background: #e24b4b; }
+      .d2 { background: #f0a429; }
+      .d3 { background: #34c98a; }
+      .shot-body { padding: 16px; }
+      .caption { font-size: 13px; color: var(--muted); margin: 0 0 28px; }
+
+      .rec {
+        display: grid;
+        grid-template-columns: 88px 1fr;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--rec-bg);
+        margin-bottom: 10px;
+      }
+      .tag {
+        align-self: start;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 4px 8px;
+        border-radius: 999px;
+        text-align: center;
+      }
+      .high { background: var(--high-bg); color: var(--high-fg); }
+      .med { background: var(--med-bg); color: var(--med-fg); }
+      .low { background: var(--low-bg); color: var(--low-fg); }
+      .rec h3 { margin: 0 0 4px; font-size: 15px; }
+      .rec p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      .note {
+        background: var(--note-bg);
+        border: 1px solid var(--note-line);
+        color: var(--note-text);
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 14px;
+      }
+
+      footer.page {
+        border-top: 1px solid var(--line);
+        padding: 28px 0 40px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 800px) {
+        .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        nav.toc { display: none; }
+        .hero { padding: 24px 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-inner">
+        <a class="brand" href="/login" target="_top">
+          <div class="gem">◆</div>
+          <div>
+            <strong>Freedom Planner</strong>
+            <span>Internal brief</span>
+          </div>
+        </a>
+        <nav class="toc" aria-label="On this page">
+          <a href="#problem">Problem</a>
+          <a href="#objective">Objective</a>
+          <a href="#today">Today</a>
+          <a href="#vision">Vision</a>
+        </nav>
+        <div class="header-actions">
+          <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch color theme">
+            <span class="sun" aria-hidden="true">☀</span>
+            <span class="moon" aria-hidden="true">☾</span>
+          </button>
+          <a class="btn ghost" href="/guide" target="_top">Product walkthrough</a>
+          <a class="btn" href="/login" target="_top">Open the app</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <p class="kicker">Internal · share this link</p>
+        <h1>The problem we solve, the job of the app, and where it goes next.</h1>
+        <p>
+          Freedom Planner is not another expense tracker and not a product catalogue.
+          It exists so a household in India can see surplus, debt, cover, tax, and FIRE as one picture —
+          then act on that picture. This page is the internal brief. The Arjun Mehta walkthrough is at
+          <a href="/guide" target="_top" style="color:#9fe3c4">/guide</a>.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="#problem">Read the problem</a>
+          <a class="btn ghost" href="#vision">Jump to the vision</a>
+        </div>
+      </div>
+
+      <section id="problem">
+        <h2>Problem statement</h2>
+        <p class="lede">
+          Households already have the pieces of a financial life. They do not have one system that
+          turns those pieces into answers they can use.
+        </p>
+
+        <p class="note">
+          <strong>Exact problem:</strong> a salaried or self-employed adult in India cannot see,
+          in one place, what is left after EMIs and SIPs, whether debt and insurance match their
+          income and dependents, whether investments fund their goals and FIRE date, or which tax
+          regime is cheaper for <em>their</em> year. Advice and product sales happen without that picture.
+        </p>
+
+        <div class="shot" aria-label="Where money lives today versus what people still cannot see">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span>Freedom Planner · the split picture we are replacing</span>
+          </div>
+          <div class="shot-body">
+            <table>
+              <thead>
+                <tr>
+                  <th>Where it lives today</th>
+                  <th>What they still cannot see</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Salary in the bank app</td>
+                  <td>True monthly surplus after EMIs, premiums, and SIPs</td>
+                </tr>
+                <tr>
+                  <td>EMIs in another app or Excel</td>
+                  <td>Debt burden, and which loan is the expensive one</td>
+                </tr>
+                <tr>
+                  <td>SIPs on a broker or AMC site</td>
+                  <td>Whether the portfolio actually funds the dated goal</td>
+                </tr>
+                <tr>
+                  <td>Policy PDFs in email</td>
+                  <td>Cover vs income, dependents, and outstanding loans</td>
+                </tr>
+                <tr>
+                  <td>Tax in a CA spreadsheet or last year’s return</td>
+                  <td>Old vs new regime with this year’s deductions</td>
+                </tr>
+                <tr>
+                  <td>Advice from relatives, YouTube, or a relationship manager</td>
+                  <td>A plan tied to their numbers, not a product quota</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="caption">
+          The problem is not “people do not have apps.” They have too many fragments and no household ledger.
+        </p>
+
+        <div class="grid-2">
+          <article class="card">
+            <h3>What that causes</h3>
+            <p>
+              Surplus, emergency months, insurance adequacy, and retirement year stay guesses.
+              “Start a SIP” or “buy term” is generic. A new job, EMI, or child does not update a plan
+              because there is no plan — only scattered balances.
+            </p>
+          </article>
+          <article class="card">
+            <h3>What we are not solving</h3>
+            <p>
+              We are not building live bank aggregation, PAN/Aadhaar KYC, tax filing, or a marketplace
+              as the first job. Those can come later. The first job is a trusted picture of the household.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="objective">
+        <h2>Objective of the app</h2>
+        <p class="lede">
+          Give that adult a living financial picture — then turn it into a forecast and a plan of action
+          that is computed from their records, not guessed in a chat.
+        </p>
+
+        <ol class="steps">
+          <li>
+            <div class="n">1</div>
+            <div>
+              <strong>Capture the household</strong>
+              <p class="muted">
+                Profile, income, expenses, loans, investments, insurance, a required emergency fund,
+                one FIRE path (Lean, Fat, or Coast), and other goals. Defaults: ₹, 6% inflation, retire at 60.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="n">2</div>
+            <div>
+              <strong>Show one picture</strong>
+              <p class="muted">
+                Net worth, surplus, debt-to-income, coverage, and goal progress on a dashboard.
+                Bank or UPI statements become categorized lines. Tax compares old vs new for their year.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="n">3</div>
+            <div>
+              <strong>Project and advise</strong>
+              <p class="muted">
+                A deterministic cash-flow / net-worth engine, then a structured AI report on that snapshot,
+                plus a PDF they can keep. Suggestions must name the expensive loan, the cover gap, or the
+                unfinished emergency fund — not generic tips.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="grid-3" style="margin-top: 22px">
+          <article class="card">
+            <h3>Who it is for</h3>
+            <p>Salaried or self-employed adult in India who wants FIRE, a house, education funding, or simply not to be surprised by EMIs and tax.</p>
+          </article>
+          <article class="card">
+            <h3>What “done” means today</h3>
+            <p>They finish setup, see a coherent dashboard from saved records, regenerate an advisor report when numbers change, and download a PDF.</p>
+          </article>
+          <article class="card">
+            <h3>How we stay honest</h3>
+            <p>Planner math is the source of the picture. AI fills a schema on top of that math. We do not let a model invent surplus or EMI.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="today">
+        <h2>What the app does today</h2>
+        <p class="lede">
+          This is the working product. Use it as the contract for what “Freedom Planner” means before
+          any distribution work.
+        </p>
+
+        <div class="shot" aria-label="Current product surfaces">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span>Freedom Planner · surfaces in the app</span>
+          </div>
+          <div class="shot-body">
+            <div class="grid-2">
+              <div>
+                <h3 style="margin:0 0 8px">Manage</h3>
+                <p class="muted">Income, expenses, daily tracker, loans, investments, insurance, goals.</p>
+              </div>
+              <div>
+                <h3 style="margin:0 0 8px">Plan</h3>
+                <p class="muted">Statements, tax planner, freedom calculator, forecast, AI advisor, learning hub.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          Users sign up with OTP, complete Quick Setup, then move Overview → Manage → Plan → Report.
+          See the sample household on <a href="/guide" target="_top">/guide</a>.
+        </p>
+      </section>
+
+      <section id="vision">
+        <h2>Vision for later</h2>
+        <p class="lede">
+          Once the ledger is trusted, the same picture can recommend the next action — and later let
+          the user take it in-app. The plan stays primary. A loan, policy, or fund is offered only
+          when the household numbers support it.
+        </p>
+
+        <div class="shot" aria-label="How surplus should sequence the next product">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            <span>Freedom Planner · future sequence, not a product banner</span>
+          </div>
+          <div class="shot-body">
+            <p class="kicker" style="margin-top:0">Need → product</p>
+            <h3 style="margin:0 0 14px">Sell only what the plan already says they need.</h3>
+
+            <div class="rec">
+              <span class="tag high">Cover</span>
+              <div>
+                <h3>Insurance</h3>
+                <p>
+                  If term or health is short vs income and dependents, quote and buy (or renew) through a
+                  licensed partner, then write the policy back onto the insurance list. Do not push a
+                  policy when cover is already enough.
+                </p>
+              </div>
+            </div>
+            <div class="rec">
+              <span class="tag med">Goals</span>
+              <div>
+                <h3>Mutual funds</h3>
+                <p>
+                  If emergency months are done and surplus remains, start or raise a goal SIP. Skip equity
+                  when the buffer is empty or EMI ratio is already high. New SIPs must appear on the
+                  investment list so the planner stays true.
+                </p>
+              </div>
+            </div>
+            <div class="rec">
+              <span class="tag low">Debt</span>
+              <div>
+                <h3>Loans</h3>
+                <p>
+                  Refinance or balance-transfer when a cheaper EMI is justified. Top-up only when surplus
+                  and a dated goal support it. If unsecured EMI is already heavy, the correct product is
+                  “do not borrow.”
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          Insurance gap first, then goal SIPs, then loan refinance. That order matches how cash flow
+          actually works. Partners transact; we keep the plan.
+        </p>
+
+        <div class="grid-3">
+          <article class="card">
+            <h3>Why these three</h3>
+            <p>
+              Banks, insurers, and AMCs sell them as separate products. For a household they are one
+              surplus decision. Only a ledger that already holds loans, cover, and investments can
+              sequence them honestly.
+            </p>
+          </article>
+          <article class="card">
+            <h3>How we earn later</h3>
+            <p>
+              Need-based distribution: origination on loans, commission on insurance, trail on funds —
+              through licensed partners. Extra AI reports can stay a product fee. We do not become the
+              lender or the insurer.
+            </p>
+          </article>
+          <article class="card">
+            <h3>What stays out until we mean it</h3>
+            <p>
+              Native mobile, live bank/UPI aggregation, household sharing, in-app KYC, and tax filing
+              are later platform work. They are not required to prove the core loop.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>How to use this page</h2>
+        <p class="lede">
+          Share <strong>/why</strong> when someone asks what problem we solve and where the product is going.
+          Share <strong>/guide</strong> when someone needs to see the screens with sample rupees.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="/guide" target="_top">Open the product walkthrough</a>
+          <a class="btn ghost" href="#problem">Back to the problem</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <div class="wrap">
+        Freedom Planner · internal brief · not a customer walkthrough · sample household lives on /guide.
+      </div>
+    </footer>
+    <script>
+      (function () {
+        var button = document.getElementById("theme-toggle");
+        if (!button) return;
+        function apply(theme) {
+          var dark = theme === "dark";
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.dataset.theme = theme;
+          button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+          try { localStorage.setItem("theme", theme); } catch (e) {}
+          try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
+        }
+        apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
+        button.addEventListener("click", function () {
+          apply(document.documentElement.classList.contains("dark") ? "light" : "dark");
+        });
+      })();
+    </script>
+  </body>
+</html>

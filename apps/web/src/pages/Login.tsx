@@ -399,6 +399,11 @@ export default function Login() {
               See how it works with the Arjun Mehta sample
             </Link>
           </p>
+          <p className="mt-2 text-center text-sm">
+            <Link to="/why" className="font-medium text-muted-foreground hover:text-primary hover:underline">
+              Problem, objective, and vision
+            </Link>
+          </p>
         </div>
       </div>
     </div>
