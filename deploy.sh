@@ -18,6 +18,9 @@ INSTALL_DOCKER=0
 NO_BUILD=0
 ORIGIN_OVERRIDE=""
 PORT_OVERRIDE=""
+TLS_DOMAIN_OVERRIDE=""
+TLS_WWW_OVERRIDE=""
+TLS_EMAIL_OVERRIDE=""
 
 usage() {
   cat <<'EOF'
@@ -34,6 +37,9 @@ Options:
                      back in before deploying if this is the first Docker install.
   --origin URL       Set PUBLIC_ORIGIN (no trailing slash), e.g. http://13.x.x.x
   --port N           Set PUBLIC_PORT (default 80)
+  --tls-domain HOST  Apex hostname for Let's Encrypt (e.g. myfinancefreedom.com)
+  --tls-www HOST     www hostname (default www.<tls-domain>)
+  --tls-email EMAIL  Let's Encrypt account email (required with --tls-domain)
   --no-build         Recreate containers without rebuilding images
   -h, --help         Show this help
 
@@ -54,6 +60,21 @@ while [[ $# -gt 0 ]]; do
     --port)
       PORT_OVERRIDE="${2:-}"
       [[ -n "${PORT_OVERRIDE}" ]] || { echo "--port requires a number" >&2; exit 1; }
+      shift 2
+      ;;
+    --tls-domain)
+      TLS_DOMAIN_OVERRIDE="${2:-}"
+      [[ -n "${TLS_DOMAIN_OVERRIDE}" ]] || { echo "--tls-domain requires a hostname" >&2; exit 1; }
+      shift 2
+      ;;
+    --tls-www)
+      TLS_WWW_OVERRIDE="${2:-}"
+      [[ -n "${TLS_WWW_OVERRIDE}" ]] || { echo "--tls-www requires a hostname" >&2; exit 1; }
+      shift 2
+      ;;
+    --tls-email)
+      TLS_EMAIL_OVERRIDE="${2:-}"
+      [[ -n "${TLS_EMAIL_OVERRIDE}" ]] || { echo "--tls-email requires an address" >&2; exit 1; }
       shift 2
       ;;
     -h|--help) usage; exit 0 ;;
@@ -173,6 +194,27 @@ if [[ -n "${PORT_OVERRIDE}" ]]; then
   env_set PUBLIC_PORT "${PORT_OVERRIDE}"
 fi
 
+if [[ -n "${TLS_DOMAIN_OVERRIDE}" ]]; then
+  env_set TLS_DOMAIN "${TLS_DOMAIN_OVERRIDE}"
+fi
+if [[ -n "${TLS_WWW_OVERRIDE}" ]]; then
+  env_set TLS_WWW_DOMAIN "${TLS_WWW_OVERRIDE}"
+fi
+if [[ -n "${TLS_EMAIL_OVERRIDE}" ]]; then
+  env_set CERTBOT_EMAIL "${TLS_EMAIL_OVERRIDE}"
+fi
+
+TLS_DOMAIN="$(env_get TLS_DOMAIN)"
+if [[ -n "${TLS_DOMAIN}" ]]; then
+  www="$(env_get TLS_WWW_DOMAIN)"
+  if [[ -z "${www}" ]]; then
+    env_set TLS_WWW_DOMAIN "www.${TLS_DOMAIN}"
+  fi
+  tls_origin="https://${TLS_DOMAIN}"
+  env_set PUBLIC_ORIGIN "${tls_origin}"
+  log "Set PUBLIC_ORIGIN to ${tls_origin} (CORS must match the HTTPS canonical host)"
+fi
+
 if is_placeholder "$(env_get POSTGRES_PASSWORD)"; then
   env_set POSTGRES_PASSWORD "$(alphanumeric_secret)"
   log "Generated POSTGRES_PASSWORD"
@@ -191,6 +233,11 @@ fi
 PUBLIC_ORIGIN="$(env_get PUBLIC_ORIGIN)"
 PUBLIC_PORT="$(env_get PUBLIC_PORT)"
 PUBLIC_PORT="${PUBLIC_PORT:-80}"
+TLS_DOMAIN="$(env_get TLS_DOMAIN)"
+TLS_WWW_DOMAIN="$(env_get TLS_WWW_DOMAIN)"
+TLS_PORT="$(env_get TLS_PORT)"
+TLS_PORT="${TLS_PORT:-443}"
+TLS_COMPOSE_FILE="${ROOT}/docker-compose.tls.yml"
 POSTGRES_PASSWORD="$(env_get POSTGRES_PASSWORD)"
 JWT_ACCESS_SECRET="$(env_get JWT_ACCESS_SECRET)"
 JWT_REFRESH_SECRET="$(env_get JWT_REFRESH_SECRET)"
@@ -206,7 +253,11 @@ esac
 [[ "${PUBLIC_ORIGIN}" != */ ]] || die "PUBLIC_ORIGIN must not have a trailing slash"
 
 compose() {
-  docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
+  if [[ -n "${TLS_DOMAIN}" ]]; then
+    docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" -f "${TLS_COMPOSE_FILE}" "$@"
+  else
+    docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
+  fi
 }
 
 port_listening() {
@@ -249,6 +300,18 @@ if port_listening "${PUBLIC_PORT}" && ! own_web_publishes_port "${PUBLIC_PORT}";
   Otherwise stop the other listener (host nginx, Apache) or pick another port: ./deploy.sh --port 8080 --origin http://localhost:8080"
 fi
 
+if [[ -n "${TLS_DOMAIN}" ]]; then
+  [[ -f "${TLS_COMPOSE_FILE}" ]] || die "docker-compose.tls.yml is missing"
+  email="$(env_get CERTBOT_EMAIL)"
+  if is_placeholder "${email}"; then
+    die "TLS_DOMAIN is set; set CERTBOT_EMAIL in .env.prod or pass --tls-email (Let's Encrypt requires it)"
+  fi
+  if port_listening "${TLS_PORT}" && ! own_web_publishes_port "${TLS_PORT}"; then
+    die "Host port ${TLS_PORT} is already in use, so nginx cannot bind HTTPS.
+  Stop the other listener or change TLS_PORT in .env.prod"
+  fi
+fi
+
 if [[ "${NO_BUILD}" -eq 1 ]]; then
   log "Starting stack without rebuild..."
   compose up -d
@@ -257,16 +320,50 @@ else
   compose up -d --build
 fi
 
+wait_for_health() {
+  local health_url="$1"
+  log "Waiting for ${health_url} ..."
+  local i
+  for i in {1..60}; do
+    if curl -fsS -m 2 "${health_url}" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
 health_url="http://127.0.0.1:${PUBLIC_PORT}/health"
-log "Waiting for ${health_url} ..."
 ready=0
-for _ in {1..60}; do
-  if curl -fsS -m 2 "${health_url}" >/dev/null 2>&1; then
-    ready=1
-    break
+if wait_for_health "${health_url}"; then
+  ready=1
+fi
+
+if [[ "${ready}" -eq 1 && -n "${TLS_DOMAIN}" ]]; then
+  www="${TLS_WWW_DOMAIN:-www.${TLS_DOMAIN}}"
+  email="$(env_get CERTBOT_EMAIL)"
+  log "Requesting Let's Encrypt certificate for ${TLS_DOMAIN} and ${www}"
+  if compose run --rm --no-deps --entrypoint certbot certbot certonly \
+    --webroot -w /var/www/certbot \
+    --email "${email}" \
+    --agree-tos --no-eff-email --keep-until-expiring --non-interactive \
+    -d "${TLS_DOMAIN}" -d "${www}"; then
+    log "Restarting web so nginx serves HTTPS"
+    compose up -d --no-deps --force-recreate web
+    if wait_for_health "${health_url}"; then
+      ready=1
+    else
+      ready=0
+    fi
+  else
+    echo "========================================="
+    echo " Let's Encrypt failed. HTTP is still up on port ${PUBLIC_PORT}."
+    echo " Confirm both DNS A records point at this host, and the security"
+    echo " group allows 80/443 from the internet, then re-run ./deploy.sh"
+    echo "========================================="
+    exit 1
   fi
-  sleep 2
-done
+fi
 
 echo "========================================="
 if [[ "${ready}" -eq 1 ]]; then
@@ -279,6 +376,10 @@ echo " App:    ${PUBLIC_ORIGIN}/"
 echo " Health: ${PUBLIC_ORIGIN}/health"
 echo " Env:    ${ENV_FILE} (not committed; add OPENAI_API_KEY there if you use the advisor)"
 echo "========================================="
-echo "Security group must allow 22 (your IP) and ${PUBLIC_PORT} (0.0.0.0/0)."
+if [[ -n "${TLS_DOMAIN}" ]]; then
+  echo "Security group must allow 22 (your IP), 80, and 443 (0.0.0.0/0)."
+else
+  echo "Security group must allow 22 (your IP) and ${PUBLIC_PORT} (0.0.0.0/0)."
+fi
 echo "Do not open 5432, 6379, or 5001."
 echo "========================================="

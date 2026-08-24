@@ -507,7 +507,7 @@ Express (:5001)
     → OpenAI (optional)
 ```
 
-AWS (`docker-compose.prod.yml`): nginx :80 serves the built SPA and proxies `/api` to Express. Postgres and Redis stay on the Compose network. See `docs/AWS_DEPLOY.md`.
+AWS (`docker-compose.prod.yml`): nginx serves the built SPA and proxies `/api` to Express (port 80, and 443 when `TLS_DOMAIN` is set). Postgres and Redis stay on the Compose network. See `docs/AWS_DEPLOY.md`.
 
 Planner output is computed, not the source of truth. Advisor JSON lives in Redis, not a durable advice table.
 

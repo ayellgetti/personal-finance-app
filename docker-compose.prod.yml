@@ -2,8 +2,9 @@
 # Usage: docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 #
 # Public surface is the web image (nginx + built SPA + /api proxy) on
-# PUBLIC_PORT (default 80). Postgres, Redis, and the API stay on the Compose
-# network and are not published to the host.
+# PUBLIC_PORT (default 80). With TLS_DOMAIN set, deploy.sh also merges
+# docker-compose.tls.yml (443 + certbot). Postgres, Redis, and the API stay
+# on the Compose network and are not published to the host.
 #
 # Do not add a second nginx service here. The local stack already uses
 # container_name docker-nginx and host port 80; a copy in this file races
@@ -77,9 +78,15 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile.prod
     restart: unless-stopped
+    environment:
+      TLS_DOMAIN: ${TLS_DOMAIN:-}
+      TLS_WWW_DOMAIN: ${TLS_WWW_DOMAIN:-}
+    volumes:
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot
     ports:
       # Bind to another host port when something else (a TLS terminator) fronts this.
-      - "${PUBLIC_PORT:-80}:80"
+      - "0.0.0.0:${PUBLIC_PORT:-80}:80"
     depends_on:
       api:
         condition: service_healthy
@@ -87,3 +94,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  letsencrypt:
+  certbot_www:

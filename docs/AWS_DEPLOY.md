@@ -15,7 +15,7 @@ ssh -L 5001:localhost:5001 user@host   # then use docker exec / a temporary port
 ## 1. EC2
 
 - Ubuntu or Debian, x86_64 or ARM (match the instance).
-- Security group inbound: **22** (your IP), **80** (0.0.0.0/0). Do not open 5432, 5433, 6379, 5001, 5050, or 5173.
+- Security group inbound: **22** (your IP), **80** and **443** (0.0.0.0/0). Do not open 5432, 5433, 6379, 5001, 5050, or 5173.
 - Allocate an Elastic IP if you want a stable address.
 
 Install Docker with `docker-setup.sh` (Debian/Ubuntu). Log out and back in so the `docker` group applies. First-time hosts can use `./deploy.sh --install-docker` instead, then SSH again and run `./deploy.sh`.
@@ -31,7 +31,7 @@ chmod +x deploy.sh docker-setup.sh
 
 `deploy.sh` copies `.env.prod.example` to `.env.prod` if needed, sets `PUBLIC_ORIGIN` from the instance public IP when that value is still a placeholder, generates `POSTGRES_PASSWORD` / JWT secrets when they are still the example strings, then runs `docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build`. Existing real secrets are left alone.
 
-Optional flags: `--origin https://your.domain`, `--port 80`, `--no-build`. Edit `.env.prod` yourself for `OPENAI_API_KEY` and SMTP/Twilio.
+Optional flags: `--origin https://your.domain`, `--port 80`, `--tls-domain myfinancefreedom.com`, `--tls-email you@example.com`, `--no-build`. Edit `.env.prod` yourself for `OPENAI_API_KEY` and SMTP/Twilio.
 
 `deploy.sh` stops before building if `PUBLIC_PORT` is already bound by something other than this stack's own web container. On a development machine that is usually nginx from the local `docker-compose.yml`; stop it (`docker compose -f docker-compose.yml stop nginx`) or deploy on another port with `--port 8080 --origin http://localhost:8080`.
 
@@ -45,9 +45,39 @@ Rebuild after API or web changes:
 
 Logs: `docker compose -f docker-compose.prod.yml logs -f api web`.
 
-## 3. HTTPS (optional)
+## 3. HTTPS (Let's Encrypt)
 
-Put a domain on the Elastic IP, then terminate TLS with a host nginx/Caddy, an ALB, or Certbot in front of this Compose stack. Set `PUBLIC_ORIGIN` to `https://your.domain` and recreate the API container so CORS matches.
+Terminate TLS in the production web container. `www` redirects to the apex host so `PUBLIC_ORIGIN` / CORS stay a single URL.
+
+1. Allocate an Elastic IP and attach it to the instance.
+2. At your DNS host, create:
+   - `A` `myfinancefreedom.com` → Elastic IP
+   - `A` `www.myfinancefreedom.com` → Elastic IP (or `CNAME` `www` → `myfinancefreedom.com`)
+3. Security group: inbound **80** and **443** from `0.0.0.0/0`.
+4. Wait until both names resolve to this host (`dig +short myfinancefreedom.com`).
+5. On the instance:
+
+```bash
+./deploy.sh \
+  --tls-domain myfinancefreedom.com \
+  --tls-www www.myfinancefreedom.com \
+  --tls-email YOUR_EMAIL@example.com
+```
+
+That sets `PUBLIC_ORIGIN=https://myfinancefreedom.com`, obtains a certificate covering both names, then reloads nginx on **443**. HTTP on port 80 keeps `/.well-known/acme-challenge/` and `/health`, and redirects everything else to HTTPS.
+
+Certbot renews in the background; nginx reloads twice a day so new files are picked up. Re-run `./deploy.sh` after DNS or email changes.
+
+To enable TLS by editing `.env.prod` instead of flags:
+
+```text
+PUBLIC_ORIGIN=https://myfinancefreedom.com
+TLS_DOMAIN=myfinancefreedom.com
+TLS_WWW_DOMAIN=www.myfinancefreedom.com
+CERTBOT_EMAIL=YOUR_EMAIL@example.com
+```
+
+Then `./deploy.sh`.
 
 ## Why the local Compose file fails on AWS
 

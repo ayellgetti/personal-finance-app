@@ -36,6 +36,14 @@ function smsBody(message: OtpMessage) {
   return `Freedom Planner OTP ${message.code} to ${purpose(message.type)}. Valid 5 min.`;
 }
 
+function transportCode(error: unknown): string | undefined {
+  if (error && typeof error === "object" && "code" in error) {
+    const code = (error as { code: unknown }).code;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+}
+
 function toE164(mobileNo: string, defaultCountryCode: string) {
   const digits = mobileNo.replace(/[^\d+]/g, "");
   if (digits.startsWith("+")) return digits;
@@ -74,7 +82,14 @@ export class ChannelOtpMessenger implements OtpMessenger {
     if (!message.email) return false;
 
     if (!this.mail.host || !this.mail.from) {
-      if (this.production) return false;
+      if (this.production) {
+        logger.error("OTP email skipped: SMTP is not configured", {
+          hasHost: Boolean(this.mail.host),
+          hasFrom: Boolean(this.mail.from),
+          type: message.type,
+        });
+        return false;
+      }
       logger.info("OTP email logged (SMTP is not configured)", {
         email: message.email,
         type: message.type,
@@ -102,6 +117,8 @@ export class ChannelOtpMessenger implements OtpMessenger {
     } catch (error) {
       logger.error("OTP email delivery failed", {
         errorType: error instanceof Error ? error.name : "UnknownError",
+        code: transportCode(error),
+        message: error instanceof Error ? error.message.slice(0, 240) : undefined,
         type: message.type,
       });
       if (this.production) return false;
