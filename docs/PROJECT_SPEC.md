@@ -291,6 +291,10 @@ Do not create `packages/shared-validation` until two apps share the same schemas
 
 Implemented: OTP register, password login, access token, refresh token, revocation/logout, bcrypt.
 
+Password fields on the web app include a show/hide control.
+
+When `VITE_OTP_AUTO_VERIFY=true` (Compose / Vite; intended for local/dev) and generate/resend includes `otp` (API returns the code when `NODE_ENV` is not production), signup verifies that code and skips the OTP entry screen.
+
 Never store plaintext passwords. Never log tokens or OTPs.
 
 SSO is out of scope until requested; do not block it with one-off token formats if a later SSO task lands.

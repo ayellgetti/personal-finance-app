@@ -12,6 +12,8 @@ RUN pnpm install --frozen-lockfile --filter web...
 COPY packages/tsconfig packages/tsconfig
 COPY apps/web apps/web
 WORKDIR /app/apps/web
+ARG VITE_OTP_AUTO_VERIFY=false
+ENV VITE_OTP_AUTO_VERIFY=$VITE_OTP_AUTO_VERIFY
 RUN pnpm build
 
 FROM nginx:alpine AS runtime

@@ -1133,7 +1133,8 @@ export const openApiDocument = {
         tags: ["OTP"],
         summary: "Signup OTP attempt counts",
         description:
-          "Returns how many unique people requested a registration OTP, how many registration OTPs were issued (including resends), and how many users completed signup. Counts only; no phone numbers or codes.",
+          "Authenticated. Returns how many unique people requested a registration OTP, how many registration OTPs were issued (including resends), and how many users completed signup. Counts only; no phone numbers or codes.",
+        security: [{ bearerAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/RequestId" }],
         responses: {
           "200": {
@@ -1144,6 +1145,7 @@ export const openApiDocument = {
               },
             },
           },
+          "401": { $ref: "#/components/responses/Unauthorized" },
         },
       },
     },

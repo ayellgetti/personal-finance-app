@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Gem, Loader2 } from "lucide-react";
+import { isOtpAutoVerifyEnabled } from "@/lib/auth/otp-auto-verify";
 import { useAuth, type SignupDraft } from "@/lib/auth/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,8 @@ export default function Login() {
     setDraft((current) => ({ ...current, ...patch }));
   };
 
+  const skipOtpScreen = isOtpAutoVerifyEnabled();
+
   const notifyOtp = (result: { otp?: number }) => {
     if (result.otp) {
       toast.message(`Dev OTP: ${result.otp}`);
@@ -66,15 +69,33 @@ export default function Login() {
     toast.success("OTP sent to your email and mobile number");
   };
 
+  const applyIssuedOtp = async (result: { otp?: number }) => {
+    if (skipOtpScreen && result.otp) {
+      const code = String(result.otp);
+      setOtp(code);
+      const verified = await verifySignupOtp(draft.mobileNo, code);
+      if (verified.ok === false) {
+        toast.error(verified.error);
+        setSignupStep("otp");
+        return false;
+      }
+      toast.success("OTP verified. Set a password to finish.");
+      setSignupStep("password");
+      return true;
+    }
+
+    notifyOtp(result);
+    setSignupStep("otp");
+    return true;
+  };
+
   const sendOtp = async () => {
     const result = await requestSignupOtp(draft);
     if (result.ok === false) {
       toast.error(result.error);
       return false;
     }
-    notifyOtp(result);
-    setSignupStep("otp");
-    return true;
+    return applyIssuedOtp(result);
   };
 
   const onLogin = async (e: FormEvent) => {
@@ -139,7 +160,7 @@ export default function Login() {
       toast.error(result.error);
       return;
     }
-    notifyOtp(result);
+    await applyIssuedOtp(result);
   };
 
   return (
@@ -381,7 +402,7 @@ export default function Login() {
                 type="button"
                 className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
                 onClick={() => {
-                  setSignupStep("otp");
+                  setSignupStep(skipOtpScreen ? "details" : "otp");
                   patchDraft({ password: "" });
                   setConfirmPassword("");
                 }}

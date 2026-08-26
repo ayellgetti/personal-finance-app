@@ -146,6 +146,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile.prod
+      args:
+        VITE_OTP_AUTO_VERIFY: ${VITE_OTP_AUTO_VERIFY:-false}
     container_name: docker-web
     restart: unless-stopped
     ports:

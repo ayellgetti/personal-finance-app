@@ -148,6 +148,8 @@ services:
       dockerfile: apps/web/Dockerfile
     container_name: docker-web
     restart: unless-stopped
+    environment:
+      VITE_OTP_AUTO_VERIFY: ${VITE_OTP_AUTO_VERIFY:-false}
     ports:
       - "8080:8080"
     volumes:

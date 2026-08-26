@@ -1,7 +1,7 @@
 
 
 
-
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d web
 
 docker compose --env-file .env.prod -f docker-compose.dev.yml up -d --build
 
