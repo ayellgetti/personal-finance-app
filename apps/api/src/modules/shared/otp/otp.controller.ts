@@ -15,6 +15,11 @@ export class OtpController extends BaseController {
     this.sendSuccess(req, res, result, "OTP sent");
   }
 
+  async stats(req: Request, res: Response) {
+    const result = await this.service.stats();
+    this.sendSuccess(req, res, result, "Signup OTP stats");
+  }
+
   async resend(req: Request, res: Response) {
     const body = req.body as ResendOtpBody;
     const result = await this.service.resend(body);

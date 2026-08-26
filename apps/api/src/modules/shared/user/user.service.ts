@@ -30,6 +30,10 @@ export class UserService {
     return this.model.findByMobileNo(mobileNo, { includeHidden: true });
   }
 
+  async count(): Promise<number> {
+    return this.model.count();
+  }
+
   async getById(id: string): Promise<PublicUser> {
     const user = await this.model.findById(id);
     if (!user) {

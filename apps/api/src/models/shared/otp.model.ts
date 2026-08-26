@@ -15,6 +15,14 @@ export class OtpModel extends PrismaModel<
   constructor() {
     super(prisma.otp, "Otp");
   }
+
+  async countDistinctMobile(type: string): Promise<number> {
+    const groups = await prisma.otp.groupBy({
+      by: ["mobileNo"],
+      where: { type },
+    });
+    return groups.length;
+  }
 }
 
 export const otpModel = new OtpModel();

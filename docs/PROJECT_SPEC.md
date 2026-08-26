@@ -241,7 +241,7 @@ Logging must not dominate request latency (current failure-log write is acceptab
 
 Base path: **`/api`** (not `/api/v1`).
 
-Examples: `/api/auth/login`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`, `/api/statements`, `/api/tax`.
+Examples: `/api/auth/login`, `/api/otp/stats`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`, `/api/statements`, `/api/tax`.
 
 Also: `GET /health`.
 

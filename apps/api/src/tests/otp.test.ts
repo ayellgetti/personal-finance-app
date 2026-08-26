@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ChannelOtpMessenger } from "../modules/shared/otp/otp.messenger";
 import { generateOtpBodySchema, OTP_TYPE, verifyOtpBodySchema } from "../modules/shared/otp/otp.request";
+import { OtpService } from "../modules/shared/otp/otp.service";
+import type { OtpModel } from "../models/shared/otp.model";
+import type { UserService } from "../modules/shared/user/user.service";
 
 test("registration OTP requires an email address", () => {
   const missing = generateOtpBodySchema.safeParse({
@@ -74,4 +77,31 @@ test("OTP messenger sends SMS through Twilio and skips SMTP in development", asy
   assert.equal(delivered.sms, true);
   assert.equal(delivered.email, true);
   assert.match(calls[0] ?? "", /Accounts\/sid\/Messages\.json/);
+});
+
+test("OTP stats reports unique signup attempts, generations, and registered users", async () => {
+  const model = {
+    countDistinctMobile: async (type: string) => {
+      assert.equal(type, OTP_TYPE.REGISTER);
+      return 4;
+    },
+    count: async (where: { type?: string }) => {
+      assert.equal(where.type, OTP_TYPE.REGISTER);
+      return 7;
+    },
+  };
+  const users = {
+    count: async () => 2,
+  };
+
+  const service = new OtpService(
+    model as unknown as OtpModel,
+    users as unknown as UserService,
+  );
+
+  assert.deepEqual(await service.stats(), {
+    uniqueSignupAttempts: 4,
+    otpGenerations: 7,
+    registeredUsers: 2,
+  });
 });

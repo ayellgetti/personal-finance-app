@@ -1128,6 +1128,25 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/otp/stats": {
+      get: {
+        tags: ["OTP"],
+        summary: "Signup OTP attempt counts",
+        description:
+          "Returns how many unique people requested a registration OTP, how many registration OTPs were issued (including resends), and how many users completed signup. Counts only; no phone numbers or codes.",
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        responses: {
+          "200": {
+            description: "Aggregate signup OTP counts",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/otp/generate": {
       post: {
         tags: ["OTP"],

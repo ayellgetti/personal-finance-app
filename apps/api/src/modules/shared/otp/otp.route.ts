@@ -10,6 +10,13 @@ import {
 
 export const otpRouter = Router();
 
+otpRouter.get(
+  "/stats",
+  asyncHandler(async (req, res) => {
+    await otpController.stats(req, res);
+  }),
+);
+
 otpRouter.post(
   "/generate",
   validateBody(generateOtpBodySchema),

@@ -29,6 +29,12 @@ type VerifiedOtp = {
   type: string;
 };
 
+export type OtpSignupStats = {
+  uniqueSignupAttempts: number;
+  otpGenerations: number;
+  registeredUsers: number;
+};
+
 export class OtpService {
   constructor(
     private readonly model: OtpModel = otpModel,
@@ -38,6 +44,20 @@ export class OtpService {
 
   async generate(input: GenerateOtpBody): Promise<IssuedOtp> {
     return this.issue(input.mobileNo, input.type, input.email);
+  }
+
+  async stats(): Promise<OtpSignupStats> {
+    const [uniqueSignupAttempts, otpGenerations, registeredUsers] = await Promise.all([
+      this.model.countDistinctMobile(OTP_TYPE.REGISTER),
+      this.model.count({ type: OTP_TYPE.REGISTER }),
+      this.users.count(),
+    ]);
+
+    return {
+      uniqueSignupAttempts,
+      otpGenerations,
+      registeredUsers,
+    };
   }
 
   async resend(input: ResendOtpBody): Promise<IssuedOtp> {
