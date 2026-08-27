@@ -38,6 +38,8 @@ const envSchema = z.object({
   REDIS_URL: z.string().trim().min(1).default("redis://127.0.0.1:6379"),
   ADVISOR_ALLOW_REFRESH: optionalBoolean,
   ADVISOR_IGNORE_QUOTA: optionalBoolean,
+  OTP_EXPOSE_IN_RESPONSE: optionalBoolean,
+  VITE_OTP_AUTO_VERIFY: optionalBoolean,
   SMTP_HOST: optionalString,
   SMTP_PORT: z.preprocess(
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),

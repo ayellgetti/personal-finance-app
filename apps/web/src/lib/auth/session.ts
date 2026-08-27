@@ -14,6 +14,7 @@ export type StoredUser = {
   firstName: string;
   lastName: string;
   email: string;
+  countryCode?: string;
   mobileNo: string;
   gender: string;
   dob: string;

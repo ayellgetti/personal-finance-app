@@ -58,6 +58,7 @@ export class AuthService {
       lastName: input.lastName,
       dob: new Date(input.dob),
       gender: input.gender,
+      countryCode: input.countryCode,
       mobileNo: input.mobileNo,
       email: input.email,
       password,

@@ -5,6 +5,11 @@ export const registerBodySchema = z.object({
   lastName: z.string().trim().min(1).max(80),
   dob: z.iso.date(),
   gender: z.string().trim().min(1).max(20),
+  countryCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z]{2}$/, "Invalid country code"),
   mobileNo: z.string().trim().regex(/^\+?[0-9]{7,15}$/, "Invalid mobile number"),
   email: z.string().trim().email(),
   password: z.string().min(8).max(72),

@@ -152,7 +152,7 @@ export class OtpService {
       delivered,
     };
 
-    if (!setting.isProduction) {
+    if (setting.exposeSignupOtpInResponse) {
       payload.otp = no;
     }
 

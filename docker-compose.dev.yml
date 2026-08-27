@@ -148,8 +148,13 @@ services:
       dockerfile: apps/web/Dockerfile
     container_name: docker-web
     restart: unless-stopped
+    env_file:
+      - ./.env.dev
     environment:
-      VITE_OTP_AUTO_VERIFY: ${VITE_OTP_AUTO_VERIFY:-false}
+      # Vite reads process.env at startup. Do not default VITE_OTP_AUTO_VERIFY
+      # here — Compose interpolation would force false unless --env-file is used,
+      # and that overwrites the value from env_file.
+      VITE_API_PROXY: ${VITE_API_PROXY:-http://api:5001}
     ports:
       - "8080:8080"
     volumes:

@@ -48,6 +48,16 @@ export class Setting {
   get isProduction(): boolean {
     return this.environment === "production";
   }
+
+  /** Include the OTP digits in generate/resend JSON. Default on outside production;
+   *  also on when VITE_OTP_AUTO_VERIFY or OTP_EXPOSE_IN_RESPONSE is true. */
+  get exposeSignupOtpInResponse(): boolean {
+    return (
+      !this.isProduction ||
+      env.OTP_EXPOSE_IN_RESPONSE === true ||
+      env.VITE_OTP_AUTO_VERIFY === true
+    );
+  }
 }
 
 export const setting = new Setting();

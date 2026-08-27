@@ -10,3 +10,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  __APP_CONFIG__?: { OTP_AUTO_VERIFY?: boolean | string };
+}

@@ -19,6 +19,7 @@ import {
   type AuthSession,
   type StoredUser,
 } from "@/lib/auth/session";
+import { DEFAULT_COUNTRY_ISO, toE164Mobile } from "@/lib/auth/country-dial-codes";
 
 export { getAccessToken, getRefreshToken } from "@/lib/auth/session";
 
@@ -31,10 +32,15 @@ export type SignupDraft = {
   lastName: string;
   dob: string;
   gender: string;
+  countryIso: string;
   mobileNo: string;
   email: string;
   password: string;
 };
+
+export function signupMobileE164(draft: Pick<SignupDraft, "countryIso" | "mobileNo">) {
+  return toE164Mobile(draft.countryIso || DEFAULT_COUNTRY_ISO, draft.mobileNo);
+}
 
 type AuthResult = { ok: true } | { ok: false; error: string };
 
@@ -46,7 +52,7 @@ interface AuthContextValue {
   user: PublicUser | null;
   login: (email: string, password: string) => Promise<AuthResult>;
   requestSignupOtp: (draft: SignupDraft) => Promise<OtpResult>;
-  resendSignupOtp: (mobileNo: string, email: string) => Promise<OtpResult>;
+  resendSignupOtp: (draft: SignupDraft) => Promise<OtpResult>;
   verifySignupOtp: (mobileNo: string, otp: string) => Promise<AuthResult>;
   completeSignup: (draft: SignupDraft, otp: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
@@ -108,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "/api/otp/generate",
         {
           method: "POST",
-          body: { mobileNo: draft.mobileNo, email: draft.email, type: "register" },
+          body: { mobileNo: signupMobileE164(draft), email: draft.email, type: "register" },
         },
       );
       return { ok: true, otp: result.otp, delivered: result.delivered };
@@ -117,13 +123,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const resendSignupOtp = useCallback(async (mobileNo: string, email: string): Promise<OtpResult> => {
+  const resendSignupOtp = useCallback(async (draft: SignupDraft): Promise<OtpResult> => {
     try {
       const result = await api<{ otp?: number; delivered?: { email: boolean; sms: boolean } }>(
         "/api/otp/resend",
         {
           method: "POST",
-          body: { mobileNo, email, type: "register" },
+          body: { mobileNo: signupMobileE164(draft), email: draft.email, type: "register" },
         },
       );
       return { ok: true, otp: result.otp, delivered: result.delivered };
@@ -159,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await api("/api/otp/verify", {
           method: "POST",
-          body: { mobileNo: draft.mobileNo, type: "register", no },
+          body: { mobileNo: signupMobileE164(draft), type: "register", no },
         });
       } catch (error) {
         return { ok: false, error: errorMessage(error, "OTP verification failed") };
@@ -168,7 +174,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const session = await api<AuthSession>("/api/auth/register", {
           method: "POST",
-          body: { ...draft, no },
+          body: {
+            firstName: draft.firstName,
+            lastName: draft.lastName,
+            dob: draft.dob,
+            gender: draft.gender,
+            countryCode: (draft.countryIso || DEFAULT_COUNTRY_ISO).toUpperCase(),
+            mobileNo: signupMobileE164(draft),
+            email: draft.email,
+            password: draft.password,
+            no,
+          },
         });
         applySession(session);
         return { ok: true };

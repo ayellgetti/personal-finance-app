@@ -9,6 +9,7 @@ export type CreateUserInput = {
   lastName: string;
   dob: Date;
   gender: string;
+  countryCode: string;
   mobileNo: string;
   email: string;
   password: string;

@@ -46,7 +46,7 @@ describe("Login signup OTP auto-verify", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send OTP" }));
 
     await waitFor(() => {
-      expect(verifySignupOtp).toHaveBeenCalledWith("9876543210", "123456");
+      expect(verifySignupOtp).toHaveBeenCalledWith("+919876543210", "123456");
     });
     expect(await screen.findByLabelText("Password")).toBeInTheDocument();
     expect(screen.getByLabelText("Confirm password")).toBeInTheDocument();

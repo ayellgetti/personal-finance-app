@@ -13,6 +13,7 @@ model User {
   lastName          String
   dob               DateTime
   gender            String
+  countryCode       String   @default("IN")
   mobileNo          String   @unique
   email             String   @unique
   password          String

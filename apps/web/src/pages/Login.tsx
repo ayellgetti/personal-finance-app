@@ -3,6 +3,12 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Gem, Loader2 } from "lucide-react";
 import { isOtpAutoVerifyEnabled } from "@/lib/auth/otp-auto-verify";
 import { useAuth, type SignupDraft } from "@/lib/auth/store";
+import {
+  COUNTRY_DIAL_CODES,
+  DEFAULT_COUNTRY_ISO,
+  findCountryDial,
+  toE164Mobile,
+} from "@/lib/auth/country-dial-codes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +34,7 @@ const emptyDraft: SignupDraft = {
   lastName: "",
   dob: "",
   gender: "",
+  countryIso: DEFAULT_COUNTRY_ISO,
   mobileNo: "",
   email: "",
   password: "",
@@ -59,6 +66,7 @@ export default function Login() {
     setDraft((current) => ({ ...current, ...patch }));
   };
 
+  const e164 = toE164Mobile(draft.countryIso, draft.mobileNo);
   const skipOtpScreen = isOtpAutoVerifyEnabled();
 
   const notifyOtp = (result: { otp?: number }) => {
@@ -73,7 +81,7 @@ export default function Login() {
     if (skipOtpScreen && result.otp) {
       const code = String(result.otp);
       setOtp(code);
-      const verified = await verifySignupOtp(draft.mobileNo, code);
+      const verified = await verifySignupOtp(e164, code);
       if (verified.ok === false) {
         toast.error(verified.error);
         setSignupStep("otp");
@@ -121,7 +129,7 @@ export default function Login() {
   const onVerifyOtp = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const result = await verifySignupOtp(draft.mobileNo, otp);
+    const result = await verifySignupOtp(toE164Mobile(draft.countryIso, draft.mobileNo), otp);
     setBusy(false);
     if (result.ok === false) {
       toast.error(result.error);
@@ -154,7 +162,7 @@ export default function Login() {
 
   const onResend = async () => {
     setBusy(true);
-    const result = await resendSignupOtp(draft.mobileNo, draft.email);
+    const result = await resendSignupOtp(draft);
     setBusy(false);
     if (result.ok === false) {
       toast.error(result.error);
@@ -180,7 +188,7 @@ export default function Login() {
             {mode === "login"
               ? "Sign in to your wealth workspace"
               : signupStep === "otp"
-                ? `Enter the OTP sent to ${draft.email} and ${draft.mobileNo}`
+                ? `Enter the OTP sent to ${draft.email} and ${e164}`
                 : signupStep === "password"
                   ? "OTP verified. Choose a password for your account"
                 : "Create your account to get started"}
@@ -300,15 +308,37 @@ export default function Login() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mobileNo">Mobile number</Label>
-                <Input
-                  id="mobileNo"
-                  value={draft.mobileNo}
-                  onChange={(e) => patchDraft({ mobileNo: e.target.value })}
-                  placeholder="9876543210"
-                  className="rounded-xl"
-                  autoComplete="tel"
-                  required
-                />
+                <div className="flex gap-2">
+                  <Select
+                    value={draft.countryIso}
+                    onValueChange={(value) => patchDraft({ countryIso: value })}
+                  >
+                    <SelectTrigger className="w-[9.5rem] shrink-0 rounded-xl" aria-label="Country ISD code">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRY_DIAL_CODES.map((country) => (
+                        <SelectItem key={country.iso} value={country.iso}>
+                          {country.iso} {country.dial}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id="mobileNo"
+                    value={draft.mobileNo}
+                    onChange={(e) => patchDraft({ mobileNo: e.target.value })}
+                    placeholder="9876543210"
+                    className="rounded-xl"
+                    autoComplete="tel"
+                    inputMode="numeric"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {findCountryDial(draft.countryIso).name} · SMS uses{" "}
+                  {e164 || findCountryDial(draft.countryIso).dial}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-email">Email</Label>

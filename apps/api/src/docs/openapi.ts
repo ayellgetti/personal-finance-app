@@ -114,6 +114,7 @@ export const openApiDocument = {
           "lastName",
           "dob",
           "gender",
+          "countryCode",
           "mobileNo",
           "email",
           "isActive",
@@ -126,6 +127,7 @@ export const openApiDocument = {
           lastName: { type: "string", example: "Lovelace" },
           dob: { type: "string", format: "date-time" },
           gender: { type: "string", example: "female" },
+          countryCode: { type: "string", example: "IN", description: "ISO 3166-1 alpha-2 from signup" },
           mobileNo: { type: "string", example: "9876543210" },
           email: { type: "string", format: "email" },
           avatar: { type: "string", nullable: true },
@@ -152,6 +154,7 @@ export const openApiDocument = {
           "lastName",
           "dob",
           "gender",
+          "countryCode",
           "mobileNo",
           "email",
           "password",
@@ -162,6 +165,7 @@ export const openApiDocument = {
           lastName: { type: "string", minLength: 1, maxLength: 80 },
           dob: { type: "string", format: "date", example: "1990-05-01" },
           gender: { type: "string", minLength: 1, maxLength: 20 },
+          countryCode: { type: "string", pattern: "^[A-Z]{2}$", example: "IN" },
           mobileNo: {
             type: "string",
             pattern: "^\\+?[0-9]{7,15}$",
@@ -1154,7 +1158,7 @@ export const openApiDocument = {
         tags: ["OTP"],
         summary: "Generate an OTP",
         description:
-          "Creates a 6-digit OTP and delivers it by SMS. Registration OTPs also require `email` and are sent on both email and SMS. The code is included in the response only outside production.",
+          "Creates a 6-digit OTP and delivers it by SMS. Registration OTPs also require `email` and are sent on both email and SMS. The code is included in the response outside production, or when OTP_EXPOSE_IN_RESPONSE / VITE_OTP_AUTO_VERIFY is true.",
         parameters: [{ $ref: "#/components/parameters/RequestId" }],
         requestBody: {
           required: true,
@@ -1166,7 +1170,7 @@ export const openApiDocument = {
         },
         responses: {
           "200": {
-            description: "OTP generated and sent. The code is included only outside production.",
+            description: "OTP generated and sent. The code is included outside production, or when OTP expose / auto-verify env is enabled.",
             content: {
               "application/json": {
                 schema: { $ref: "#/components/schemas/Envelope" },
