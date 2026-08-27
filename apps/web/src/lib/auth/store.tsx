@@ -19,7 +19,7 @@ import {
   type AuthSession,
   type StoredUser,
 } from "@/lib/auth/session";
-import { DEFAULT_COUNTRY_ISO, toE164Mobile } from "@/lib/auth/country-dial-codes";
+import { DEFAULT_COUNTRY_ISO, dialForIso, toE164Mobile } from "@/lib/auth/country-dial-codes";
 
 export { getAccessToken, getRefreshToken } from "@/lib/auth/session";
 
@@ -40,6 +40,10 @@ export type SignupDraft = {
 
 export function signupMobileE164(draft: Pick<SignupDraft, "countryIso" | "mobileNo">) {
   return toE164Mobile(draft.countryIso || DEFAULT_COUNTRY_ISO, draft.mobileNo);
+}
+
+export function signupCountryDial(draft: Pick<SignupDraft, "countryIso">) {
+  return dialForIso(draft.countryIso || DEFAULT_COUNTRY_ISO);
 }
 
 type AuthResult = { ok: true } | { ok: false; error: string };
@@ -179,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             lastName: draft.lastName,
             dob: draft.dob,
             gender: draft.gender,
-            countryCode: (draft.countryIso || DEFAULT_COUNTRY_ISO).toUpperCase(),
+            countryCode: signupCountryDial(draft),
             mobileNo: signupMobileE164(draft),
             email: draft.email,
             password: draft.password,

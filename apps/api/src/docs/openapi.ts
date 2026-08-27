@@ -127,7 +127,7 @@ export const openApiDocument = {
           lastName: { type: "string", example: "Lovelace" },
           dob: { type: "string", format: "date-time" },
           gender: { type: "string", example: "female" },
-          countryCode: { type: "string", example: "IN", description: "ISO 3166-1 alpha-2 from signup" },
+          countryCode: { type: "string", example: "+91", description: "ISD dial code from signup" },
           mobileNo: { type: "string", example: "9876543210" },
           email: { type: "string", format: "email" },
           avatar: { type: "string", nullable: true },
@@ -165,7 +165,7 @@ export const openApiDocument = {
           lastName: { type: "string", minLength: 1, maxLength: 80 },
           dob: { type: "string", format: "date", example: "1990-05-01" },
           gender: { type: "string", minLength: 1, maxLength: 20 },
-          countryCode: { type: "string", pattern: "^[A-Z]{2}$", example: "IN" },
+          countryCode: { type: "string", pattern: "^\\+[1-9]\\d{0,3}$", example: "+91" },
           mobileNo: {
             type: "string",
             pattern: "^\\+?[0-9]{7,15}$",

@@ -8,8 +8,7 @@ export const registerBodySchema = z.object({
   countryCode: z
     .string()
     .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{2}$/, "Invalid country code"),
+    .regex(/^\+[1-9]\d{0,3}$/, "Invalid country code"),
   mobileNo: z.string().trim().regex(/^\+?[0-9]{7,15}$/, "Invalid mobile number"),
   email: z.string().trim().email(),
   password: z.string().min(8).max(72),

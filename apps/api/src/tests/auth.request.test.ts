@@ -7,19 +7,20 @@ const validRegister = {
   lastName: "Lovelace",
   dob: "1990-05-01",
   gender: "female",
-  countryCode: "in",
+  countryCode: "+91",
   mobileNo: "+919876543210",
   email: "ada@example.com",
   password: "password1",
   no: 123456,
 };
 
-test("register accepts a two-letter country code and stores it uppercase", () => {
+test("register accepts an ISD country code", () => {
   const parsed = registerBodySchema.parse(validRegister);
-  assert.equal(parsed.countryCode, "IN");
+  assert.equal(parsed.countryCode, "+91");
 });
 
 test("register rejects a missing or invalid country code", () => {
   assert.equal(registerBodySchema.safeParse({ ...validRegister, countryCode: undefined }).success, false);
-  assert.equal(registerBodySchema.safeParse({ ...validRegister, countryCode: "IND" }).success, false);
+  assert.equal(registerBodySchema.safeParse({ ...validRegister, countryCode: "IN" }).success, false);
+  assert.equal(registerBodySchema.safeParse({ ...validRegister, countryCode: "91" }).success, false);
 });

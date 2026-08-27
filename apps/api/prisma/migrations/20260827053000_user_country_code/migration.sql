@@ -1,2 +1,2 @@
--- Persist the signup country (ISO 3166-1 alpha-2). Existing users default to IN.
-ALTER TABLE "User" ADD COLUMN "countryCode" TEXT NOT NULL DEFAULT 'IN';
+-- Persist the signup ISD dial code. Existing users default to +91.
+ALTER TABLE "User" ADD COLUMN "countryCode" TEXT NOT NULL DEFAULT '+91';

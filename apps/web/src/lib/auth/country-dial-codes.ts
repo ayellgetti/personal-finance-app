@@ -26,6 +26,10 @@ export function findCountryDial(iso: string): CountryDialCode {
   return COUNTRY_DIAL_CODES.find((country) => country.iso === iso) ?? COUNTRY_DIAL_CODES[0]!;
 }
 
+export function dialForIso(iso: string): string {
+  return findCountryDial(iso || DEFAULT_COUNTRY_ISO).dial;
+}
+
 export function toE164Mobile(iso: string, nationalNumber: string): string {
   const digits = nationalNumber.replace(/\D/g, "").replace(/^0+/, "");
   const { dial } = findCountryDial(iso);
