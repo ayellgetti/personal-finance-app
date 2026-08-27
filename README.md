@@ -1,15 +1,16 @@
 # example
 
-pnpm + Turborepo monorepo with a TypeScript Express API, Vite React web app, and PostgreSQL.
+pnpm + Turborepo monorepo with a TypeScript Express API, Vite React product app, a separate marketing site, and PostgreSQL.
 
 ## Apps
 
 - `apps/api` — Express API on port `5001` (Swagger UI at `http://localhost:5001/docs`)
-- `apps/web` — Vite + React on port `5173` (proxies `/api` to the API). Product walkthrough: `/guide`. Internal brief (problem, objective, vision): `/why`
+- `apps/web` — Product app (login, dashboard, planner). Vite on port `8080` in Compose (`5173` if you run Vite on the host). Walkthrough: `/guide`. Internal brief: `/why`
+- `apps/website` — Public marketing site only. No auth, no finance data. Vite on port `8081`. “Open the app” links to `VITE_APP_URL` (default `http://localhost:8080`)
 
 Local Postgres is exposed on **5433** (avoids clashing with an existing 5432 instance). Connection string is in `apps/api/.env`.
 
-The Compose stack also runs nginx on **http://localhost** (port 80), proxying `/api` and `/health` to the API and everything else to the Vite dev server, so the browser sees one origin. Hitting `http://localhost:5173` directly still works.
+The Compose stack also runs nginx on **http://localhost** (port 80). The default host serves the marketing site (`apps/website`). `web.local.uat` serves the product app (`apps/web`) and still proxies `/api` and `/health` to the API. Hitting `http://localhost:8080` (app) or `http://localhost:8081` (website) directly still works.
 
 AWS EC2: do not use this Compose file on a public host. Use `./deploy.sh` (or `docker-compose.prod.yml` by hand). HTTPS for `myfinancefreedom.com` / `www`: `docs/AWS_DEPLOY.md` section 3.
 
@@ -27,7 +28,7 @@ pnpm dev
 
 | Command | Description |
 | --- | --- |
-| `pnpm dev` | Run api and web in watch mode |
+| `pnpm dev` | Run api, web, and website in watch mode |
 | `pnpm build` | Build all apps |
 | `pnpm typecheck` | Typecheck all apps |
 | `pnpm lint` | Lint all apps |

@@ -24,6 +24,8 @@ services:
         condition: service_healthy
       web:
         condition: service_healthy
+      website:
+        condition: service_healthy
 
   certbot:
     image: certbot/certbot:latest
@@ -155,6 +157,23 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  website:
+    build:
+      context: .
+      dockerfile: apps/website/Dockerfile.prod
+      args:
+        VITE_APP_URL: ${VITE_APP_URL:-https://myfinancefreedom.com}
+    container_name: docker-website
+    restart: unless-stopped
+    ports:
+      - "8081:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/"]
       interval: 10s

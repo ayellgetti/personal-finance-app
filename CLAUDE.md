@@ -253,8 +253,9 @@ No seed pipeline yet. If added, seeds must be deterministic and idempotent. Seed
 # 15. Monorepo architecture
 
 ```text
-apps/api     Express API
-apps/web     Vite React app
+apps/api      Express API
+apps/web      Product React app
+apps/website  Public marketing site (no auth / finance)
 packages/tsconfig
 ```
 
@@ -561,7 +562,7 @@ Do not use `--no-verify` as normal workflow if hooks are added later.
 
 Keep production images lean. Do not run as root in production images when changing Dockerfiles, where practical.
 
-Local Postgres is **5433** on the host. Redis **6379**. API **5001**. Web **5173**.
+Local Postgres is **5433** on the host. Redis **6379**. API **5001**. Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**.
 
 ---
 

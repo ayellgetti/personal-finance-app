@@ -256,6 +256,8 @@ Depends on B1 if daily spend should enter the planner snapshot.
 
 **Validate:** typecheck, tests for touched modules, OpenAPI updated.
 
+Public marketing UI lives in `apps/website` (separate from `apps/web`). Do not fold landing pages into the product app.
+
 ### Phase B4 — Optional product surfaces
 
 **Status: NOT STARTED**

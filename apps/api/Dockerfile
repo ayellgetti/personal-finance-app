@@ -7,6 +7,7 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
+COPY apps/website/package.json apps/website/
 COPY packages/tsconfig packages/tsconfig
 COPY apps/api/prisma apps/api/prisma
 RUN pnpm install --frozen-lockfile --filter api...
@@ -32,6 +33,7 @@ COPY --from=build /app/apps/api/prompts ./apps/api/prompts
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
+COPY apps/website/package.json apps/website/
 RUN mkdir -p apps/api/uploads
 EXPOSE 5001
 WORKDIR /app/apps/api

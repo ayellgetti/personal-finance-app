@@ -76,7 +76,8 @@ Redis is already used for advisor caching. Do not add BullMQ or a second queue u
 .
 ├── apps/
 │   ├── api/                 # Express API
-│   └── web/                 # React app
+│   ├── web/                 # Product React app
+│   └── website/             # Public marketing site
 ├── packages/
 │   └── tsconfig/
 ├── docs/
@@ -103,8 +104,11 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 
 | App | Path | Role |
 | --- | --- | --- |
-| Web | `apps/web` | Primary user-facing React app (`5173`) |
+| Web | `apps/web` | Authenticated product UI (`8080` in Compose) |
+| Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
 | API | `apps/api` | Express backend (`5001`), Swagger `/docs` |
+
+Do not import `apps/web` source from `apps/website` or the reverse.
 
 **Admin (`apps/admin`)** does not exist. Do not scaffold it unless requested.
 
@@ -129,6 +133,8 @@ apps/web/src/
 ```
 
 Do not reshape into `src/features/*` in an unrelated PR.
+
+Marketing site (`apps/website`) is a second Vite app: `src/pages`, `src/components`. It has no auth store and must not import `apps/web`.
 
 - Keep API calls in `lib/finance/remote.ts` and `lib/api.ts`.
 - Keep finance state in `lib/finance/store.tsx`.

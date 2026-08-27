@@ -24,6 +24,8 @@ services:
         condition: service_healthy
       web:
         condition: service_healthy
+      website:
+        condition: service_healthy
 
   certbot:
     image: certbot/certbot:latest
@@ -167,6 +169,28 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  website:
+    build:
+      context: .
+      dockerfile: apps/website/Dockerfile
+    container_name: docker-website
+    restart: unless-stopped
+    environment:
+      VITE_APP_URL: ${VITE_APP_URL:-http://web.local.uat}
+      VITE_DEV_ALLOWED_HOSTS: ${VITE_DEV_ALLOWED_HOSTS:-website.local.uat,web.local.uat,localhost}
+      VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./apps/website:/app/apps/website
+      - /app/apps/website/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/"]
       interval: 10s
       timeout: 5s
       retries: 5

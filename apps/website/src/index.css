@@ -1,0 +1,29 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 150 30% 98%;
+    --foreground: 200 30% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 30% 12%;
+    --primary: 158 70% 36%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 160 18% 94%;
+    --muted-foreground: 200 12% 42%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 30 40% 12%;
+    --border: 158 18% 88%;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
