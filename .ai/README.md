@@ -49,3 +49,47 @@ The shortcut definitions in `commands/` are the source of truth.
 ## Important
 
 A shortcut is a prompt convention unless the AI client has been explicitly configured to recognize it as an actual command. The files define what the shortcut means; they do not by themselves create UI slash commands.
+
+## Core development workflow
+
+Recommended feature lifecycle:
+
+```text
+/understand
+    ↓
+/prd
+    ↓
+/architecture
+    ↓
+/plan
+    ↓
+/implement
+    ↓
+/testing
+    ↓
+/review
+    ↓
+/security /performance
+    ↓
+/production
+    ↓
+/document
+```
+
+Bug lifecycle:
+
+```text
+/understand → /debug → /rootcause → /fix → /regression → /testing → /review
+```
+
+Database lifecycle:
+
+```text
+/schema → /prisma → /migration → /testing → /production
+```
+
+Full-stack lifecycle:
+
+```text
+/understand → /plan → /backend /api → /frontend /react → /testing → /review
+```

@@ -142,3 +142,33 @@ Shortcuts can be combined:
 ```
 
 Do not treat shortcuts as independent tasks when they naturally form one workflow. Produce one coherent answer.
+
+## Core Development Workflow
+
+| Shortcut | Purpose |
+|---|---|
+| `/understand` | Inspect and explain the existing system before changes |
+| `/plan` | Create an implementation plan before coding |
+| `/implement` | Implement the approved solution |
+| `/backend` | Restrict work to backend |
+| `/frontend` | Restrict work to frontend |
+| `/fullstack` | Coordinate backend + frontend |
+| `/regression` | Prevent a bug from returning |
+| `/migration` | Review/design safe database migrations |
+| `/document` | Create documentation from actual implementation |
+
+## Recommended workflow
+
+```text
+New feature:
+ /understand → /prd → /architecture → /plan → /implement → /testing → /review → /production → /document
+
+Bug:
+ /understand → /debug → /rootcause → /fix → /regression → /testing → /review
+
+Database:
+ /schema → /prisma → /migration → /testing → /review → /production
+
+Full-stack:
+ /understand → /plan → /backend /api → /frontend /react → /testing → /review
+```
