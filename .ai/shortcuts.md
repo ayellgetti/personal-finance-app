@@ -29,6 +29,7 @@
 | `/formal` | Make formal |
 | `/persuasive` | Make more persuasive |
 | `/aggressive` | Make more direct and attention-grabbing |
+| `/short` | Give a compact response |
 | `/shorten` | Make shorter |
 | `/expand` | Make more detailed |
 | `/humanize` | Make natural and human |
@@ -49,6 +50,8 @@
 | `/explaincode` | Explain code |
 | `/refactor` | Improve code without unnecessary behavior changes |
 | `/review` | Review implementation |
+| `/critique` | Identify weaknesses and trade-offs |
+| `/improve` | Improve the supplied implementation |
 | `/architecture` | Analyze architecture |
 | `/schema` | Design database/schema |
 | `/api` | Design API |
@@ -156,6 +159,19 @@ Do not treat shortcuts as independent tasks when they naturally form one workflo
 | `/regression` | Prevent a bug from returning |
 | `/migration` | Review/design safe database migrations |
 | `/document` | Create documentation from actual implementation |
+
+## Workflow Shortcuts
+
+| Shortcut | Purpose |
+|---|---|
+| `/new-feature` | Deliver a feature from discovery through validation |
+| `/bug-fix` | Diagnose, correct, and regression-test a defect |
+| `/new-api` | Implement an API change using existing conventions |
+| `/new-schema` | Make a safe schema and migration change |
+| `/fullstack` | Coordinate backend and frontend implementation |
+| `/research` | Research with repository evidence and authoritative sources |
+| `/launch` | Create a product launch plan |
+| `/sales-campaign` | Create a measurable sales campaign |
 
 ## Recommended workflow
 

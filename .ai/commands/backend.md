@@ -6,7 +6,7 @@ Inspect and follow existing:
 - architecture
 - routes
 - services/use cases
-- repositories
+- models/data access
 - validation
 - authentication/authorization
 - Prisma/database access

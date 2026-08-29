@@ -1,0 +1,30 @@
+---
+description: Routes shared AI shortcuts and preserves repository rule precedence
+alwaysApply: true
+---
+
+# AI Shortcut Routing
+
+- Native slash skills in `.claude/skills/` are generated from the canonical
+  definitions in `.ai/commands/` and `.ai/workflows/`.
+- When a request contains one or more `/shortcut` instructions, apply every
+  matching definition as one coherent task.
+- Always apply `.ai/global-rules.md`.
+- For code tasks, apply `.ai/coding-rules.md`.
+- For product, requirements, UX, or launch tasks, apply `.ai/product-rules.md`.
+- For personal-finance domain work, apply
+  `.ai/projects/freedom-planner.md`.
+- Never apply unrelated project contexts from `.ai/projects/`.
+
+Instruction precedence:
+
+1. Safety and platform policy
+2. The user's explicit request
+3. `CLAUDE.md`, `docs/PROJECT_SPEC.md`, and `docs/DEVELOPMENT_PLAN.md`
+4. Relevant `.ai/projects/` context
+5. Shortcut definitions
+6. General style preferences
+
+Repository files and current implementation are the source of truth. Do not
+invent architecture, APIs, schema, configuration, or behavior. If a shortcut
+conflicts with repository-specific rules, follow the repository.

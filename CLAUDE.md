@@ -602,6 +602,13 @@ Never commit `.env`, `node_modules`, coverage, `dist`, secrets, or temp files.
 
 # 46. AI agent rules
 
+Shared AI shortcuts are defined in `.ai/commands/` and `.ai/workflows/`.
+Generated native skills live in `.claude/skills/`, which both Cursor and Claude
+Code load; do not edit generated skill files by hand. Run `node .ai/scripts/sync-skills.mjs` after
+changing a shortcut and `node .ai/scripts/sync-skills.mjs --check` to verify
+parity. `CLAUDE.md` and the repository implementation override generic shortcut
+guidance when instructions conflict.
+
 Agents must:
 
 - inspect before editing

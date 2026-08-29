@@ -92,7 +92,7 @@ Where applicable, assume the repository prefers:
 - Vite
 - TypeScript
 - Node.js
-- Fastify
+- Express
 - Prisma
 - PostgreSQL
 - Docker

@@ -12,7 +12,7 @@ Where applicable:
 - Vite
 - TypeScript
 - Node.js
-- Fastify
+- the HTTP framework selected by the project
 - Prisma
 - PostgreSQL
 - Docker
