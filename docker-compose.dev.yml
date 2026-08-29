@@ -182,7 +182,7 @@ services:
     restart: unless-stopped
     environment:
       VITE_APP_URL: ${VITE_APP_URL:-http://web.local.uat}
-      VITE_DEV_ALLOWED_HOSTS: ${VITE_DEV_ALLOWED_HOSTS:-website.local.uat,web.local.uat,localhost}
+      VITE_DEV_ALLOWED_HOSTS: ${VITE_DEV_ALLOWED_HOSTS:-local.uat,www.local.uat,website.local.uat,web.local.uat,localhost}
       VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
     ports:
       - "8081:8081"

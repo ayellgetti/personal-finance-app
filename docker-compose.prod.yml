@@ -169,7 +169,7 @@ services:
       context: .
       dockerfile: apps/website/Dockerfile.prod
       args:
-        VITE_APP_URL: ${VITE_APP_URL:-https://myfinancefreedom.com}
+        VITE_APP_URL: ${VITE_APP_URL:-https://web.myfinancefreedom.com}
     container_name: docker-website
     restart: unless-stopped
     ports:

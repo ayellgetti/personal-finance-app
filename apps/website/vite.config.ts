@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-const allowedHosts = (process.env.VITE_DEV_ALLOWED_HOSTS ?? "website.local.uat,web.local.uat")
+const allowedHosts = (process.env.VITE_DEV_ALLOWED_HOSTS ?? "local.uat,www.local.uat,website.local.uat,web.local.uat")
   .split(",")
   .map((host) => host.trim())
   .filter(Boolean);
