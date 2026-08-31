@@ -84,6 +84,20 @@ export function oneTimeExpenses(d: FinanceData): number {
 export function monthlyEMI(d: FinanceData): number {
   return d.loans.reduce((s, l) => s + l.emi, 0);
 }
+export function monthlyCreditCardDue(d: FinanceData): number {
+  return d.creditCards.reduce((s, c) => s + c.minimumDue, 0);
+}
+export function totalCreditCardOutstanding(d: FinanceData): number {
+  return d.creditCards.reduce((s, c) => s + c.outstanding, 0);
+}
+export function totalCreditLimit(d: FinanceData): number {
+  return d.creditCards.reduce((s, c) => s + c.creditLimit, 0);
+}
+export function creditUtilization(d: FinanceData): number {
+  const limit = totalCreditLimit(d);
+  if (limit === 0) return 0;
+  return (totalCreditCardOutstanding(d) / limit) * 100;
+}
 export function monthlySIP(d: FinanceData): number {
   return d.investments.reduce((s, i) => s + i.monthlySip, 0);
 }
@@ -91,7 +105,7 @@ export function monthlyInsurancePremium(d: FinanceData): number {
   return d.insurances.reduce((s, i) => s + i.annualPremium, 0) / 12;
 }
 export function totalLiabilities(d: FinanceData): number {
-  return d.loans.reduce((s, l) => s + l.outstanding, 0);
+  return d.loans.reduce((s, l) => s + l.outstanding, 0) + totalCreditCardOutstanding(d);
 }
 export function totalInvestments(d: FinanceData): number {
   return d.investments.reduce((s, i) => s + i.currentValue, 0);
@@ -103,7 +117,7 @@ export function netWorth(d: FinanceData): number {
   return totalAssets(d) - totalLiabilities(d);
 }
 export function monthlySavings(d: FinanceData): number {
-  return monthlyIncome(d) - monthlyExpenses(d) - monthlyEMI(d) - monthlyInsurancePremium(d);
+  return monthlyIncome(d) - monthlyExpenses(d) - monthlyEMI(d) - monthlyCreditCardDue(d) - monthlyInsurancePremium(d);
 }
 export function savingsRate(d: FinanceData): number {
   const inc = monthlyIncome(d);
@@ -113,7 +127,7 @@ export function savingsRate(d: FinanceData): number {
 export function debtToIncome(d: FinanceData): number {
   const inc = monthlyIncome(d);
   if (inc === 0) return 0;
-  return (monthlyEMI(d) / inc) * 100;
+  return ((monthlyEMI(d) + monthlyCreditCardDue(d)) / inc) * 100;
 }
 
 /* ---------------- investment analysis ---------------- */
@@ -138,6 +152,31 @@ export function assetAllocation(d: FinanceData): { name: string; value: number }
 
 export function investmentProjection(inv: Investment): number {
   return fvLumpSum(inv.currentValue, inv.expectedReturn, inv.horizon) + fvSIP(inv.monthlySip, inv.expectedReturn, inv.horizon);
+}
+
+export interface ProjectionSchedulePoint {
+  year: number;
+  contributed: number;
+  estimatedReturns: number;
+  projectedValue: number;
+  target?: number;
+}
+
+export function investmentProjectionSchedule(inv: Investment): ProjectionSchedulePoint[] {
+  const years = Math.max(0, Math.ceil(inv.horizon));
+  return Array.from({ length: years + 1 }, (_, year) => {
+    const elapsedYears = Math.min(year, inv.horizon);
+    const contributed = inv.currentValue + inv.monthlySip * elapsedYears * 12;
+    const projectedValue =
+      fvLumpSum(inv.currentValue, inv.expectedReturn, elapsedYears) +
+      fvSIP(inv.monthlySip, inv.expectedReturn, elapsedYears);
+    return {
+      year: elapsedYears,
+      contributed,
+      estimatedReturns: Math.max(0, projectedValue - contributed),
+      projectedValue,
+    };
+  });
 }
 
 /* ---------------- goals ---------------- */
@@ -179,6 +218,30 @@ export function analyzeGoal(d: FinanceData, goal: Goal, assumedReturn = 11): Goa
   const probability = Math.round(Math.min(98, Math.max(8, ratio * 95 + (goal.currentSaved / Math.max(goal.targetAmount, 1)) * 20)));
   const status = probability >= 70 ? "On Track" : probability >= 40 ? "At Risk" : "Off Track";
   return { goal, yearsLeft, inflationAdjustedTarget, projectedSavedValue, monthlyRequired, fundingGap, probability, status };
+}
+
+export function goalProjectionSchedule(
+  d: FinanceData,
+  goal: Goal,
+  assumedReturn = 11,
+): ProjectionSchedulePoint[] {
+  const analysis = analyzeGoal(d, goal, assumedReturn);
+  const years = Math.max(1, Math.ceil(analysis.yearsLeft));
+  const startingValue = analysis.goal.currentSaved;
+  return Array.from({ length: years + 1 }, (_, year) => {
+    const elapsedYears = Math.min(year, analysis.yearsLeft);
+    const contributed = startingValue + analysis.monthlyRequired * elapsedYears * 12;
+    const projectedValue =
+      fvLumpSum(startingValue, assumedReturn, elapsedYears) +
+      fvSIP(analysis.monthlyRequired, assumedReturn, elapsedYears);
+    return {
+      year: elapsedYears,
+      contributed,
+      estimatedReturns: Math.max(0, projectedValue - contributed),
+      projectedValue,
+      target: fvLumpSum(analysis.goal.targetAmount, d.profile.inflationRate, elapsedYears),
+    };
+  });
 }
 
 /* ---------------- insurance ---------------- */
@@ -418,10 +481,11 @@ export function forecastNetWorth(d: FinanceData, scenario: Scenario): { year: st
   const currentYear = new Date().getFullYear();
   for (let y = 0; y <= 20; y++) {
     const assets = portfolioFutureValue(d, y, adj) + d.profile.emergencyFund;
-    const debt = d.loans.reduce(
-      (sum, l) => sum + loanBalanceAfterMonths(l.outstanding, l.interestRate, l.emi, y * 12),
-      0,
-    );
+    const debt =
+      d.loans.reduce(
+        (sum, l) => sum + loanBalanceAfterMonths(l.outstanding, l.interestRate, l.emi, y * 12),
+        0,
+      ) + totalCreditCardOutstanding(d);
     out.push({ year: `${currentYear + y}`, netWorth: assets - debt, assets, debt });
   }
   return out;

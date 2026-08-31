@@ -164,39 +164,6 @@ describe("CalculatorsModule", () => {
     );
   });
 
-  it("loads an existing loan directly into the amortization preview", async () => {
-    render(
-      <CalculatorsModule
-        initialType="loan"
-        loanPreset={{
-          title: "Home Loan",
-          principal: 6_790_000,
-          annualRatePct: 7.35,
-          months: 180,
-          monthlyPayment: 62_367,
-        }}
-      />,
-    );
-
-    expect(screen.getByLabelText("Calculation name (optional)")).toHaveValue(
-      "Home Loan",
-    );
-    expect(screen.getByLabelText("Loan amount")).toHaveValue(6_790_000);
-    expect(screen.getByLabelText("Interest rate")).toHaveValue(7.35);
-    expect(screen.getByLabelText("Loan tenure")).toHaveValue(15);
-    expect(screen.getByLabelText("Monthly EMI (optional)")).toHaveValue(62_367);
-
-    await waitFor(() =>
-      expect(previewCalculator).toHaveBeenCalledWith({
-        type: "loan",
-        principal: 6_790_000,
-        annualRatePct: 7.35,
-        months: 180,
-        monthlyPayment: 62_367,
-      }),
-    );
-  });
-
   it("previews an INR currency conversion with a manual rate", async () => {
     render(<CalculatorsModule initialType="currency" />);
     fireEvent.click(

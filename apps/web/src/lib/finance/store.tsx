@@ -10,6 +10,7 @@ import {
   Goal,
   Profile,
   DailyExpense,
+  CreditCard,
 } from "@/types/finance";
 import { newId, createEmergencyFundGoal } from "./sampleData";
 import { useAuth } from "@/lib/auth/store";
@@ -48,7 +49,7 @@ import { toast } from "sonner";
 const LEGACY_STORAGE_KEY = "ffp-finance-data-v1";
 const LOCAL_EXTRAS_KEY = "ffp-finance-local-v2";
 
-type Collections = "incomes" | "expenses" | "loans" | "investments" | "insurances" | "goals" | "dailyExpenses";
+type Collections = "incomes" | "expenses" | "loans" | "creditCards" | "investments" | "insurances" | "goals" | "dailyExpenses";
 
 interface FinanceContextValue {
   data: FinanceData;
@@ -63,6 +64,7 @@ type LocalExtras = {
   profile: Partial<Profile>;
   insurances: Insurance[];
   dailyExpenses: DailyExpense[];
+  creditCards: CreditCard[];
 };
 
 const FinanceContext = createContext<FinanceContextValue | null>(null);
@@ -102,6 +104,7 @@ function emptyForUser(account?: AccountIdentity | null): FinanceData {
     incomes: [],
     expenses: [],
     loans: [],
+    creditCards: [],
     investments: [],
     insurances: [],
     goals: [],
@@ -123,13 +126,14 @@ function readJson<T>(key: string): T | null {
 }
 
 function readLocalExtras(userId: string): LocalExtras {
-  const empty: LocalExtras = { profile: {}, insurances: [], dailyExpenses: [] };
+  const empty: LocalExtras = { profile: {}, insurances: [], dailyExpenses: [], creditCards: [] };
   const current = readJson<LocalExtras>(extrasKey(userId));
   if (current && !looksLikeSample(current)) {
     return {
       profile: pickProfileExtras(current.profile),
       insurances: Array.isArray(current.insurances) ? current.insurances : [],
       dailyExpenses: Array.isArray(current.dailyExpenses) ? current.dailyExpenses : [],
+      creditCards: Array.isArray(current.creditCards) ? current.creditCards : [],
     };
   }
 
@@ -139,6 +143,7 @@ function readLocalExtras(userId: string): LocalExtras {
       profile: pickProfileExtras(legacy.profile),
       insurances: Array.isArray(legacy.insurances) ? legacy.insurances : [],
       dailyExpenses: Array.isArray(legacy.dailyExpenses) ? legacy.dailyExpenses : [],
+      creditCards: Array.isArray(legacy.creditCards) ? legacy.creditCards : [],
     };
   }
 
@@ -150,6 +155,7 @@ function persistLocalExtras(userId: string, data: FinanceData) {
     profile: pickProfileExtras(data.profile),
     insurances: data.insurances,
     dailyExpenses: data.dailyExpenses,
+    creditCards: data.creditCards,
   };
   localStorage.setItem(extrasKey(userId), JSON.stringify(extras));
   localStorage.removeItem(legacyKey(userId));
@@ -187,6 +193,7 @@ function mergeFinance(
     incomes: remote?.incomes ?? [],
     expenses: remote?.expenses ?? [],
     loans: remote?.loans ?? [],
+    creditCards: extras.creditCards,
     investments: remote?.investments ?? [],
     insurances: extras.insurances,
     goals: remote?.goals ?? [],
@@ -464,4 +471,4 @@ export function useFinance() {
 }
 
 export { newId };
-export type { Income, Expense, Loan, Investment, Insurance, Goal };
+export type { Income, Expense, Loan, Investment, Insurance, Goal, CreditCard };

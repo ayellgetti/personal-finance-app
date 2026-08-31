@@ -58,6 +58,18 @@ export const sampleData: FinanceData = {
     { id: uid(), name: "Car Loan", type: "Vehicle Loan", outstanding: 480000, interestRate: 9.2, emi: 14500, remainingTenure: 38, emiDay: 5, prepaymentAllowed: true },
     { id: uid(), name: "Personal Loan", type: "Personal Loan", outstanding: 220000, interestRate: 13.5, emi: 11200, remainingTenure: 22, emiDay: 5, prepaymentAllowed: true },
   ],
+  creditCards: [
+    {
+      id: uid(),
+      name: "HDFC Millennia",
+      network: "Visa",
+      creditLimit: 300000,
+      outstanding: 45000,
+      interestRate: 42,
+      dueDay: 8,
+      minimumDue: 2250,
+    },
+  ],
   investments: [
     { id: uid(), name: "Index Mutual Funds", type: "Mutual Funds", currentValue: 1850000, monthlySip: 35000, expectedReturn: 12, horizon: 20 },
     { id: uid(), name: "Direct Equity", type: "Stocks", currentValue: 920000, monthlySip: 15000, expectedReturn: 14, horizon: 18 },

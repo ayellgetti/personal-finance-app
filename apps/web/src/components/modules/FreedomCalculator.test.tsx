@@ -25,6 +25,7 @@ const data: FinanceData = {
     { id: "e-1", name: "Living costs", category: "Rent", amount: 50_000, recurring: true, date: "2024-01-01" },
   ],
   loans: [],
+  creditCards: [],
   investments: [],
   insurances: [],
   goals: [],

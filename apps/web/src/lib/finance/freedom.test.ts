@@ -31,6 +31,7 @@ const data: FinanceData = {
   incomes: [],
   expenses: [],
   loans: [],
+  creditCards: [],
   investments: [],
   insurances: [],
   goals: [],

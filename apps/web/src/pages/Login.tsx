@@ -319,12 +319,18 @@ export default function Login() {
                     onValueChange={(value) => patchDraft({ countryIso: value })}
                   >
                     <SelectTrigger className="w-[9.5rem] shrink-0 rounded-xl" aria-label="Country ISD code">
-                      <SelectValue />
+                      <span className="truncate">
+                        {findCountryDial(draft.countryIso).iso} {findCountryDial(draft.countryIso).dial}
+                      </span>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-72 min-w-[18rem]">
                       {COUNTRY_DIAL_CODES.map((country) => (
-                        <SelectItem key={country.iso} value={country.iso}>
-                          {country.iso} {country.dial}
+                        <SelectItem
+                          key={country.iso}
+                          value={country.iso}
+                          textValue={`${country.name} ${country.iso} ${country.dial}`}
+                        >
+                          {country.name} ({country.dial})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -458,6 +464,11 @@ export default function Login() {
           <p className="mt-2 text-center text-sm">
             <Link to="/why" className="font-medium text-muted-foreground hover:text-primary hover:underline">
               Problem, objective, and vision
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-sm">
+            <Link to="/course" className="font-medium text-muted-foreground hover:text-primary hover:underline">
+              Course outline
             </Link>
           </p>
         </div>

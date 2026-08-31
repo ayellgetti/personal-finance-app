@@ -11,18 +11,14 @@ import { InvestmentModule } from "@/components/modules/InvestmentModule";
 import { InsuranceModule } from "@/components/modules/InsuranceModule";
 import { GoalsModule } from "@/components/modules/GoalsModule";
 import { FreedomCalculator } from "@/components/modules/FreedomCalculator";
-import { ForecastEngine } from "@/components/modules/ForecastEngine";
 import { AIAdvisor } from "@/components/modules/AIAdvisor";
 import { LearningHubModule } from "@/components/modules/LearningHubModule";
 import { ReportModule } from "@/components/modules/ReportModule";
 import { StatementAnalyzerModule } from "@/components/modules/StatementAnalyzerModule";
 import { TaxPlannerModule } from "@/components/modules/TaxPlannerModule";
-import {
-  CalculatorsModule,
-  type LoanCalculatorPreset,
-} from "@/components/modules/CalculatorsModule";
+import { CalculatorsModule } from "@/components/modules/CalculatorsModule";
+import { CreditCardModule } from "@/components/modules/CreditCardModule";
 import type { CalculatorType } from "@/lib/finance/calculator-remote";
-import type { Loan } from "@/types/finance";
 import { useAuth } from "@/lib/auth/store";
 import { toast } from "sonner";
 
@@ -32,16 +28,16 @@ const META: Record<ViewId, { title: string; description: string }> = {
   profile: { title: "Profile", description: "Manage your account and financial persona" },
   income: { title: "Income Management", description: "Track every source of money coming in" },
   expenses: { title: "Expense Management", description: "Understand where your money goes" },
-  daily: { title: "Daily Expense Tracker", description: "Log spending and stay on budget every day" },
+  daily: { title: "Budget Tracker", description: "Log spending and stay on budget every day" },
   loans: { title: "Loan Management", description: "Debt overview, ratios and payoff strategy" },
+  creditCards: { title: "Credit Card", description: "Limits, outstanding balances and utilization" },
   investments: { title: "Investment Management", description: "Portfolio, allocation and growth projections" },
   insurance: { title: "Insurance Management", description: "Coverage adequacy and protection gaps" },
   goals: { title: "Goals", description: "Emergency fund and the milestones you are saving toward" },
   statements: { title: "Statement Analyzer", description: "Bank and phone/UPI statements, categorized automatically" },
-  tax: { title: "Tax Planner", description: "Country-wise slabs — India old/new regime, plus US and UK estimates" },
+  tax: { title: "Tax Calculator", description: "Country-wise slabs — India old/new regime, plus US and UK estimates" },
   calculators: { title: "Financial Calculators", description: "Run, save and revisit financial what-if scenarios" },
   freedom: { title: "Financial Freedom Calculator", description: "When can you retire and live free?" },
-  forecast: { title: "Smart Forecast Engine", description: "Project wealth across market scenarios" },
   advisor: { title: "AI Financial Advisor", description: "Personalised, actionable recommendations" },
   learn: { title: "Financial Learning Hub", description: "Learn concepts, then apply them to your money" },
   report: { title: "Summary Report", description: "AI summary and a downloadable executive report" },
@@ -53,9 +49,6 @@ const Index = () => {
   const [view, setView] = useState<ViewId>(() => (setupDone ? "dashboard" : "setup"));
   const [calculatorType, setCalculatorType] =
     useState<CalculatorType>("lumpsum");
-  const [loanPreset, setLoanPreset] = useState<LoanCalculatorPreset | null>(
-    null,
-  );
 
   useEffect(() => {
     if (setupDone && view === "setup") setView("dashboard");
@@ -76,21 +69,8 @@ const Index = () => {
     if (id === "setup" && setupDone) return;
     if (id === "calculators" && selectedCalculator) {
       setCalculatorType(selectedCalculator);
-      setLoanPreset(null);
     }
     setView(id);
-  };
-
-  const viewLoanAmortization = (loan: Loan) => {
-    setCalculatorType("loan");
-    setLoanPreset({
-      title: loan.name,
-      principal: loan.outstanding,
-      annualRatePct: loan.interestRate,
-      months: Math.max(1, Math.round(loan.remainingTenure)),
-      monthlyPayment: loan.emi,
-    });
-    setView("calculators");
   };
 
   const visibleView = setupDone && view === "setup" ? "dashboard" : view;
@@ -117,22 +97,17 @@ const Index = () => {
         {visibleView === "income" && <IncomeModule />}
         {visibleView === "expenses" && <ExpenseModule />}
         {visibleView === "daily" && <DailyExpenseModule />}
-        {visibleView === "loans" && (
-          <LoanModule onViewAmortization={viewLoanAmortization} />
-        )}
+        {visibleView === "loans" && <LoanModule />}
+        {visibleView === "creditCards" && <CreditCardModule />}
         {visibleView === "investments" && <InvestmentModule />}
         {visibleView === "insurance" && <InsuranceModule />}
         {visibleView === "goals" && <GoalsModule />}
         {visibleView === "statements" && <StatementAnalyzerModule />}
         {visibleView === "tax" && <TaxPlannerModule />}
         {visibleView === "calculators" && (
-          <CalculatorsModule
-            initialType={calculatorType}
-            loanPreset={loanPreset}
-          />
+          <CalculatorsModule initialType={calculatorType} />
         )}
         {visibleView === "freedom" && <FreedomCalculator />}
-        {visibleView === "forecast" && <ForecastEngine />}
         {visibleView === "advisor" && <AIAdvisor />}
         {visibleView === "learn" && <LearningHubModule />}
         {visibleView === "report" && <ReportModule />}

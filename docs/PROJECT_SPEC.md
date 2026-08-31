@@ -458,19 +458,19 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | Area | Behavior |
 | --- | --- |
 | Auth | OTP register, login, forgot-password reset, refresh, profile |
-| Onboarding | Setup wizard → profile + income + expenses + loans + investments + insurance + required emergency fund + required FIRE path (Lean, Fat, or Coast) + other goals. Public walkthrough: `/guide` (Arjun Mehta sample, screenshot-style screens and advisor suggestions). Internal brief: `/why` (problem, objective, future vision). |
+| Onboarding | Setup wizard → profile + income + expenses + loans + investments + insurance + required emergency fund + required FIRE path (Lean, Fat, or Coast) + other goals. Public walkthrough: `/guide` (Arjun Mehta sample, screenshot-style screens and advisor suggestions). Internal brief: `/why` (problem, objective, future vision). Course outline: `/course` (Financial Freedom Journey — 3 levels, 30 lessons; not live yet). |
 | Cash flow | Recurring `Budget` income/expense |
-| Debt | Loans: principal, ROI, tenure, EMI, EMI day |
-| Investments | Corpus, contribution, ROI, remaining months, hold |
+| Debt | Loans: principal, ROI, tenure, EMI, EMI day. Each loan row opens an amortization dialog (summary, repayment chart, and the year/month schedule) computed by `/api/calculators/preview`; it never saves a scenario or changes the loan. Credit cards: name, network, limit, outstanding, APR, due day, and minimum due. Stored with other client-only extras (same path as insurance and the budget tracker), not a server `Loan` row. Outstanding counts in net worth; minimum due counts in monthly surplus. |
+| Investments | Corpus, contribution, ROI, remaining months, hold. Each holding opens a client-side projection dialog (contributions, estimated returns, projected value per year). |
 | Insurance | Type, coverage, premium, expiry |
-| Goals | Target/current amount, horizon; every user has a compulsory `emergency` goal and selects one `lean_fire`, `fat_fire`, or `coast_fire` path before completing Quick Setup. FIRE suggested targets inflate the user's added expenses to retirement and fund 25 years after they stop working (Lean = essentials, Fat = all expenses or 2× essentials, Coast = that corpus discounted so current investments can compound without extra SIPs). |
+| Goals | Target/current amount, horizon; every user has a compulsory `emergency` goal and selects one `lean_fire`, `fat_fire`, or `coast_fire` path before completing Quick Setup. FIRE suggested targets inflate the user's added expenses to retirement and fund 25 years after they stop working (Lean = essentials, Fat = all expenses or 2× essentials, Coast = that corpus discounted so current investments can compound without extra SIPs). Each life goal opens a projection dialog showing the funding path against the inflation-adjusted target. |
 | Profile | Retirement age, dependents, inflation, employment, currency |
 | Planner | Server cash-flow / net-worth engine |
 | AI advisor | OpenAI JSON from planner snapshot; Redis cache |
 | Statements | Bank or phone/UPI statements as PDF, CSV/TSV, Excel or pasted text (password-protected PDF/Excel supported); categorized lines (not live bank aggregation, no OCR for scanned PDFs) |
-| Tax planner | Country-wise slabs and regime-specific deductions (India old/new, US/UK estimates); side-by-side "Old Regime / With Planner / New Regime" computation sheet per financial year, surcharge with marginal relief, saved scenarios — not e-filing |
-| Calculators | A dedicated sidebar group opens each saved deterministic tool directly: lumpsum, SIP, step-up SIP, EMI, loan (amount, rate, and tenure required; EMI optional), future target, depreciation, manually rated INR currency conversion, Indian number-to-words, bond yield, stock return, and periodic IRR. Supported numeric inputs pair editable values with sliders. Summary figures include Indian number-to-words under each amount. Inputs and visual results sit side-by-side, recent saved calculations follow in an accordion, and detailed tables use the full width at the bottom. Existing loans can open the Loan calculator prefilled for an amortization preview. Results do not alter real loans, investments, or planner totals. |
-| Freedom calculator | A top toggle switches between Lean FIRE, FIRE, Coast FIRE, and Fat FIRE. The monthly expense prefills from recurring expenses, EMIs, and premiums and can be edited as an unsaved what-if; current age comes from the date of birth; retirement age and inflation save to the profile; expected return and coast age are local assumptions. Targets are the annual expense inflated to the retirement age times 15 (Lean), 25 (FIRE), or 50 (Fat); Coast FIRE is the FIRE number discounted at the expected return back to the coast age. This screen is a standalone what-if and does not change the FIRE goal suggestions described under Goals. |
+| Tax calculator | Country-wise slabs and regime-specific deductions (India old/new, US/UK estimates); side-by-side "Old Regime / With Planner / New Regime" computation sheet per financial year, surcharge with marginal relief, saved scenarios — not e-filing. Opens as the first item in the Calculators sidebar group. |
+| Calculators | A dedicated sidebar group opens Tax Calculator and Freedom Calculator first, then each saved deterministic tool: lumpsum, SIP, step-up SIP, EMI, loan (amount, rate, and tenure required; EMI optional), future target, depreciation, manually rated INR currency conversion, Indian number-to-words, bond yield, stock return, and periodic IRR. Supported numeric inputs pair editable values with sliders. Summary figures include Indian number-to-words under each amount. Inputs and visual results sit side-by-side, recent saved calculations follow in an accordion, and detailed tables use the full width at the bottom. Results do not alter real loans, investments, or planner totals. Saved loans show their amortization in a dialog on Manage → Loans instead of redirecting here. |
+| Freedom calculator | Lives in the Calculators sidebar group. A top toggle switches between Lean FIRE, FIRE, Coast FIRE, and Fat FIRE. The monthly expense prefills from recurring expenses, EMIs, and premiums and can be edited as an unsaved what-if; current age comes from the date of birth; retirement age and inflation save to the profile; expected return and coast age are local assumptions. Targets are the annual expense inflated to the retirement age times 15 (Lean), 25 (FIRE), or 50 (Fat); Coast FIRE is the FIRE number discounted at the expected return back to the coast age. This screen is a standalone what-if and does not change the FIRE goal suggestions described under Goals. |
 | Learning hub | Static lessons |
 | Report | AI summary + client PDF |
 
@@ -496,13 +496,15 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 1. Sign up / log in  
 2. Optional getting-started guide (`/guide`) — Arjun Mehta sample walkthrough with screenshot-style screens  
 3. Optional internal brief (`/why`) — problem statement, app objective, later vision (loans / insurance / mutual funds)  
-4. Quick setup (`User.quickStep`)  
-5. Dashboard  
-6. Manage: income, expenses, loans, investments, insurance, goals  
-7. Plan: daily tracker, statement analyzer, tax planner, calculators, freedom calculator, forecast, AI advisor, learning hub
-8. Report + PDF  
+4. Optional course outline (`/course`) — planned Financial Freedom Journey (Foundation / Growth / Freedom, 30 lessons). The in-app Learning hub is still static content.  
+5. Quick setup (`User.quickStep`)  
+6. Dashboard  
+7. Manage: income, expenses, loans, credit cards, investments, insurance, goals  
+8. Plan: budget tracker, statement analyzer, AI advisor, learning hub  
+9. Calculators: tax calculator, freedom calculator, lumpsum/SIP/EMI and the other saved tools  
+10. Report + PDF  
 
-Light theme by default (dark is opt-in via the header toggle; the choice persists under the `fp-theme` key, shared with `/guide` and `/why`). Nav: Overview / Manage / Plan / Report.
+Light theme by default (dark is opt-in via the header toggle; the choice persists under the `fp-theme` key, shared with `/guide`, `/why`, and `/course`). Nav: Overview / Manage / Plan / Report / Calculators.
 
 ---
 

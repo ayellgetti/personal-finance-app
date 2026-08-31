@@ -12,6 +12,7 @@ import Login from "./pages/Login.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import Guide from "./pages/Guide.tsx";
 import Why from "./pages/Why.tsx";
+import Course from "./pages/Course.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,8 @@ const App = () => (
                 <Route path="/guide.html" element={<Guide />} />
                 <Route path="/why" element={<Why />} />
                 <Route path="/why.html" element={<Why />} />
+                <Route path="/course" element={<Course />} />
+                <Route path="/course.html" element={<Course />} />
                 <Route
                   path="/"
                   element={

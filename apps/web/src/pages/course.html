@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financial Freedom Journey — course outline</title>
+    <meta
+      name="description"
+      content="Internal outline of the Financial Freedom Journey: three levels, thirty lessons, and how each lesson connects to Freedom Planner tools."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("fp-theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+          else if (window.parent && window.parent !== window) {
+            var parentHtml = window.parent.document.documentElement;
+            if (parentHtml.classList.contains("light")) theme = "light";
+            else if (parentHtml.classList.contains("dark")) theme = "dark";
+          }
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4faf7;
+        --card: #ffffff;
+        --line: #d5e4dc;
+        --text: #152028;
+        --muted: #5b6f78;
+        --primary: #1c9b6a;
+        --primary-2: #178a5d;
+        --ok: #178a5d;
+        --warn: #c47b10;
+        --header-bg: rgba(255, 255, 255, 0.88);
+        --toc-hover: #e8f4ee;
+        --n-bg: #e3f3eb;
+        --note-bg: #e8f6ee;
+        --note-line: #b7e0c8;
+        --note-text: #1a3d2e;
+        --shadow: 0 18px 48px -18px rgba(21, 32, 40, 0.18);
+        --hero: linear-gradient(135deg, #142833 0%, #1a4a42 100%);
+        --flow-line: #b9dccc;
+      }
+
+      html.dark {
+        color-scheme: dark;
+        --bg: #0b161c;
+        --card: #14242c;
+        --line: #234048;
+        --text: #e8f2ee;
+        --muted: #8aa0aa;
+        --primary: #1c9b6a;
+        --primary-2: #2bb57e;
+        --ok: #34c98a;
+        --warn: #f0a429;
+        --header-bg: rgba(11, 22, 28, 0.82);
+        --toc-hover: #1a2d34;
+        --n-bg: #1a3a34;
+        --note-bg: #173128;
+        --note-line: #2a5c48;
+        --note-text: #d7efe4;
+        --shadow: 0 18px 48px -18px rgba(8, 24, 28, 0.55);
+        --flow-line: #2a5c48;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+      }
+      h1, h2, h3, .display { font-family: Sora, Inter, sans-serif; letter-spacing: -0.02em; }
+      a { color: var(--primary-2); }
+
+      .wrap { width: min(1040px, calc(100% - 32px)); margin: 0 auto; }
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(16px);
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .top-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 0;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+      .gem {
+        width: 36px; height: 36px; border-radius: 10px;
+        display: grid; place-items: center;
+        background: linear-gradient(135deg, #1c9b6a, #2bb57e);
+        box-shadow: 0 0 24px -6px rgba(43, 181, 126, 0.7);
+        font-size: 16px;
+      }
+      .brand strong { display: block; font-size: 15px; }
+      .brand span { font-size: 12px; color: var(--muted); }
+      nav.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+      nav.toc a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 10px;
+        border-radius: 999px;
+      }
+      nav.toc a:hover { color: var(--text); background: var(--toc-hover); }
+      .header-actions { display: flex; align-items: center; gap: 8px; }
+      .theme-btn {
+        width: 40px; height: 40px; border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card); color: var(--text);
+        cursor: pointer; font-size: 16px;
+        display: grid; place-items: center;
+      }
+      html.dark .theme-btn .sun { display: none; }
+      html:not(.dark) .theme-btn .moon { display: none; }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        background: linear-gradient(135deg, #1c9b6a, #2bb57e);
+        color: #fff; text-decoration: none; font-weight: 700; font-size: 14px;
+        padding: 10px 16px; border-radius: 12px; border: 0; cursor: pointer;
+      }
+      .btn.ghost {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--text);
+      }
+
+      .hero {
+        margin: 36px 0 28px;
+        padding: 36px 32px;
+        border-radius: 28px;
+        background: var(--hero);
+        box-shadow: var(--shadow);
+        color: #e8f2ee;
+      }
+      .kicker {
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 12px;
+        font-weight: 700;
+        color: #b7d8cc;
+        margin: 0 0 10px;
+      }
+      .hero h1 { font-size: clamp(28px, 4vw, 42px); margin: 0 0 12px; color: #fff; }
+      .hero p { margin: 0; max-width: 70ch; color: #d5e6e0; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+      .hero .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+
+      section { margin: 48px 0; }
+      section h2 { font-size: 26px; margin: 0 0 8px; }
+      .lede { color: var(--muted); margin: 0 0 22px; max-width: 72ch; }
+
+      .grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 18px;
+      }
+      .card h3 { margin: 0 0 8px; font-size: 16px; }
+      .card p { margin: 0; color: var(--muted); font-size: 14px; }
+      .muted { color: var(--muted); }
+      .ok { color: var(--ok); }
+
+      ol.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+      ol.steps.flow {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+      ol.steps li {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 12px;
+        align-items: start;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 14px 16px;
+      }
+      ol.steps.flow li { grid-template-columns: 1fr; justify-items: start; }
+      .n {
+        width: 36px; height: 36px; border-radius: 10px;
+        background: var(--n-bg); color: var(--primary-2);
+        display: grid; place-items: center; font-weight: 800;
+      }
+
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+      .module {
+        margin: 18px 0 8px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+      .module-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 16px;
+        background: var(--n-bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .module-head h3 { margin: 0; font-size: 15px; }
+      .module-head span { font-size: 12px; color: var(--muted); font-weight: 600; }
+      .module-body { padding: 4px 8px 8px; }
+
+      .note {
+        background: var(--note-bg);
+        border: 1px solid var(--note-line);
+        color: var(--note-text);
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 14px;
+      }
+
+      footer.page {
+        border-top: 1px solid var(--line);
+        padding: 28px 0 40px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 800px) {
+        .grid-3, ol.steps.flow { grid-template-columns: 1fr; }
+        nav.toc { display: none; }
+        .hero { padding: 24px 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-inner">
+        <a class="brand" href="/login" target="_top">
+          <div class="gem">◆</div>
+          <div>
+            <strong>Freedom Planner</strong>
+            <span>Course outline</span>
+          </div>
+        </a>
+        <nav class="toc" aria-label="On this page">
+          <a href="#loop">Loop</a>
+          <a href="#levels">Levels</a>
+          <a href="#foundation">Foundation</a>
+          <a href="#growth">Growth</a>
+          <a href="#freedom">Freedom</a>
+          <a href="#lesson">Lesson</a>
+        </nav>
+        <div class="header-actions">
+          <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch color theme">
+            <span class="sun" aria-hidden="true">☀</span>
+            <span class="moon" aria-hidden="true">☾</span>
+          </button>
+          <a class="btn" href="/login" target="_top">Open the app</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <p class="kicker">Financial Freedom Journey</p>
+        <h1>Thirty lessons that teach money, then send the user back into their own numbers.</h1>
+        <p>
+          This is the planned education module for Freedom Planner — not a video campus
+          bolted on the side. Each lesson explains a concept, checks understanding,
+          applies it to the household already in the app, and creates an action
+          (a goal, a budget change, a debt plan). The in-app Learning hub today is
+          still static reads. This page is the outline we will build toward.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="#foundation">See the 30 lessons</a>
+          <a class="btn ghost" href="/guide" target="_top">Product walkthrough</a>
+        </div>
+      </div>
+
+      <section id="loop">
+        <h2>The product loop</h2>
+        <p class="lede">
+          Learn → understand → look at your finances → use a Freedom Planner tool →
+          take action → track improvement → next concept. Users are not forced
+          through Lesson 1…30 in order. The app should recommend the next lesson
+          from real gaps (high-interest debt before investing, empty emergency
+          fund before FIRE).
+        </p>
+        <ol class="steps flow">
+          <li>
+            <div class="n">1</div>
+            <div>
+              <strong>Learn</strong>
+              <p class="muted">5–8 minute concept.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">2</div>
+            <div>
+              <strong>Check</strong>
+              <p class="muted">Short understanding check.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">3</div>
+            <div>
+              <strong>Apply</strong>
+              <p class="muted">Use existing income, EMIs, SIPs.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">4</div>
+            <div>
+              <strong>Act</strong>
+              <p class="muted">Create a goal or change a plan.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">5</div>
+            <div>
+              <strong>Track</strong>
+              <p class="muted">Watch the gap close in the app.</p>
+            </div>
+          </li>
+        </ol>
+        <p class="note" style="margin-top: 18px">
+          <strong>Do not isolate this as “Courses”.</strong>
+          Lessons reuse Financial Health, cash flow, loans, insurance, SIPs,
+          goals, retirement, FIRE, Freedom Score, calculators, and the AI advisor.
+          Do not ask the user to re-enter numbers the app already has.
+        </p>
+      </section>
+
+      <section id="levels">
+        <h2>Three levels</h2>
+        <p class="lede">
+          Foundation, Growth, and Freedom. Internally these map to beginner,
+          intermediate, and advanced. About ten lessons each.
+        </p>
+        <div class="grid-3">
+          <article class="card">
+            <h3>Foundation</h3>
+            <p>
+              Take control of your money. Understand the current situation and
+              build a base: cash flow, budget, emergency fund, first debt plan.
+              Lessons 1–10.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Growth</h3>
+            <p>
+              Build and protect wealth. Credit, interest burden, insurance,
+              saving vs investing, inflation, SIP and asset classes.
+              Lessons 11–20.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Freedom</h3>
+            <p>
+              Path to independence. Goals, retirement corpus, FIRE variants,
+              freedom rate, and a personal roadmap. Lessons 21–30.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="foundation">
+        <h2>Level 1 — Foundation</h2>
+        <p class="lede">Goal: know where the money is and stop the leaks before chasing returns.</p>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 1 — Money mindset</h3>
+            <span>Lessons 1–3</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">1</td>
+                  <td>What does financial freedom mean?</td>
+                  <td>Financial Freedom Score</td>
+                  <td>Define a freedom goal</td>
+                </tr>
+                <tr>
+                  <td class="num">2</td>
+                  <td>Understand your money</td>
+                  <td>Financial snapshot</td>
+                  <td>Complete the financial profile</td>
+                </tr>
+                <tr>
+                  <td class="num">3</td>
+                  <td>Understand your cash flow</td>
+                  <td>Cash-flow analyzer</td>
+                  <td>Identify monthly surplus or deficit</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 2 — Budgeting</h3>
+            <span>Lessons 4–5</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">4</td>
+                  <td>How budgeting actually works (50/30/20, zero-based, needs vs wants)</td>
+                  <td>Budget planner</td>
+                  <td>Create a monthly budget</td>
+                </tr>
+                <tr>
+                  <td class="num">5</td>
+                  <td>Find where your money is going</td>
+                  <td>Expense analyzer</td>
+                  <td>Pick three expenses to reduce</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 3 — Emergency fund</h3>
+            <span>Lessons 6–7</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">6</td>
+                  <td>What is an emergency fund?</td>
+                  <td>Emergency fund calculator</td>
+                  <td>Set a target (example: 6 months of essentials)</td>
+                </tr>
+                <tr>
+                  <td class="num">7</td>
+                  <td>Build your emergency fund</td>
+                  <td>Emergency fund goal</td>
+                  <td>Create the goal and start funding it</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 4 — Debt</h3>
+            <span>Lessons 8–10</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">8</td>
+                  <td>Understanding loans (principal, EMI, tenure, amortization)</td>
+                  <td>Loan analyzer</td>
+                  <td>See total interest on current loans</td>
+                </tr>
+                <tr>
+                  <td class="num">9</td>
+                  <td>Good debt vs bad debt</td>
+                  <td>Debt health analyzer</td>
+                  <td>Read debt-to-income against the household</td>
+                </tr>
+                <tr>
+                  <td class="num">10</td>
+                  <td>Your first debt-freedom plan (avalanche, snowball, prepay)</td>
+                  <td>Debt freedom planner</td>
+                  <td>Choose a repayment strategy</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="growth">
+        <h2>Level 2 — Growth</h2>
+        <p class="lede">Goal: protect the household and put surplus to work. Education stays neutral — no promised returns.</p>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 1 — Credit and debt optimization</h3>
+            <span>Lessons 11–13</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">11</td>
+                  <td>Understanding credit scores</td>
+                  <td>Debt health / loans</td>
+                  <td>See how utilisation and EMIs show up in the plan</td>
+                </tr>
+                <tr>
+                  <td class="num">12</td>
+                  <td>How credit cards really work</td>
+                  <td>Credit cards on Manage</td>
+                  <td>Review revolved balances vs pay-in-full</td>
+                </tr>
+                <tr>
+                  <td class="num">13</td>
+                  <td>Reduce your interest burden</td>
+                  <td>Loan optimizer, prepayment, consolidation calculators</td>
+                  <td>Model a prepay vs continue-SIP trade-off</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 2 — Insurance</h3>
+            <span>Lessons 14–16</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">14</td>
+                  <td>Why insurance is financial protection</td>
+                  <td>Insurance coverage checker</td>
+                  <td>Compare current cover vs estimated need</td>
+                </tr>
+                <tr>
+                  <td class="num">15</td>
+                  <td>Health insurance</td>
+                  <td>Family protection calculator</td>
+                  <td>Note gaps; no product push without disclosure</td>
+                </tr>
+                <tr>
+                  <td class="num">16</td>
+                  <td>Life and term insurance</td>
+                  <td>Coverage checker</td>
+                  <td>Same comparison for term cover</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 3 — Investing</h3>
+            <span>Lessons 17–20</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">17</td>
+                  <td>Saving vs investing</td>
+                  <td>Investments + emergency fund</td>
+                  <td>Split liquid buffer from long-term SIPs</td>
+                </tr>
+                <tr>
+                  <td class="num">18</td>
+                  <td>Understanding inflation</td>
+                  <td>Inflation calculator</td>
+                  <td>See today’s rupee vs retirement-year rupee</td>
+                </tr>
+                <tr>
+                  <td class="num">19</td>
+                  <td>Compound interest</td>
+                  <td>Investment growth / lumpsum</td>
+                  <td>Run a labelled assumption, not a promise</td>
+                </tr>
+                <tr>
+                  <td class="num">20</td>
+                  <td>Mutual funds, SIP, and asset classes</td>
+                  <td>SIP calculator</td>
+                  <td>Map existing SIPs; do not guarantee returns</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="freedom">
+        <h2>Level 3 — Freedom</h2>
+        <p class="lede">
+          Goal: a written path to independence. FIRE is taught as variants (Lean,
+          Regular, Fat, Coast) — not as the only right life.
+        </p>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 1 — Financial goals</h3>
+            <span>Lessons 21–23</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">21</td>
+                  <td>How to set financial goals</td>
+                  <td>Goal planner</td>
+                  <td>Write one funded goal from real surplus</td>
+                </tr>
+                <tr>
+                  <td class="num">22</td>
+                  <td>Short-, medium-, and long-term goals</td>
+                  <td>Goals</td>
+                  <td>Place existing goals on a timeline</td>
+                </tr>
+                <tr>
+                  <td class="num">23</td>
+                  <td>Planning large expenses</td>
+                  <td>Goal projection calculator</td>
+                  <td>Size a house / education / wedding target</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 2 — Retirement</h3>
+            <span>Lessons 24–26</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">24</td>
+                  <td>Why retirement planning starts early</td>
+                  <td>Freedom calculator</td>
+                  <td>See years left vs corpus gap</td>
+                </tr>
+                <tr>
+                  <td class="num">25</td>
+                  <td>Understanding retirement inflation</td>
+                  <td>Profile inflation + retirement tools</td>
+                  <td>Keep inflation as an explicit assumption</td>
+                </tr>
+                <tr>
+                  <td class="num">26</td>
+                  <td>How much do you need for retirement?</td>
+                  <td>Retirement corpus planner</td>
+                  <td>Set a corpus target from expenses × multiple</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="module">
+          <div class="module-head">
+            <h3>Module 3 — FIRE</h3>
+            <span>Lessons 27–30</span>
+          </div>
+          <div class="module-body">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th>Lesson</th>
+                  <th>Tool in the app</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">27</td>
+                  <td>What is FIRE? (Lean, Regular, Fat, Coast)</td>
+                  <td>Freedom calculator path toggle</td>
+                  <td>Pick a path without treating it as universal</td>
+                </tr>
+                <tr>
+                  <td class="num">28</td>
+                  <td>Calculate your FIRE number</td>
+                  <td>FIRE calculator</td>
+                  <td>See estimated FIRE age vs current investments</td>
+                </tr>
+                <tr>
+                  <td class="num">29</td>
+                  <td>Increase your financial-freedom rate</td>
+                  <td>Financial freedom simulator</td>
+                  <td>Model savings rate, income, debt, and SIPs</td>
+                </tr>
+                <tr>
+                  <td class="num">30</td>
+                  <td>Create your financial-freedom roadmap</td>
+                  <td>Advisor + goals + forecast</td>
+                  <td>Leave with priorities, actions, and a projection</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="lesson">
+        <h2>What one lesson looks like</h2>
+        <p class="lede">
+          Same skeleton every time. Example from the spec: “What is an emergency fund?”
+        </p>
+        <ol class="steps">
+          <li>
+            <div class="n">1</div>
+            <div>
+              <strong>Learn</strong>
+              <p class="muted">Short lesson: why a buffer exists, emergency vs non-emergency, liquidity.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">2</div>
+            <div>
+              <strong>Check</strong>
+              <p class="muted">e.g. how many months of essential expenses a fund generally covers.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">3</div>
+            <div>
+              <strong>Apply</strong>
+              <p class="muted">
+                Pull essential expenses from the household. Show target vs current
+                vs gap (example in the spec: target ₹3,60,000, current ₹1,20,000, gap ₹2,40,000).
+              </p>
+            </div>
+          </li>
+          <li>
+            <div class="n">4</div>
+            <div>
+              <strong>Act</strong>
+              <p class="muted">Create the goal “Build ₹2,40,000 emergency fund” from that gap.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">5</div>
+            <div>
+              <strong>Track</strong>
+              <p class="muted">Progress lives on Goals / Overview, then the next recommended lesson.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>How to use this page</h2>
+        <p class="lede">
+          Share <strong>/course</strong> when someone asks what the education module will contain.
+          Share <strong>/guide</strong> for the Arjun Mehta product walkthrough.
+          Share <strong>/why</strong> for problem, objective, and platform vision.
+          The source spec is <code>docs/# Finance Freedom — Financial Education &amp; Transfor</code>.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="/guide" target="_top">Open the product walkthrough</a>
+          <a class="btn ghost" href="/why" target="_top">Problem, objective, vision</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <div class="wrap">
+        Freedom Planner · course outline · not live lessons yet ·
+        walkthrough <a href="/guide" target="_top">/guide</a> ·
+        brief <a href="/why" target="_top">/why</a>.
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var button = document.getElementById("theme-toggle");
+        if (!button) return;
+        function apply(theme) {
+          var dark = theme === "dark";
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.dataset.theme = theme;
+          button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+          try { localStorage.setItem("fp-theme", theme); } catch (e) {}
+          try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
+        }
+        apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
+        button.addEventListener("click", function () {
+          apply(document.documentElement.classList.contains("dark") ? "light" : "dark");
+        });
+      })();
+    </script>
+  </body>
+</html>

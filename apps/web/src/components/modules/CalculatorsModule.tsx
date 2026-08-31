@@ -176,18 +176,7 @@ const DEFAULT_DRAFT: Draft = {
   cashFlowsText: "-100000, 30000, 35000, 40000, 45000",
 };
 
-export type LoanCalculatorPreset = {
-  title: string;
-  principal: number;
-  annualRatePct: number;
-  months: number;
-  monthlyPayment: number;
-};
-
-function initialDraft(
-  type: CalculatorType,
-  loanPreset?: LoanCalculatorPreset | null,
-): Draft {
+function initialDraft(type: CalculatorType): Draft {
   return {
     ...DEFAULT_DRAFT,
     type,
@@ -198,7 +187,6 @@ function initialDraft(
           months: 240,
           years: 20,
           monthlyPayment: 0,
-          ...(loanPreset ?? {}),
         }
       : {}),
   };
@@ -441,14 +429,10 @@ function wordsForValue(key: string, value: number) {
 
 export function CalculatorsModule({
   initialType = "lumpsum",
-  loanPreset,
 }: {
   initialType?: CalculatorType;
-  loanPreset?: LoanCalculatorPreset | null;
 }) {
-  const [draft, setDraft] = useState<Draft>(() =>
-    initialDraft(initialType, loanPreset),
-  );
+  const [draft, setDraft] = useState<Draft>(() => initialDraft(initialType));
   const [result, setResult] = useState<CalculatorResult | null>(null);
   const [scenarios, setScenarios] = useState<CalculatorScenario[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -1478,7 +1462,7 @@ function SliderField({
   );
 }
 
-function LoanResultPanel({
+export function LoanResultPanel({
   result,
   principal,
   showPreview = true,

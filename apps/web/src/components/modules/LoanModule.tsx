@@ -5,18 +5,12 @@ import {
 } from "@/lib/finance/calculations";
 import { Loan, LoanType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Button } from "@/components/ui/button";
 import { Panel, ItemRow, EmptyState, Badge, EditButton } from "./shared";
 import { StatCard } from "@/components/StatCard";
-import {
-  CalendarClock,
-  Landmark,
-  Percent,
-  TableProperties,
-  TrendingDown,
-} from "lucide-react";
+import { CalendarClock, Landmark, Percent, TrendingDown } from "lucide-react";
 import { QuickAddDialog } from "./QuickTypePicker";
 import { LoanQuickAdd } from "./LoanQuickAdd";
+import { LoanAmortizationDialog } from "./LoanAmortizationDialog";
 
 const TYPES: LoanType[] = ["Home Loan", "Personal Loan", "Business Loan", "Vehicle Loan", "Education Loan"];
 
@@ -40,11 +34,7 @@ function loanFields(loan?: Loan, currency?: string): FieldDef[] {
   ];
 }
 
-export function LoanModule({
-  onViewAmortization,
-}: {
-  onViewAmortization?: (loan: Loan) => void;
-}) {
+export function LoanModule() {
   const { data, loading, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const dti = debtToIncome(data);
@@ -87,18 +77,7 @@ export function LoanModule({
                 ]}
                 actions={
                   <div className="flex items-center gap-1">
-                    {onViewAmortization && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => onViewAmortization(l)}
-                      >
-                        <TableProperties className="mr-1.5 h-4 w-4" />
-                        View amortization
-                      </Button>
-                    )}
+                    <LoanAmortizationDialog loan={l} currency={cur} />
                     <EntityDialog
                       title="Edit Loan"
                       fields={loanFields(l, cur)}

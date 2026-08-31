@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Compass, LogOut, UserRound } from "lucide-react";
+import { BookOpen, Compass, GraduationCap, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth/store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,9 @@ export function UserMenu({ onProfile }: { onProfile: () => void }) {
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => navigate("/why")}>
           <Compass className="mr-2 h-4 w-4" /> Why this product
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/course")}>
+          <GraduationCap className="mr-2 h-4 w-4" /> Course outline
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="text-danger focus:text-danger">

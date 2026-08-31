@@ -36,6 +36,21 @@ describe("Login signup OTP auto-verify", () => {
       "href",
       "/forgot-password",
     );
+    expect(screen.getByRole("link", { name: "Course outline" })).toHaveAttribute("href", "/course");
+  });
+
+  it("lists ISO countries in the signup country picker", () => {
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
+    fireEvent.click(screen.getByLabelText("Country ISD code"));
+    expect(screen.getByRole("option", { name: /Japan/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Brazil/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Nigeria/ })).toBeInTheDocument();
   });
 
   it("skips the OTP screen and opens the password step when generate returns an OTP", async () => {

@@ -1,7 +1,7 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import {
   formatCurrency, formatPercent, totalInvestments, monthlySIP, weightedReturn,
-  assetAllocation, investmentProjection,
+  assetAllocation, investmentProjection, investmentProjectionSchedule,
 } from "@/lib/finance/calculations";
 import { Investment, InvestmentType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
@@ -11,6 +11,7 @@ import { TrendingUp, Repeat, Gauge, Wallet } from "lucide-react";
 import { QuickAddDialog } from "./QuickTypePicker";
 import { InvestmentQuickAdd } from "./InvestmentQuickAdd";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { ProjectionScheduleDialog } from "./ProjectionScheduleDialog";
 
 const TYPES: InvestmentType[] = [
   "Mutual Funds", "Stocks", "Bonds", "Fixed Deposits", "PPF", "EPF", "NPS", "Gold", "Real Estate", "Crypto", "Other",
@@ -79,12 +80,20 @@ export function InvestmentModule() {
                   { label: "Current", value: formatCurrency(inv.currentValue, cur, true), emphasis: true },
                 ]}
                 actions={
-                  <EntityDialog
-                    title="Edit Investment"
-                    fields={investmentFields(inv, cur)}
-                    trigger={<EditButton />}
-                    onSubmit={(v) => updateItem("investments", inv.id, v)}
-                  />
+                  <div className="flex items-center gap-1">
+                    <ProjectionScheduleDialog
+                      name={inv.name}
+                      description={`${inv.horizon}-year projection at ${formatPercent(inv.expectedReturn)} with a ${formatCurrency(inv.monthlySip, cur)} monthly SIP.`}
+                      rows={investmentProjectionSchedule(inv)}
+                      currency={cur}
+                    />
+                    <EntityDialog
+                      title="Edit Investment"
+                      fields={investmentFields(inv, cur)}
+                      trigger={<EditButton />}
+                      onSubmit={(v) => updateItem("investments", inv.id, v)}
+                    />
+                  </div>
                 }
                 onDelete={() => removeItem("investments", inv.id)}
               />

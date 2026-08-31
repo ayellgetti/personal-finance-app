@@ -214,7 +214,7 @@ This is the **default work**. Complete B1 before B2 unless a task says otherwise
 | Insurance on the client | API exists; web still stores policies in `localStorage` (`LocalExtras.insurances`). |
 | Daily expenses | UI only; no API. `Transaction` is an untyped JSON bag. |
 | Tests | Planner engine and `remote.ts` / store need cases. |
-| Learning hub | Static content; no persisted progress. |
+| Learning hub | Static content; no persisted progress. Planned curriculum (Foundation / Growth / Freedom, 30 lessons) is outlined at `/course`; do not build the live journey until that work is approved. |
 | Unused schema | Chat, notifications, devices, TradingView, `Categories` — do not build unless a later phase asks. |
 | Root clutter | `prisma.README.md` is a one-liner. |
 
@@ -249,7 +249,7 @@ Depends on B1 if daily spend should enter the planner snapshot.
 
 **Status: NOT STARTED**
 
-1. Daily tracker: budget vs actual from server data; month navigation.
+1. Budget tracker: budget vs actual from server data; month navigation.
 2. Seed `Categories` and drive pickers from API instead of hardcoded maps in `remote.ts`.
 3. Insurance expiry reminders only if using `Notification` with a real delivery path.
 4. Tighten OpenAPI so Swagger matches the web client.
@@ -276,8 +276,8 @@ Do not start until B1 is done unless explicitly asked:
 
 Approved product surfaces (not bank aggregation or tax filing):
 
-1. Bank / phone statement analyzer: CSV or pasted SMS/UPI text → categorized lines, credit/debit summary, stored as `StatementImport` + `StatementLine`. Routes `/api/statements`. Web: Plan → Statements.
-2. Country-wise tax planner: slab catalog (India old/new FY 2024-25 and 2025-26, US federal 2025 single, UK England FY 2025-26), preview + saved `TaxScenario`. Routes `/api/tax`. Web: Plan → Tax Planner.
+1. Bank / phone statement analyzer: CSV or pasted SMS/UPI text → categorized lines, credit/debit summary, stored as `StatementImport` + `StatementLine`. Routes `/api/statements`. Web: Plan → Statement Analyzer.
+2. Country-wise tax calculator: slab catalog (India old/new FY 2024-25 and 2025-26, US federal 2025 single, UK England FY 2025-26), preview + saved `TaxScenario`. Routes `/api/tax`. Web: Calculators → Tax Calculator.
 3. Regime comparison sheet: `POST /api/tax/compare` returns one column per regime for a financial year plus a "With Planner" column driven by separate planned amounts, and the row-by-row income / exemption / Chapter VI-A / surcharge / cess breakdown. Adds 80E, 80EEA, 80GG, 80TTA, surcharge with marginal relief, and per-section `deductionLines` on `TaxPlanResult`. Web selects a financial year (not a single regime) and splits income and deduction entry into separate panels.
 
 **Validate:** `pnpm --filter api test` (includes `statement-tax.test.ts`), `pnpm --filter web test` (includes `TaxPlannerModule.test.tsx`), `pnpm typecheck`, migrate `20260822120000_statement_and_tax`.
@@ -286,9 +286,9 @@ Approved product surfaces (not bank aggregation or tax filing):
 
 **Status: IN PROGRESS**
 
-Approved standalone tools: lumpsum, SIP, step-up SIP, EMI, loan (amount, rate, and tenure required; EMI optional), future target, straight-line/written-down-value depreciation, manually rated INR currency conversion, Indian number-to-words, bond yield, stock return, and periodic IRR. Each tool can be opened directly from the Calculators sidebar group, supported numeric inputs pair editable values with sliders, and an existing loan can prefill the Loan calculator for amortization. Previewing does not persist; saved scenarios use `CalculatorScenario`. Calculator scenarios do not alter real loans, investments, planner totals, or advisor context.
+Approved standalone tools: lumpsum, SIP, step-up SIP, EMI, loan (amount, rate, and tenure required; EMI optional), future target, straight-line/written-down-value depreciation, manually rated INR currency conversion, Indian number-to-words, bond yield, stock return, and periodic IRR. Tax Calculator and Freedom Calculator open as the first two items in the Calculators sidebar group (they are not `CalculatorScenario` types). Each remaining tool can be opened directly from the same group, and supported numeric inputs pair editable values with sliders. Saved loans reuse `LoanResultPanel` inside an amortization dialog on Manage → Loans rather than redirecting into this screen. Previewing does not persist; saved scenarios use `CalculatorScenario`. Calculator scenarios do not alter real loans, investments, planner totals, or advisor context.
 
-Routes: `/api/calculators`. Web: Plan → Calculators.
+Routes: `/api/calculators`. Web: Calculators sidebar group.
 
 **Validate:** `pnpm --filter api test`, `pnpm --filter web test`, `pnpm typecheck`, `pnpm --filter web lint`, migrate `20260831100000_calculator_scenarios`.
 

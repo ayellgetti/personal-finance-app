@@ -212,7 +212,7 @@ export interface Profile {
   monthlyEssentialExpenses: number; // 0 = auto-derive from expenses
   liquidAssets: number; // FD, liquid funds available for emergencies
   emergencyMonthlyContribution: number; // planned monthly top-up
-  dailyBudget: number; // monthly budget for daily spending tracker
+  dailyBudget: number; // monthly budget for the budget tracker
 }
 
 export type DailyCategory =
@@ -233,11 +233,33 @@ export interface DailyExpense {
   date: string; // ISO datetime
 }
 
+export type CreditCardNetwork = "Visa" | "Mastercard" | "RuPay" | "American Express" | "Other";
+
+export interface CreditCard {
+  id: ID;
+  name: string;
+  network: CreditCardNetwork;
+  creditLimit: number;
+  outstanding: number;
+  interestRate: number; // % annual
+  dueDay: number; // day of the month payment is due (1–31)
+  minimumDue: number;
+}
+
+export const CREDIT_CARD_NETWORKS: CreditCardNetwork[] = [
+  "Visa",
+  "Mastercard",
+  "RuPay",
+  "American Express",
+  "Other",
+];
+
 export interface FinanceData {
   profile: Profile;
   incomes: Income[];
   expenses: Expense[];
   loans: Loan[];
+  creditCards: CreditCard[];
   investments: Investment[];
   insurances: Insurance[];
   goals: Goal[];

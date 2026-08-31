@@ -1,5 +1,10 @@
 import { useFinance, newId } from "@/lib/finance/store";
-import { formatCurrency, analyzeGoal } from "@/lib/finance/calculations";
+import {
+  analyzeGoal,
+  formatCurrency,
+  formatPercent,
+  goalProjectionSchedule,
+} from "@/lib/finance/calculations";
 import { FIRE_GOAL_DESCRIPTIONS, EMERGENCY_FUND_GOAL_ID, FireGoalType, Goal, Priority, USER_GOAL_TYPES } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, EmptyState, Badge, EditButton } from "./shared";
@@ -9,6 +14,7 @@ import { Trash2, Target } from "lucide-react";
 import { EmergencyFundModule } from "./EmergencyFundModule";
 import { QuickAddDialog } from "./QuickTypePicker";
 import { GoalQuickAdd } from "./GoalQuickAdd";
+import { ProjectionScheduleDialog } from "./ProjectionScheduleDialog";
 
 const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
 
@@ -58,7 +64,8 @@ export function GoalsModule() {
             {lifeGoals.map((g) => {
               const a = analyzeGoal(data, g);
               const progress = Math.min(100, (g.currentSaved / g.targetAmount) * 100);
-              const tone = a.status === "On Track" ? "success" : a.status === "At Risk" ? "gold" : "danger";
+              const tone: "success" | "gold" | "danger" =
+                a.status === "On Track" ? "success" : a.status === "At Risk" ? "gold" : "danger";
               return (
                 <div key={g.id} className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-elevated)]">
                   <div className="flex items-start justify-between">
@@ -109,8 +116,14 @@ export function GoalsModule() {
                       <p className={`font-semibold ${tone === "success" ? "text-success" : tone === "gold" ? "text-accent" : "text-danger"}`}>{a.probability}%</p>
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <Badge tone={tone as any}>{a.status}</Badge>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <Badge tone={tone}>{a.status}</Badge>
+                    <ProjectionScheduleDialog
+                      name={g.name}
+                      description={`Funding path using the required monthly contribution, an assumed 11% annual return, and ${formatPercent(data.profile.inflationRate)} inflation.`}
+                      rows={goalProjectionSchedule(data, g)}
+                      currency={cur}
+                    />
                   </div>
                 </div>
               );

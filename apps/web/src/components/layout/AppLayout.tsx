@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   Target,
   Rocket,
-  LineChart,
   Sparkles,
   FileText,
   Menu,
@@ -19,6 +18,7 @@ import {
   FileSpreadsheet,
   Calculator,
   Percent,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -36,6 +36,7 @@ export type ViewId =
   | "expenses"
   | "daily"
   | "loans"
+  | "creditCards"
   | "investments"
   | "insurance"
   | "goals"
@@ -43,7 +44,6 @@ export type ViewId =
   | "tax"
   | "calculators"
   | "freedom"
-  | "forecast"
   | "advisor"
   | "learn"
   | "report";
@@ -62,17 +62,17 @@ export const NAV: NavItem[] = [
   { id: "income", label: "Income", icon: Wallet, group: "Manage" },
   { id: "expenses", label: "Expenses", icon: Receipt, group: "Manage" },
   { id: "loans", label: "Loans", icon: Landmark, group: "Manage" },
+  { id: "creditCards", label: "Credit Card", icon: CreditCard, group: "Manage" },
   { id: "investments", label: "Investments", icon: TrendingUp, group: "Manage" },
   { id: "insurance", label: "Insurance", icon: ShieldCheck, group: "Manage" },
   { id: "goals", label: "Goals", icon: Target, group: "Manage" },
-  { id: "statements", label: "Statements", icon: FileSpreadsheet, group: "Plan" },
-  { id: "tax", label: "Tax Planner", icon: Percent, group: "Plan" },
-  { id: "daily", label: "Daily Tracker", icon: CalendarClock, group: "Plan" },
-  { id: "freedom", label: "Freedom Calculator", icon: Rocket, group: "Plan" },
-  { id: "forecast", label: "Forecast Engine", icon: LineChart, group: "Plan" },
+  { id: "statements", label: "Statement Analyzer", icon: FileSpreadsheet, group: "Plan" },
+  { id: "daily", label: "Budget Tracker", icon: CalendarClock, group: "Plan" },
   { id: "advisor", label: "AI Advisor", icon: Sparkles, group: "Plan" },
   { id: "learn", label: "Learning Hub", icon: GraduationCap, group: "Plan" },
   { id: "report", label: "Summary Report", icon: FileText, group: "Report" },
+  { id: "tax", label: "Tax Calculator", icon: Percent, group: "Calculators" },
+  { id: "freedom", label: "Freedom Calculator", icon: Rocket, group: "Calculators" },
   { id: "calculators", label: "Lumpsum", icon: Calculator, group: "Calculators", calculatorType: "lumpsum" },
   { id: "calculators", label: "SIP", icon: Calculator, group: "Calculators", calculatorType: "sip" },
   { id: "calculators", label: "Step Up SIP", icon: Calculator, group: "Calculators", calculatorType: "step_up_sip" },

@@ -22,7 +22,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 
@@ -167,12 +166,18 @@ export default function ForgotPassword() {
                 <div className="flex gap-2">
                   <Select value={countryIso} onValueChange={setCountryIso}>
                     <SelectTrigger className="w-[9.5rem] shrink-0 rounded-xl" aria-label="Country ISD code">
-                      <SelectValue />
+                      <span className="truncate">
+                        {findCountryDial(countryIso).iso} {findCountryDial(countryIso).dial}
+                      </span>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-72 min-w-[18rem]">
                       {COUNTRY_DIAL_CODES.map((country) => (
-                        <SelectItem key={country.iso} value={country.iso}>
-                          {country.iso} {country.dial}
+                        <SelectItem
+                          key={country.iso}
+                          value={country.iso}
+                          textValue={`${country.name} ${country.iso} ${country.dial}`}
+                        >
+                          {country.name} ({country.dial})
                         </SelectItem>
                       ))}
                     </SelectContent>
