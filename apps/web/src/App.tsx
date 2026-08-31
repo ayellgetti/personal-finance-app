@@ -9,6 +9,7 @@ import { FinanceProvider } from "@/lib/finance/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
+import ForgotPassword from "./pages/ForgotPassword.tsx";
 import Guide from "./pages/Guide.tsx";
 import Why from "./pages/Why.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -26,6 +27,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/guide" element={<Guide />} />
                 <Route path="/guide.html" element={<Guide />} />
                 <Route path="/why" element={<Why />} />

@@ -25,6 +25,19 @@ vi.mock("@/lib/auth/store", () => ({
 }));
 
 describe("Login signup OTP auto-verify", () => {
+  it("links to the forgot password page from the login form", () => {
+    render(
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute(
+      "href",
+      "/forgot-password",
+    );
+  });
+
   it("skips the OTP screen and opens the password step when generate returns an OTP", async () => {
     requestSignupOtp.mockResolvedValue({ ok: true, otp: 123456 });
     verifySignupOtp.mockResolvedValue({ ok: true });

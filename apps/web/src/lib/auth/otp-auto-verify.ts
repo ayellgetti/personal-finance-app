@@ -10,7 +10,7 @@ function runtimeFlag(): unknown {
   return window.__APP_CONFIG__?.OTP_AUTO_VERIFY;
 }
 
-/** Signup skips the OTP screen when generate/resend includes `otp`. */
+/** Signup and forgot-password skip the OTP screen when generate/resend includes `otp`. */
 export function isOtpAutoVerifyEnabled(): boolean {
   return parseOtpAutoVerifyFlag(runtimeFlag()) || parseOtpAutoVerifyFlag(import.meta.env.VITE_OTP_AUTO_VERIFY);
 }

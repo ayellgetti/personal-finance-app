@@ -127,7 +127,7 @@ apps/web/src/
 ├── hooks/
 ├── lib/auth/
 ├── lib/finance/          # store, remote, calculations, pdf
-├── pages/                # Login, Index, NotFound
+├── pages/                # Login, ForgotPassword, Index, NotFound
 ├── types/
 └── main.tsx
 ```
@@ -295,11 +295,11 @@ Do not create `packages/shared-validation` until two apps share the same schemas
 
 ## 19. Authentication
 
-Implemented: OTP register, password login, access token, refresh token, revocation/logout, bcrypt.
+Implemented: OTP register, password login, forgot-password OTP reset, access token, refresh token, revocation/logout, bcrypt.
 
 Password fields on the web app include a show/hide control.
 
-When `VITE_OTP_AUTO_VERIFY=true` (Compose / Vite; intended for local/dev) and generate/resend includes `otp` (API returns the code when `NODE_ENV` is not production), signup verifies that code and skips the OTP entry screen.
+When `VITE_OTP_AUTO_VERIFY=true` (Compose / Vite; intended for local/dev) and generate/resend includes `otp` (API returns the code when `NODE_ENV` is not production), signup and forgot-password verify that code and skip the OTP entry screen.
 
 Never store plaintext passwords. Never log tokens or OTPs.
 
@@ -457,7 +457,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 
 | Area | Behavior |
 | --- | --- |
-| Auth | OTP register, login, refresh, profile |
+| Auth | OTP register, login, forgot-password reset, refresh, profile |
 | Onboarding | Setup wizard → profile + income + expenses + loans + investments + insurance + required emergency fund + required FIRE path (Lean, Fat, or Coast) + other goals. Public walkthrough: `/guide` (Arjun Mehta sample, screenshot-style screens and advisor suggestions). Internal brief: `/why` (problem, objective, future vision). |
 | Cash flow | Recurring `Budget` income/expense |
 | Debt | Loans: principal, ROI, tenure, EMI, EMI day |

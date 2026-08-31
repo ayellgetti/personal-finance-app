@@ -52,6 +52,16 @@ type OtpResult =
   | { ok: true; otp?: number; delivered?: { email: boolean; sms: boolean } }
   | { ok: false; error: string };
 
+const FORGOT_PASSWORD_OTP_TYPE = "forgot-password";
+
+function parseOtpCode(otp: string): { ok: true; no: number } | { ok: false; error: string } {
+  const no = Number(otp);
+  if (!Number.isInteger(no) || otp.length !== 6) {
+    return { ok: false, error: "Enter the 6-digit OTP" };
+  }
+  return { ok: true, no };
+}
+
 interface AuthContextValue {
   user: PublicUser | null;
   login: (email: string, password: string) => Promise<AuthResult>;
@@ -59,6 +69,10 @@ interface AuthContextValue {
   resendSignupOtp: (draft: SignupDraft) => Promise<OtpResult>;
   verifySignupOtp: (mobileNo: string, otp: string) => Promise<AuthResult>;
   completeSignup: (draft: SignupDraft, otp: string) => Promise<AuthResult>;
+  requestForgotPasswordOtp: (mobileNo: string) => Promise<OtpResult>;
+  resendForgotPasswordOtp: (mobileNo: string) => Promise<OtpResult>;
+  verifyForgotPasswordOtp: (mobileNo: string, otp: string) => Promise<AuthResult>;
+  resetPassword: (mobileNo: string, otp: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   updateAccount: (updates: {
     firstName?: string;
@@ -143,15 +157,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const verifySignupOtp = useCallback(async (mobileNo: string, otp: string): Promise<AuthResult> => {
-    const no = Number(otp);
-    if (!Number.isInteger(no) || otp.length !== 6) {
-      return { ok: false, error: "Enter the 6-digit OTP" };
-    }
+    const parsed = parseOtpCode(otp);
+    if (parsed.ok === false) return parsed;
 
     try {
       await api("/api/otp/verify", {
         method: "POST",
-        body: { mobileNo, type: "register", no },
+        body: { mobileNo, type: "register", no: parsed.no },
       });
       return { ok: true };
     } catch (error) {
@@ -161,10 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completeSignup = useCallback(
     async (draft: SignupDraft, otp: string): Promise<AuthResult> => {
-      const no = Number(otp);
-      if (!Number.isInteger(no) || otp.length !== 6) {
-        return { ok: false, error: "Enter the 6-digit OTP" };
-      }
+      const parsed = parseOtpCode(otp);
+      if (parsed.ok === false) return parsed;
+      const no = parsed.no;
 
       try {
         await api("/api/otp/verify", {
@@ -197,6 +208,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     [applySession],
+  );
+
+  const requestForgotPasswordOtp = useCallback(async (mobileNo: string): Promise<OtpResult> => {
+    try {
+      const result = await api<{ otp?: number; delivered?: { email: boolean; sms: boolean } }>(
+        "/api/otp/generate",
+        {
+          method: "POST",
+          body: { mobileNo, type: FORGOT_PASSWORD_OTP_TYPE },
+        },
+      );
+      return { ok: true, otp: result.otp, delivered: result.delivered };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "Unable to send OTP") };
+    }
+  }, []);
+
+  const resendForgotPasswordOtp = useCallback(async (mobileNo: string): Promise<OtpResult> => {
+    try {
+      const result = await api<{ otp?: number; delivered?: { email: boolean; sms: boolean } }>(
+        "/api/otp/resend",
+        {
+          method: "POST",
+          body: { mobileNo, type: FORGOT_PASSWORD_OTP_TYPE },
+        },
+      );
+      return { ok: true, otp: result.otp, delivered: result.delivered };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "Unable to resend OTP") };
+    }
+  }, []);
+
+  const verifyForgotPasswordOtp = useCallback(async (mobileNo: string, otp: string): Promise<AuthResult> => {
+    const parsed = parseOtpCode(otp);
+    if (parsed.ok === false) return parsed;
+
+    try {
+      await api("/api/otp/verify", {
+        method: "POST",
+        body: { mobileNo, type: FORGOT_PASSWORD_OTP_TYPE, no: parsed.no },
+      });
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: errorMessage(error, "OTP verification failed") };
+    }
+  }, []);
+
+  const resetPassword = useCallback(
+    async (mobileNo: string, otp: string, password: string): Promise<AuthResult> => {
+      const parsed = parseOtpCode(otp);
+      if (parsed.ok === false) return parsed;
+      if (password.length < 8) {
+        return { ok: false, error: "Password must be at least 8 characters" };
+      }
+
+      try {
+        await api("/api/auth/forgot-password", {
+          method: "POST",
+          body: { mobileNo, no: parsed.no, password },
+        });
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: errorMessage(error, "Unable to reset password") };
+      }
+    },
+    [],
   );
 
   const logout = useCallback(async () => {
@@ -288,11 +365,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resendSignupOtp,
       verifySignupOtp,
       completeSignup,
+      requestForgotPasswordOtp,
+      resendForgotPasswordOtp,
+      verifyForgotPasswordOtp,
+      resetPassword,
       logout,
       updateAccount,
       completeQuickSetup,
     }),
-    [user, login, requestSignupOtp, resendSignupOtp, verifySignupOtp, completeSignup, logout, updateAccount, completeQuickSetup],
+    [
+      user,
+      login,
+      requestSignupOtp,
+      resendSignupOtp,
+      verifySignupOtp,
+      completeSignup,
+      requestForgotPasswordOtp,
+      resendForgotPasswordOtp,
+      verifyForgotPasswordOtp,
+      resetPassword,
+      logout,
+      updateAccount,
+      completeQuickSetup,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

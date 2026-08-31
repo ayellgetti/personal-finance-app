@@ -253,6 +253,11 @@ export default function Login() {
                 {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign in
               </Button>
+              <p className="text-center text-sm">
+                <Link to="/forgot-password" className="font-medium text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </p>
             </form>
           ) : signupStep === "details" ? (
             <form onSubmit={onSignupDetails} className="space-y-4">

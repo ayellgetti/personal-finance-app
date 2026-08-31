@@ -10,3 +10,5 @@ docker run --rm \
   --no-eff-email \
   -d myfinancefreedom.com \
   -d www.myfinancefreedom.com
+  -d api.myfinancefreedom.com
+  -d web.myfinancefreedom.com

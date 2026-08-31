@@ -12,6 +12,17 @@ Local Postgres is exposed on **5433** (avoids clashing with an existing 5432 ins
 
 The Compose stack also runs nginx on **http://localhost** (port 80). Hosts: `local.uat` / `www.local.uat` → marketing (`apps/website`); `web.local.uat` → product app (`apps/web`, `/api` and `/health` still proxied); `api.local.uat` → API. Hitting `http://localhost:8080` (app) or `http://localhost:8081` (website) directly still works.
 
+These hostnames resolve only if they are in `/etc/hosts`. Without them the browser fails on DNS before nginx is reached:
+
+```bash
+sudo tee -a /etc/hosts >/dev/null <<'EOF'
+127.0.0.1       local.uat www.local.uat website.local.uat
+127.0.0.1       web.local.uat api.local.uat
+EOF
+```
+
+Port 80 allows one listener. The dev nginx cannot start while `docker-compose.prod.yml` is up locally — stop that stack first (`docker compose -p personal-finance-prod stop`), otherwise `docker-nginx` stays in `Created` and `http://localhost` silently serves the production build instead.
+
 AWS EC2: do not use this Compose file on a public host. Use `./deploy.sh` (or `docker-compose.prod.yml` by hand). HTTPS for `myfinancefreedom.com` / `www`: `docs/AWS_DEPLOY.md` section 3.
 
 ## Setup

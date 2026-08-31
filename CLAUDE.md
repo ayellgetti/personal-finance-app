@@ -408,7 +408,7 @@ Do not expose stack traces, SQL, paths, or secrets to clients in production.
 
 # 24. Authentication
 
-Current: OTP register, password login, JWT access + refresh, logout/revocation via refresh store, bcrypt passwords.
+Current: OTP register, password login, forgot-password OTP reset, JWT access + refresh, logout/revocation via refresh store, bcrypt passwords.
 
 Never store plaintext passwords.
 
