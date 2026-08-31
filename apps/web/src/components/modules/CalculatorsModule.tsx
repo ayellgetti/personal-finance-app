@@ -620,17 +620,6 @@ export function CalculatorsModule({
           )}
       </div>
 
-      {result?.schedule && result.schedule.length > 0 &&
-        (result.type === "loan" ? (
-          <LoanResultPanel
-            result={result}
-            principal={draft.principal}
-            showPreview={false}
-          />
-        ) : (
-          <ResultPanel result={result} showPreview={false} />
-        ))}
-
       <Panel>
         <Accordion type="single" collapsible>
           <AccordionItem value="recent" className="border-0">
@@ -707,6 +696,17 @@ export function CalculatorsModule({
           </AccordionItem>
         </Accordion>
       </Panel>
+
+      {result?.schedule && result.schedule.length > 0 &&
+        (result.type === "loan" ? (
+          <LoanResultPanel
+            result={result}
+            principal={draft.principal}
+            showPreview={false}
+          />
+        ) : (
+          <ResultPanel result={result} showPreview={false} />
+        ))}
     </form>
   );
 }
