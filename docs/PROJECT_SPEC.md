@@ -203,7 +203,7 @@ This is **not** a greenfield “User + Role + Permission only” scaffold. Finan
 
 **Auth / platform:** `User`, `RefreshSession`, `Otp`, `Session`, `FailureLog`
 
-**Finance:** `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `StatementImport`, `StatementLine`, `TaxScenario`
+**Finance:** `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `StatementImport`, `StatementLine`, `TaxScenario`, `CalculatorScenario`
 
 **Unused / stub (do not build UI on these unless the plan says so):** `Contact`, conversation tables, `Notification`, `Device`, `Socket`, `TradingView`, `Categories`, `Constant`, generic `Transaction`
 
@@ -247,7 +247,7 @@ Logging must not dominate request latency (current failure-log write is acceptab
 
 Base path: **`/api`** (not `/api/v1`).
 
-Examples: `/api/auth/login`, `/api/otp/stats`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`, `/api/statements`, `/api/tax`.
+Examples: `/api/auth/login`, `/api/otp/stats`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`, `/api/statements`, `/api/tax`, `/api/calculators`.
 
 Also: `GET /health`.
 
@@ -469,6 +469,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 | AI advisor | OpenAI JSON from planner snapshot; Redis cache |
 | Statements | Bank or phone/UPI statements as PDF, CSV/TSV, Excel or pasted text (password-protected PDF/Excel supported); categorized lines (not live bank aggregation, no OCR for scanned PDFs) |
 | Tax planner | Country-wise slabs and regime-specific deductions (India old/new, US/UK estimates); side-by-side "Old Regime / With Planner / New Regime" computation sheet per financial year, surcharge with marginal relief, saved scenarios — not e-filing |
+| Calculators | A dedicated sidebar group opens each saved deterministic tool directly: lumpsum, SIP, step-up SIP, EMI, loan (amount, rate, and tenure required; EMI optional), future target, depreciation, manually rated INR currency conversion, Indian number-to-words, bond yield, stock return, and periodic IRR. Supported numeric inputs pair editable values with sliders. Inputs and visual results sit side-by-side, detailed tables use the full width below, and recent saved calculations are collapsed in an accordion. Existing loans can open the Loan calculator prefilled for an amortization preview. Results do not alter real loans, investments, or planner totals. |
 | Learning hub | Static lessons |
 | Report | AI summary + client PDF |
 
@@ -497,7 +498,7 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 4. Quick setup (`User.quickStep`)  
 5. Dashboard  
 6. Manage: income, expenses, loans, investments, insurance, goals  
-7. Plan: daily tracker, statement analyzer, tax planner, freedom calculator, forecast, AI advisor, learning hub  
+7. Plan: daily tracker, statement analyzer, tax planner, calculators, freedom calculator, forecast, AI advisor, learning hub
 8. Report + PDF  
 
 Light theme by default (dark is opt-in via the header toggle; the choice persists under the `fp-theme` key, shared with `/guide` and `/why`). Nav: Overview / Manage / Plan / Report.

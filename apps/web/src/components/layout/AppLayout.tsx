@@ -18,6 +18,7 @@ import {
   ClipboardList,
   FileSpreadsheet,
   Calculator,
+  Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -25,6 +26,7 @@ import { UserMenu } from "@/components/UserMenu";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth/store";
+import type { CalculatorType } from "@/lib/finance/calculator-remote";
 
 export type ViewId =
   | "dashboard"
@@ -39,13 +41,22 @@ export type ViewId =
   | "goals"
   | "statements"
   | "tax"
+  | "calculators"
   | "freedom"
   | "forecast"
   | "advisor"
   | "learn"
   | "report";
 
-export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; group: string }[] = [
+type NavItem = {
+  id: ViewId;
+  label: string;
+  icon: typeof LayoutDashboard;
+  group: string;
+  calculatorType?: CalculatorType;
+};
+
+export const NAV: NavItem[] = [
   { id: "dashboard", label: "Net Worth", icon: LayoutDashboard, group: "Overview" },
   { id: "setup", label: "Quick Setup", icon: ClipboardList, group: "Overview" },
   { id: "income", label: "Income", icon: Wallet, group: "Manage" },
@@ -55,18 +66,38 @@ export const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard; gro
   { id: "insurance", label: "Insurance", icon: ShieldCheck, group: "Manage" },
   { id: "goals", label: "Goals", icon: Target, group: "Manage" },
   { id: "statements", label: "Statements", icon: FileSpreadsheet, group: "Plan" },
-  { id: "tax", label: "Tax Planner", icon: Calculator, group: "Plan" },
+  { id: "tax", label: "Tax Planner", icon: Percent, group: "Plan" },
   { id: "daily", label: "Daily Tracker", icon: CalendarClock, group: "Plan" },
   { id: "freedom", label: "Freedom Calculator", icon: Rocket, group: "Plan" },
   { id: "forecast", label: "Forecast Engine", icon: LineChart, group: "Plan" },
   { id: "advisor", label: "AI Advisor", icon: Sparkles, group: "Plan" },
   { id: "learn", label: "Learning Hub", icon: GraduationCap, group: "Plan" },
   { id: "report", label: "Summary Report", icon: FileText, group: "Report" },
+  { id: "calculators", label: "Lumpsum", icon: Calculator, group: "Calculators", calculatorType: "lumpsum" },
+  { id: "calculators", label: "SIP", icon: Calculator, group: "Calculators", calculatorType: "sip" },
+  { id: "calculators", label: "Step Up SIP", icon: Calculator, group: "Calculators", calculatorType: "step_up_sip" },
+  { id: "calculators", label: "EMI", icon: Calculator, group: "Calculators", calculatorType: "emi" },
+  { id: "calculators", label: "Loan", icon: Calculator, group: "Calculators", calculatorType: "loan" },
+  { id: "calculators", label: "Future Value", icon: Calculator, group: "Calculators", calculatorType: "future" },
+  { id: "calculators", label: "Depreciation", icon: Calculator, group: "Calculators", calculatorType: "depreciation" },
+  { id: "calculators", label: "Currency", icon: Calculator, group: "Calculators", calculatorType: "currency" },
+  { id: "calculators", label: "Number to Words", icon: Calculator, group: "Calculators", calculatorType: "number_words" },
+  { id: "calculators", label: "Bond Yield", icon: Calculator, group: "Calculators", calculatorType: "bond_yield" },
+  { id: "calculators", label: "Stock", icon: Calculator, group: "Calculators", calculatorType: "stock" },
+  { id: "calculators", label: "IRR", icon: Calculator, group: "Calculators", calculatorType: "irr" },
 ];
 
-const GROUPS = ["Overview", "Manage", "Report", "Plan"];
+const GROUPS = ["Overview", "Manage", "Report", "Plan", "Calculators"];
 
-function NavList({ active, onSelect }: { active: ViewId; onSelect: (id: ViewId) => void }) {
+function NavList({
+  active,
+  activeCalculator,
+  onSelect,
+}: {
+  active: ViewId;
+  activeCalculator?: CalculatorType;
+  onSelect: (id: ViewId, calculatorType?: CalculatorType) => void;
+}) {
   const { user } = useAuth();
   const hideSetup = user?.quickStep === 1;
 
@@ -81,11 +112,13 @@ function NavList({ active, onSelect }: { active: ViewId; onSelect: (id: ViewId) 
           <div className="flex flex-col gap-1">
             {items.map((item) => {
               const Icon = item.icon;
-              const isActive = active === item.id;
+              const isActive =
+                active === item.id &&
+                (!item.calculatorType || item.calculatorType === activeCalculator);
               return (
                 <button
-                  key={item.id}
-                  onClick={() => onSelect(item.id)}
+                  key={`${item.id}-${item.calculatorType ?? item.label}`}
+                  onClick={() => onSelect(item.id, item.calculatorType)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
                     isActive
@@ -122,6 +155,7 @@ function Brand() {
 
 export function AppLayout({
   active,
+  activeCalculator,
   onSelect,
   title,
   description,
@@ -129,7 +163,8 @@ export function AppLayout({
   children,
 }: {
   active: ViewId;
-  onSelect: (id: ViewId) => void;
+  activeCalculator?: CalculatorType;
+  onSelect: (id: ViewId, calculatorType?: CalculatorType) => void;
   title: string;
   description: string;
   actions?: ReactNode;
@@ -143,7 +178,11 @@ export function AppLayout({
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
         <Brand />
         <div className="flex-1 overflow-y-auto">
-          <NavList active={active} onSelect={onSelect} />
+          <NavList
+            active={active}
+            activeCalculator={activeCalculator}
+            onSelect={onSelect}
+          />
         </div>
       </aside>
 
@@ -162,7 +201,14 @@ export function AppLayout({
                   <Brand />
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-                  <NavList active={active} onSelect={(id) => { onSelect(id); setMobileOpen(false); }} />
+                  <NavList
+                    active={active}
+                    activeCalculator={activeCalculator}
+                    onSelect={(id, calculatorType) => {
+                      onSelect(id, calculatorType);
+                      setMobileOpen(false);
+                    }}
+                  />
                 </div>
               </SheetContent>
             </Sheet>

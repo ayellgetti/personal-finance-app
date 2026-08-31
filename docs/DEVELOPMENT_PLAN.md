@@ -119,7 +119,7 @@ Exists: `packages/tsconfig` only.
 
 Prisma: `apps/api/prisma/schema.prisma` + migrations. Client: `apps/api/src/utils/prisma.util.ts`. Postgres in Compose.
 
-Models in use: `User`, auth sessions/OTP, `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `FailureLog`, `StatementImport`, `StatementLine`, `TaxScenario`.
+Models in use: `User`, auth sessions/OTP, `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `FailureLog`, `StatementImport`, `StatementLine`, `TaxScenario`, `CalculatorScenario`.
 
 **Not created (Track C):** `Role`, `Permission`, `UserRole`, `RolePermission`, generic `Log`, `packages/database`, `pnpm db:seed`.
 
@@ -281,6 +281,16 @@ Approved product surfaces (not bank aggregation or tax filing):
 3. Regime comparison sheet: `POST /api/tax/compare` returns one column per regime for a financial year plus a "With Planner" column driven by separate planned amounts, and the row-by-row income / exemption / Chapter VI-A / surcharge / cess breakdown. Adds 80E, 80EEA, 80GG, 80TTA, surcharge with marginal relief, and per-section `deductionLines` on `TaxPlanResult`. Web selects a financial year (not a single regime) and splits income and deduction entry into separate panels.
 
 **Validate:** `pnpm --filter api test` (includes `statement-tax.test.ts`), `pnpm --filter web test` (includes `TaxPlannerModule.test.tsx`), `pnpm typecheck`, migrate `20260822120000_statement_and_tax`.
+
+### Phase B6 — Financial calculators
+
+**Status: IN PROGRESS**
+
+Approved standalone tools: lumpsum, SIP, step-up SIP, EMI, loan (amount, rate, and tenure required; EMI optional), future target, straight-line/written-down-value depreciation, manually rated INR currency conversion, Indian number-to-words, bond yield, stock return, and periodic IRR. Each tool can be opened directly from the Calculators sidebar group, supported numeric inputs pair editable values with sliders, and an existing loan can prefill the Loan calculator for amortization. Previewing does not persist; saved scenarios use `CalculatorScenario`. Calculator scenarios do not alter real loans, investments, planner totals, or advisor context.
+
+Routes: `/api/calculators`. Web: Plan → Calculators.
+
+**Validate:** `pnpm --filter api test`, `pnpm --filter web test`, `pnpm typecheck`, `pnpm --filter web lint`, migrate `20260831100000_calculator_scenarios`.
 
 ---
 

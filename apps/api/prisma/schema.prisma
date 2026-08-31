@@ -53,6 +53,7 @@ model User {
   statementImports           StatementImport[]
   statementLines             StatementLine[]
   taxScenarios               TaxScenario[]
+  calculatorScenarios        CalculatorScenario[]
 }
 
 model FinancialProfile {
@@ -463,6 +464,28 @@ model TaxScenario {
 
   @@index([userId])
   @@index([userId, isActive])
+}
+
+model CalculatorScenario {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  input     Json
+  result    Json
+  isActive  Int       @default(1)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([userId, type, isActive])
 }
 
 model Device {

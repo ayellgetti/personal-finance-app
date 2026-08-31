@@ -17,6 +17,12 @@ import { LearningHubModule } from "@/components/modules/LearningHubModule";
 import { ReportModule } from "@/components/modules/ReportModule";
 import { StatementAnalyzerModule } from "@/components/modules/StatementAnalyzerModule";
 import { TaxPlannerModule } from "@/components/modules/TaxPlannerModule";
+import {
+  CalculatorsModule,
+  type LoanCalculatorPreset,
+} from "@/components/modules/CalculatorsModule";
+import type { CalculatorType } from "@/lib/finance/calculator-remote";
+import type { Loan } from "@/types/finance";
 import { useAuth } from "@/lib/auth/store";
 import { toast } from "sonner";
 
@@ -33,6 +39,7 @@ const META: Record<ViewId, { title: string; description: string }> = {
   goals: { title: "Goals", description: "Emergency fund and the milestones you are saving toward" },
   statements: { title: "Statement Analyzer", description: "Bank and phone/UPI statements, categorized automatically" },
   tax: { title: "Tax Planner", description: "Country-wise slabs — India old/new regime, plus US and UK estimates" },
+  calculators: { title: "Financial Calculators", description: "Run, save and revisit financial what-if scenarios" },
   freedom: { title: "Financial Freedom Calculator", description: "When can you retire and live free?" },
   forecast: { title: "Smart Forecast Engine", description: "Project wealth across market scenarios" },
   advisor: { title: "AI Financial Advisor", description: "Personalised, actionable recommendations" },
@@ -44,6 +51,11 @@ const Index = () => {
   const { user, completeQuickSetup } = useAuth();
   const setupDone = user?.quickStep === 1;
   const [view, setView] = useState<ViewId>(() => (setupDone ? "dashboard" : "setup"));
+  const [calculatorType, setCalculatorType] =
+    useState<CalculatorType>("lumpsum");
+  const [loanPreset, setLoanPreset] = useState<LoanCalculatorPreset | null>(
+    null,
+  );
 
   useEffect(() => {
     if (setupDone && view === "setup") setView("dashboard");
@@ -60,28 +72,65 @@ const Index = () => {
     setView("dashboard");
   };
 
-  const selectView = (id: ViewId) => {
+  const selectView = (id: ViewId, selectedCalculator?: CalculatorType) => {
     if (id === "setup" && setupDone) return;
+    if (id === "calculators" && selectedCalculator) {
+      setCalculatorType(selectedCalculator);
+      setLoanPreset(null);
+    }
     setView(id);
+  };
+
+  const viewLoanAmortization = (loan: Loan) => {
+    setCalculatorType("loan");
+    setLoanPreset({
+      title: loan.name,
+      principal: loan.outstanding,
+      annualRatePct: loan.interestRate,
+      months: Math.max(1, Math.round(loan.remainingTenure)),
+      monthlyPayment: loan.emi,
+    });
+    setView("calculators");
   };
 
   const visibleView = setupDone && view === "setup" ? "dashboard" : view;
 
   return (
-    <AppLayout active={visibleView} onSelect={selectView} title={META[visibleView].title} description={META[visibleView].description}>
-      <div key={visibleView} className="animate-fade-in">
+    <AppLayout
+      active={visibleView}
+      activeCalculator={calculatorType}
+      onSelect={selectView}
+      title={META[visibleView].title}
+      description={META[visibleView].description}
+    >
+      <div
+        key={
+          visibleView === "calculators"
+            ? `${visibleView}-${calculatorType}`
+            : visibleView
+        }
+        className="animate-fade-in"
+      >
         {visibleView === "dashboard" && <Dashboard onNavigate={selectView} />}
         {visibleView === "setup" && <SetupWizard onDone={() => void finishSetup(true)} />}
         {visibleView === "profile" && <ProfileModule />}
         {visibleView === "income" && <IncomeModule />}
         {visibleView === "expenses" && <ExpenseModule />}
         {visibleView === "daily" && <DailyExpenseModule />}
-        {visibleView === "loans" && <LoanModule />}
+        {visibleView === "loans" && (
+          <LoanModule onViewAmortization={viewLoanAmortization} />
+        )}
         {visibleView === "investments" && <InvestmentModule />}
         {visibleView === "insurance" && <InsuranceModule />}
         {visibleView === "goals" && <GoalsModule />}
         {visibleView === "statements" && <StatementAnalyzerModule />}
         {visibleView === "tax" && <TaxPlannerModule />}
+        {visibleView === "calculators" && (
+          <CalculatorsModule
+            initialType={calculatorType}
+            loanPreset={loanPreset}
+          />
+        )}
         {visibleView === "freedom" && <FreedomCalculator />}
         {visibleView === "forecast" && <ForecastEngine />}
         {visibleView === "advisor" && <AIAdvisor />}

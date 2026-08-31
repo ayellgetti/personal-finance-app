@@ -38,6 +38,10 @@ export const openApiDocument = {
       name: "Tax",
       description: "Country-wise tax slab catalog, estimates, and saved scenarios",
     },
+    {
+      name: "Calculators",
+      description: "Deterministic financial calculators and saved scenarios",
+    },
   ],
   components: {
     securitySchemes: {
@@ -506,6 +510,173 @@ export const openApiDocument = {
             properties: {
               title: { type: "string" },
             },
+          },
+        ],
+      },
+      CalculatorInputRequest: {
+        oneOf: [
+          {
+            type: "object",
+            required: ["type", "principal", "annualRatePct", "years"],
+            properties: {
+              type: { type: "string", enum: ["lumpsum"] },
+              principal: { type: "number", exclusiveMinimum: 0 },
+              annualRatePct: { type: "number", minimum: 0, maximum: 100 },
+              years: { type: "number", minimum: 0.08333333333333333, maximum: 100 },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "monthlyContribution", "annualRatePct", "years"],
+            properties: {
+              type: { type: "string", enum: ["sip"] },
+              monthlyContribution: { type: "number", exclusiveMinimum: 0 },
+              annualRatePct: { type: "number", minimum: 0, maximum: 100 },
+              years: { type: "number", minimum: 0.08333333333333333, maximum: 100 },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "monthlyContribution", "annualRatePct", "annualStepUpPct", "years"],
+            properties: {
+              type: { type: "string", enum: ["step_up_sip"] },
+              monthlyContribution: { type: "number", exclusiveMinimum: 0 },
+              annualRatePct: { type: "number", minimum: 0, maximum: 100 },
+              annualStepUpPct: { type: "number", minimum: 0, maximum: 100 },
+              years: { type: "number", minimum: 0.08333333333333333, maximum: 100 },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "principal", "annualRatePct", "months"],
+            properties: {
+              type: { type: "string", enum: ["emi"] },
+              principal: { type: "number", exclusiveMinimum: 0 },
+              annualRatePct: { type: "number", minimum: 0, maximum: 100 },
+              months: { type: "integer", minimum: 1, maximum: 1200 },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "principal", "annualRatePct", "months"],
+            properties: {
+              type: { type: "string", enum: ["loan"] },
+              principal: { type: "number", exclusiveMinimum: 0 },
+              annualRatePct: { type: "number", minimum: 0, maximum: 100 },
+              months: { type: "integer", minimum: 1, maximum: 1200 },
+              monthlyPayment: {
+                type: "number",
+                exclusiveMinimum: 0,
+                description: "Optional EMI. When omitted, EMI is computed from amount, rate, and tenure.",
+              },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "targetAmount", "annualRatePct", "years"],
+            properties: {
+              type: { type: "string", enum: ["future"] },
+              targetAmount: { type: "number", exclusiveMinimum: 0 },
+              annualRatePct: { type: "number", minimum: 0, maximum: 100 },
+              years: { type: "number", minimum: 0.08333333333333333, maximum: 100 },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "method", "cost", "salvageValue", "usefulLifeYears"],
+            properties: {
+              type: { type: "string", enum: ["depreciation"] },
+              method: { type: "string", enum: ["straight_line", "written_down_value"] },
+              cost: { type: "number", exclusiveMinimum: 0 },
+              salvageValue: { type: "number", minimum: 0 },
+              usefulLifeYears: { type: "integer", minimum: 1, maximum: 100 },
+              ratePct: {
+                type: "number",
+                exclusiveMinimum: 0,
+                maximum: 100,
+                description: "Required for written_down_value.",
+              },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "amount", "exchangeRate", "targetCurrency"],
+            properties: {
+              type: { type: "string", enum: ["currency"] },
+              amount: { type: "number", exclusiveMinimum: 0 },
+              exchangeRate: { type: "number", exclusiveMinimum: 0 },
+              targetCurrency: { type: "string", pattern: "^[A-Z]{3}$" },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "number"],
+            properties: {
+              type: { type: "string", enum: ["number_words"] },
+              number: { type: "integer", minimum: 0, maximum: 999999999999 },
+            },
+          },
+          {
+            type: "object",
+            required: [
+              "type",
+              "faceValue",
+              "marketPrice",
+              "annualCouponRatePct",
+              "yearsToMaturity",
+              "paymentsPerYear",
+            ],
+            properties: {
+              type: { type: "string", enum: ["bond_yield"] },
+              faceValue: { type: "number", exclusiveMinimum: 0 },
+              marketPrice: { type: "number", exclusiveMinimum: 0 },
+              annualCouponRatePct: { type: "number", minimum: 0, maximum: 100 },
+              yearsToMaturity: { type: "number", exclusiveMinimum: 0, maximum: 100 },
+              paymentsPerYear: { type: "integer", enum: [1, 2, 4] },
+            },
+          },
+          {
+            type: "object",
+            required: [
+              "type",
+              "buyPrice",
+              "sellPrice",
+              "quantity",
+              "dividends",
+              "fees",
+            ],
+            properties: {
+              type: { type: "string", enum: ["stock"] },
+              buyPrice: { type: "number", exclusiveMinimum: 0 },
+              sellPrice: { type: "number", minimum: 0 },
+              quantity: { type: "number", exclusiveMinimum: 0 },
+              dividends: { type: "number", minimum: 0 },
+              fees: { type: "number", minimum: 0 },
+            },
+          },
+          {
+            type: "object",
+            required: ["type", "cashFlows"],
+            properties: {
+              type: { type: "string", enum: ["irr"] },
+              cashFlows: {
+                type: "array",
+                minItems: 2,
+                maxItems: 1000,
+                items: { type: "number" },
+                description: "Equal-period cash flows beginning with a negative outflow.",
+              },
+            },
+          },
+        ],
+        discriminator: { propertyName: "type" },
+      },
+      CreateCalculatorScenarioRequest: {
+        allOf: [
+          { $ref: "#/components/schemas/CalculatorInputRequest" },
+          {
+            type: "object",
+            properties: { title: { type: "string", minLength: 1, maxLength: 120 } },
           },
         ],
       },
@@ -2540,6 +2711,166 @@ export const openApiDocument = {
           },
           "401": { $ref: "#/components/responses/Unauthorized" },
           "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/calculators/preview": {
+      post: {
+        tags: ["Calculators"],
+        summary: "Compute a calculator result without saving",
+        description: "Projection outputs are deterministic estimates, not guarantees.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CalculatorInputRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Computed calculator result",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/calculators": {
+      get: {
+        tags: ["Calculators"],
+        summary: "List saved calculator scenarios",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1, default: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100, default: 25 } },
+          {
+            name: "type",
+            in: "query",
+            schema: {
+              type: "string",
+              enum: [
+                "lumpsum",
+                "sip",
+                "step_up_sip",
+                "emi",
+                "loan",
+                "future",
+                "depreciation",
+                "currency",
+                "number_words",
+                "bond_yield",
+                "stock",
+                "irr",
+              ],
+            },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Paginated calculator scenarios",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Calculators"],
+        summary: "Compute and save a calculator scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateCalculatorScenarioRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Calculator scenario saved",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/calculators/remove": {
+      post: {
+        tags: ["Calculators"],
+        summary: "Soft-delete a calculator scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RemoveByIdRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Calculator scenario deactivated",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/calculators/{id}": {
+      get: {
+        tags: ["Calculators"],
+        summary: "Get a saved calculator scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": {
+            description: "Calculator scenario",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+      patch: {
+        tags: ["Calculators"],
+        summary: "Update and recompute a calculator scenario",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                description: "One or more calculator input fields or title. Changing type requires all fields for the new type.",
+                type: "object",
+                minProperties: 1,
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Updated calculator scenario",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
         },
       },
     },

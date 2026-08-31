@@ -5,9 +5,16 @@ import {
 } from "@/lib/finance/calculations";
 import { Loan, LoanType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
+import { Button } from "@/components/ui/button";
 import { Panel, ItemRow, EmptyState, Badge, EditButton } from "./shared";
 import { StatCard } from "@/components/StatCard";
-import { Landmark, Percent, CalendarClock, TrendingDown } from "lucide-react";
+import {
+  CalendarClock,
+  Landmark,
+  Percent,
+  TableProperties,
+  TrendingDown,
+} from "lucide-react";
 import { QuickAddDialog } from "./QuickTypePicker";
 import { LoanQuickAdd } from "./LoanQuickAdd";
 
@@ -33,7 +40,11 @@ function loanFields(loan?: Loan, currency?: string): FieldDef[] {
   ];
 }
 
-export function LoanModule() {
+export function LoanModule({
+  onViewAmortization,
+}: {
+  onViewAmortization?: (loan: Loan) => void;
+}) {
   const { data, loading, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const dti = debtToIncome(data);
@@ -75,12 +86,26 @@ export function LoanModule() {
                   { label: "Outstanding", value: formatCurrency(l.outstanding, cur, true), emphasis: true },
                 ]}
                 actions={
-                  <EntityDialog
-                    title="Edit Loan"
-                    fields={loanFields(l, cur)}
-                    trigger={<EditButton />}
-                    onSubmit={(v) => updateItem("loans", l.id, v)}
-                  />
+                  <div className="flex items-center gap-1">
+                    {onViewAmortization && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => onViewAmortization(l)}
+                      >
+                        <TableProperties className="mr-1.5 h-4 w-4" />
+                        View amortization
+                      </Button>
+                    )}
+                    <EntityDialog
+                      title="Edit Loan"
+                      fields={loanFields(l, cur)}
+                      trigger={<EditButton />}
+                      onSubmit={(v) => updateItem("loans", l.id, v)}
+                    />
+                  </div>
                 }
                 onDelete={() => removeItem("loans", l.id)}
               />

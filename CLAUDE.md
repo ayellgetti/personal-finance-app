@@ -346,7 +346,7 @@ Do not put Prisma queries in controllers.
 
 **Current prefix:** `/api/...` (not `/api/v1`).
 
-Examples: `/api/auth/login`, `/api/loans`, `/api/advisor`, `/api/statements`, `/api/tax`.
+Examples: `/api/auth/login`, `/api/loans`, `/api/advisor`, `/api/statements`, `/api/tax`, `/api/calculators`.
 
 Do not introduce `/api/v1` without an approved migration of all clients.
 
@@ -638,6 +638,7 @@ When adding a finance entity: Prisma migrate → model/service/route → OpenAPI
 
 Planner math: `apps/api/src/modules/personal-finance/planner/planner.engine.ts`.
 Tax slabs: `apps/api/src/modules/personal-finance/tax/tax.engine.ts` + `tax.catalog.ts`.
+Calculator math: `apps/api/src/modules/personal-finance/calculator/calculator.engine.ts`.
 Statement file decode (PDF/Excel/text): `apps/api/src/modules/personal-finance/statement/statement.extract.ts`.
 Statement parse: `apps/api/src/modules/personal-finance/statement/statement.parser.ts`.
 

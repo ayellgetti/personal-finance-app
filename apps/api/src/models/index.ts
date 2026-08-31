@@ -32,6 +32,10 @@ export {
   TaxScenarioModel,
   taxScenarioModel,
 } from "./personal-finance/tax-scenario.model";
+export {
+  CalculatorScenarioModel,
+  calculatorScenarioModel,
+} from "./personal-finance/calculator-scenario.model";
 export { DeviceModel, deviceModel } from "./shared/device.model";
 export { SocketModel, socketModel } from "./socket.model";
 export { NotificationModel, notificationModel } from "./shared/notification.model";

@@ -4,6 +4,7 @@ import type { Express } from "express";
 import express from "express";
 import { advisorRouter } from "../modules/personal-finance/advisor/advisor.route";
 import { budgetRouter } from "../modules/personal-finance/budget/budget.route";
+import { calculatorRouter } from "../modules/personal-finance/calculator/calculator.route";
 import { financialProfileRouter } from "../modules/personal-finance/financial-profile/financial-profile.route";
 import { goalRouter } from "../modules/personal-finance/goal/goal.route";
 import { insuranceRouter } from "../modules/personal-finance/insurance/insurance.route";
@@ -48,6 +49,7 @@ export class Route {
     app.use("/api/device", deviceRouter);
     app.use("/api/users", userRouter);
     app.use("/api/budgets", budgetRouter);
+    app.use("/api/calculators", calculatorRouter);
     app.use("/api/loans", loanRouter);
     app.use("/api/investments", investmentRouter);
     app.use("/api/insurances", insuranceRouter);
