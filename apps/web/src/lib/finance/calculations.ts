@@ -2,6 +2,8 @@ import {
   FinanceData,
   FireGoalType,
   FIRE_POST_RETIREMENT_YEARS,
+  FreedomMode,
+  FREEDOM_EXPENSE_MULTIPLES,
   Goal,
   Investment,
   Loan,
@@ -218,8 +220,13 @@ export interface FIResult {
   projectedCorpus: number;
 }
 
+/** Recurring monthly outflow the plan has to keep funding after work stops. */
+export function plannedMonthlyOutflow(d: FinanceData): number {
+  return monthlyExpenses(d) + monthlyEMI(d) + monthlyInsurancePremium(d);
+}
+
 export function financialFreedom(d: FinanceData): FIResult {
-  const currentAnnualExpenses = (monthlyExpenses(d) + monthlyEMI(d) + monthlyInsurancePremium(d)) * 12;
+  const currentAnnualExpenses = plannedMonthlyOutflow(d) * 12;
   const yearsToRetire = Math.max(1, d.profile.retirementAge - d.profile.age);
   // FI number using 4% safe withdrawal, inflation-adjusted to retirement
   const futureAnnualExpenses = fvLumpSum(currentAnnualExpenses, d.profile.inflationRate, yearsToRetire);
@@ -260,6 +267,92 @@ export function financialFreedom(d: FinanceData): FIResult {
 
 export function yearsToRetirement(d: FinanceData): number {
   return Math.max(0, d.profile.retirementAge - d.profile.age);
+}
+
+/* ---------------- freedom modes (lean / fire / coast / fat) ---------------- */
+export interface FreedomInputs {
+  monthlyExpenses: number;
+  currentAge: number;
+  retirementAge: number;
+  inflationRate: number;
+  coastAge: number;
+  expectedReturn: number;
+}
+
+export interface FreedomTargets {
+  yearsToRetirement: number;
+  coastAge: number;
+  annualExpensesToday: number;
+  annualExpensesAtRetirement: number;
+  targets: Record<FreedomMode, number>;
+}
+
+export function defaultFreedomInputs(d: FinanceData): FreedomInputs {
+  const retirementAge = d.profile.retirementAge;
+  return {
+    monthlyExpenses: Math.round(plannedMonthlyOutflow(d)),
+    currentAge: d.profile.age,
+    retirementAge,
+    inflationRate: d.profile.inflationRate,
+    coastAge: Math.min(retirementAge, d.profile.age + 5),
+    expectedReturn: Math.round((weightedReturn(d) || 11) * 10) / 10,
+  };
+}
+
+export function freedomTargets(input: FreedomInputs): FreedomTargets {
+  const yearsToRetirement = Math.max(0, input.retirementAge - input.currentAge);
+  const coastAge = Math.min(Math.max(input.coastAge, input.currentAge), input.retirementAge);
+  const annualExpensesToday = Math.max(0, input.monthlyExpenses) * 12;
+  const annualExpensesAtRetirement = fvLumpSum(annualExpensesToday, input.inflationRate, yearsToRetirement);
+  const fire = annualExpensesAtRetirement * FREEDOM_EXPENSE_MULTIPLES.FIRE;
+  // Coast FIRE: the corpus that compounds into the FIRE number with no further SIPs.
+  const coast = fire / Math.pow(1 + input.expectedReturn / 100, input.retirementAge - coastAge);
+  return {
+    yearsToRetirement,
+    coastAge,
+    annualExpensesToday,
+    annualExpensesAtRetirement,
+    targets: {
+      "Lean FIRE": annualExpensesAtRetirement * FREEDOM_EXPENSE_MULTIPLES["Lean FIRE"],
+      FIRE: fire,
+      "Coast FIRE": coast,
+      "Fat FIRE": annualExpensesAtRetirement * FREEDOM_EXPENSE_MULTIPLES["Fat FIRE"],
+    },
+  };
+}
+
+export interface FreedomModeView {
+  mode: FreedomMode;
+  target: number;
+  targetAge: number;
+  yearsToTarget: number;
+  projectedCorpus: number;
+  shortfall: number;
+  requiredMonthlyInvestment: number;
+  progressPct: number;
+}
+
+export function freedomModeView(
+  d: FinanceData,
+  input: FreedomInputs,
+  mode: FreedomMode,
+): FreedomModeView {
+  const { targets, coastAge } = freedomTargets(input);
+  const target = targets[mode];
+  const targetAge = mode === "Coast FIRE" ? coastAge : input.retirementAge;
+  const yearsToTarget = Math.max(0, targetAge - input.currentAge);
+  const projectedCorpus = portfolioFutureValue(d, yearsToTarget);
+  const shortfall = Math.max(0, target - projectedCorpus);
+  return {
+    mode,
+    target,
+    targetAge,
+    yearsToTarget,
+    projectedCorpus,
+    shortfall,
+    requiredMonthlyInvestment: pmtForFV(shortfall, input.expectedReturn, yearsToTarget),
+    progressPct: Math.min(100, (projectedCorpus / Math.max(target, 1)) * 100),
+  };
 }
 
 export function firePathTargets(d: FinanceData): Record<FireGoalType, number> {

@@ -36,6 +36,10 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/finance/calculations";
+import {
+  amountToIndianRupeeWords,
+  numberToIndianWords,
+} from "@/lib/finance/number-words";
 import { Panel, tooltipStyle } from "./shared";
 import {
   calculatorApiError,
@@ -417,6 +421,22 @@ function formatValue(key: string, value: number) {
     }).format(value);
   }
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(value);
+}
+
+function wordsForValue(key: string, value: number) {
+  if (!Number.isFinite(value)) {
+    return "";
+  }
+  if (PERCENT_KEYS.has(key) || key === "exchangeRate") {
+    return "";
+  }
+  if (MONEY_KEYS.has(key)) {
+    return amountToIndianRupeeWords(value);
+  }
+  if (Math.abs(value - Math.round(value)) < 0.005) {
+    return numberToIndianWords(value);
+  }
+  return "";
 }
 
 export function CalculatorsModule({
@@ -986,14 +1006,22 @@ function ResultPanel({
       {showPreview && (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Object.entries(result.values).map(([key, value]) => (
+        {Object.entries(result.values).map(([key, value]) => {
+          const words = wordsForValue(key, value);
+          return (
           <div key={key} className="rounded-xl bg-muted/50 p-4">
             <p className="text-xs text-muted-foreground">{labelFor(key)}</p>
             <p className="mt-1 font-display text-xl font-bold">
               {formatValue(key, value)}
             </p>
+            {words && (
+              <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                {words}
+              </p>
+            )}
           </div>
-        ))}
+          );
+        })}
           </div>
 
       {result.textValues && (
@@ -1509,11 +1537,20 @@ function LoanResultPanel({
         <>
           <div className="grid gap-6 lg:grid-cols-2">
         <div className="divide-y divide-dashed divide-border">
-          <LoanStat label="Loan EMI" value={formatCurrency(emi)} />
-          <LoanStat label="Total interest payable" value={formatCurrency(totalInterest)} />
+          <LoanStat
+            label="Loan EMI"
+            value={formatCurrency(emi)}
+            words={amountToIndianRupeeWords(emi)}
+          />
+          <LoanStat
+            label="Total interest payable"
+            value={formatCurrency(totalInterest)}
+            words={amountToIndianRupeeWords(totalInterest)}
+          />
           <LoanStat
             label="Total payment (principal + interest)"
             value={formatCurrency(totalPayment)}
+            words={amountToIndianRupeeWords(totalPayment)}
           />
         </div>
         <div>
@@ -1690,11 +1727,26 @@ function LoanResultPanel({
   );
 }
 
-function LoanStat({ label, value }: { label: string; value: string }) {
+function LoanStat({
+  label,
+  value,
+  words,
+}: {
+  label: string;
+  value: string;
+  words?: string;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-3">
+    <div className="flex items-start justify-between gap-4 py-3">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-display text-2xl font-bold">{value}</p>
+      <div className="text-right">
+        <p className="font-display text-2xl font-bold">{value}</p>
+        {words && (
+          <p className="mt-1 max-w-xs text-xs leading-snug text-muted-foreground">
+            {words}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

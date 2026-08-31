@@ -150,6 +150,29 @@ export const FIRE_GOAL_DESCRIPTIONS: Record<FireGoalType, string> = {
   "Coast FIRE":
     "Compound today’s investments until retirement so they cover your inflated expenses for 25 years with no extra SIPs.",
 };
+export const FREEDOM_MODES = [
+  "Lean FIRE",
+  "FIRE",
+  "Coast FIRE",
+  "Fat FIRE",
+] as const;
+export type FreedomMode = (typeof FREEDOM_MODES)[number];
+/** Multiple of the inflation-adjusted annual expense at retirement. */
+export const FREEDOM_EXPENSE_MULTIPLES: Record<
+  Exclude<FreedomMode, "Coast FIRE">,
+  number
+> = {
+  "Lean FIRE": 15,
+  FIRE: 25,
+  "Fat FIRE": 50,
+};
+export const FREEDOM_MODE_DESCRIPTIONS: Record<FreedomMode, string> = {
+  "Lean FIRE": "15× a frugal version of your retirement expenses",
+  FIRE: "25× your retirement expenses (4% withdrawal)",
+  "Coast FIRE": "Corpus needed by your coast age to stop adding SIPs",
+  "Fat FIRE": "50× your retirement expenses for a bigger lifestyle",
+};
+
 export const USER_GOAL_TYPES: GoalType[] = [
   ...FIRE_GOAL_TYPES,
   "Emergency Fund",

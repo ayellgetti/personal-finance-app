@@ -67,6 +67,9 @@ describe("CalculatorsModule", () => {
     );
     expect(await screen.findByText("Calculation preview")).toBeInTheDocument();
     expect(screen.getByText("₹3,10,585")).toBeInTheDocument();
+    expect(
+      screen.getByText("Three Lakh Ten Thousand Five Hundred Eighty Five Rupees"),
+    ).toBeInTheDocument();
   });
 
   it("accepts whole-number tenures and saves them", async () => {

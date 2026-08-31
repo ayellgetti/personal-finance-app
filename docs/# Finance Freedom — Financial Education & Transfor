@@ -1,0 +1,2377 @@
+# Finance Freedom — Financial Education & Transformation Module
+## Complete Product Specification & Cursor Implementation Prompt
+
+---
+
+# 1. PRODUCT VISION
+
+Build a new module inside the existing **Finance Freedom** application called:
+
+> **Financial Freedom Journey**
+
+The purpose is to educate users about personal finance while simultaneously helping them improve their actual financial condition.
+
+This must NOT behave like a traditional online course platform where users simply watch videos and complete quizzes.
+
+The core product loop is:
+
+```text
+LEARN
+  ↓
+UNDERSTAND
+  ↓
+ASSESS YOUR FINANCES
+  ↓
+USE THE FINANCE FREEDOM TOOL
+  ↓
+TAKE ACTION
+  ↓
+TRACK IMPROVEMENT
+  ↓
+LEARN THE NEXT CONCEPT
+```
+
+The application should continuously connect educational content to the user's real financial situation.
+
+Example:
+
+```text
+Lesson:
+"What is an Emergency Fund?"
+
+        ↓
+
+User understands the concept
+
+        ↓
+
+"Calculate Your Emergency Fund"
+
+        ↓
+
+User enters/uses existing financial data
+
+        ↓
+
+Target Emergency Fund = ₹3,60,000
+Current Emergency Fund = ₹1,20,000
+Gap = ₹2,40,000
+
+        ↓
+
+Create Goal:
+"Build ₹2,40,000 Emergency Fund"
+
+        ↓
+
+Track progress
+
+        ↓
+
+Continue learning
+```
+
+The product should feel like:
+
+> **A personal financial education + financial planning + action platform.**
+
+---
+
+# 2. IMPORTANT PRODUCT PRINCIPLE
+
+Do NOT create an isolated "Courses" section.
+
+Courses should be tightly connected to:
+
+- Financial Health
+- Income
+- Expenses
+- Budget
+- Loans
+- Insurance
+- Investments
+- SIP
+- Financial Goals
+- Retirement
+- FIRE
+- Net Worth
+- Financial Freedom Score
+- Existing Finance Freedom calculators/tools
+- AI Financial Advisor
+
+The course system should reuse existing financial data and tools wherever possible.
+
+Avoid asking users to enter the same information multiple times.
+
+---
+
+# 3. USER JOURNEY
+
+A new user should experience:
+
+```text
+SIGN UP
+   ↓
+FINANCIAL HEALTH ASSESSMENT
+   ↓
+FINANCIAL FREEDOM SCORE
+   ↓
+RECOMMENDED LEARNING PATH
+   ↓
+FOUNDATION
+   ↓
+GROWTH
+   ↓
+FREEDOM
+```
+
+However, users should NOT be forced to complete levels sequentially.
+
+The system should recommend lessons based on financial needs.
+
+Example:
+
+User understands investing but has significant high-interest debt.
+
+Recommended path:
+
+```text
+1. Understand Your Debt
+2. Debt Repayment Strategy
+3. Emergency Fund
+4. Insurance
+5. Investing
+```
+
+Not:
+
+```text
+Lesson 1
+Lesson 2
+Lesson 3
+...
+```
+
+---
+
+# 4. COURSE LEVELS
+
+Create three primary learning levels.
+
+## LEVEL 1 — FOUNDATION
+
+User-facing title:
+
+> **Foundation**
+> Take control of your money.
+
+Internal level:
+
+> Beginner
+
+Goal:
+
+> Understand your current financial situation and build a strong financial foundation.
+
+---
+
+## LEVEL 2 — GROWTH
+
+User-facing title:
+
+> **Growth**
+> Build and protect your wealth.
+
+Internal level:
+
+> Intermediate
+
+Goal:
+
+> Improve savings, debt management, investing, insurance and financial planning.
+
+---
+
+## LEVEL 3 — FREEDOM
+
+User-facing title:
+
+> **Freedom**
+> Build your path to financial independence.
+
+Internal level:
+
+> Advanced
+
+Goal:
+
+> Build wealth, plan retirement and work toward financial independence/FIRE.
+
+---
+
+# 5. FOUNDATION COURSE
+
+Create approximately 10 lessons.
+
+## Module 1 — Money Mindset
+
+### Lesson 1
+What Does Financial Freedom Mean?
+
+Topics:
+
+- Financial freedom
+- Financial independence
+- Financial security
+- Why income alone doesn't determine financial health
+- Difference between earning more and managing money better
+
+Tool:
+
+> Financial Freedom Score
+
+Action:
+
+> Define your financial freedom goal.
+
+---
+
+### Lesson 2
+Understand Your Money
+
+Topics:
+
+- Income
+- Expenses
+- Savings
+- Investments
+- Debt
+- Net worth
+
+Tool:
+
+> Financial Snapshot
+
+Action:
+
+> Complete your financial profile.
+
+---
+
+### Lesson 3
+Understand Your Cash Flow
+
+Topics:
+
+- Monthly income
+- Fixed expenses
+- Variable expenses
+- Savings
+- Cash-flow surplus/deficit
+
+Tool:
+
+> Cash Flow Analyzer
+
+Action:
+
+> Identify your monthly surplus.
+
+---
+
+## Module 2 — Budgeting
+
+### Lesson 4
+How Budgeting Actually Works
+
+Teach:
+
+- Budgeting concepts
+- 50/30/20
+- Zero-based budgeting
+- Needs vs wants
+- Lifestyle inflation
+
+Tool:
+
+> Budget Planner
+
+Action:
+
+> Create your monthly budget.
+
+---
+
+### Lesson 5
+Find Where Your Money Is Going
+
+Teach:
+
+- Expense categories
+- Recurring expenses
+- Unnecessary expenses
+- Subscription leakage
+- Lifestyle spending
+
+Tool:
+
+> Expense Analyzer
+
+Action:
+
+> Identify 3 expenses to reduce.
+
+---
+
+## Module 3 — Emergency Fund
+
+### Lesson 6
+What Is an Emergency Fund?
+
+Teach:
+
+- Why emergency funds matter
+- Emergency vs non-emergency expenses
+- Recommended reserve period
+- Liquidity
+
+Tool:
+
+> Emergency Fund Calculator
+
+Action:
+
+> Set an emergency fund target.
+
+---
+
+### Lesson 7
+Build Your Emergency Fund
+
+Teach:
+
+- How to build it
+- Where to keep it
+- Monthly contribution strategy
+
+Tool:
+
+> Emergency Fund Goal
+
+Action:
+
+> Create and fund the goal.
+
+---
+
+## Module 4 — Debt
+
+### Lesson 8
+Understanding Loans
+
+Teach:
+
+- Principal
+- Interest
+- EMI
+- Tenure
+- Interest rate
+- Total interest
+- Amortization
+
+Tool:
+
+> Loan Analyzer
+
+---
+
+### Lesson 9
+Good Debt vs Bad Debt
+
+Teach:
+
+- Productive vs expensive debt
+- Credit cards
+- Personal loans
+- Home loans
+- Education loans
+- Debt-to-income ratio
+
+Tool:
+
+> Debt Health Analyzer
+
+---
+
+### Lesson 10
+Your First Debt Freedom Plan
+
+Teach:
+
+- Avalanche method
+- Snowball method
+- Prepayment
+- Refinancing concepts
+- Debt consolidation concepts
+
+Tool:
+
+> Debt Freedom Planner
+
+Action:
+
+> Select a debt repayment strategy.
+
+---
+
+# 6. GROWTH COURSE
+
+Approximately 10 lessons.
+
+## Module 1 — Credit & Debt Optimization
+
+### Lesson 11
+Understanding Credit Scores
+
+### Lesson 12
+How Credit Cards Really Work
+
+### Lesson 13
+Reduce Your Interest Burden
+
+Tools:
+
+- Loan Optimizer
+- Debt Consolidation Calculator
+- Prepayment Calculator
+
+---
+
+## Module 2 — Insurance
+
+### Lesson 14
+Why Insurance Is Financial Protection
+
+### Lesson 15
+Health Insurance
+
+### Lesson 16
+Life & Term Insurance
+
+Tools:
+
+- Insurance Coverage Checker
+- Family Protection Calculator
+
+The application should compare:
+
+```text
+Current Coverage
+vs
+Estimated Required Coverage
+```
+
+Avoid making regulated financial product recommendations unless supported by appropriate disclosures and data.
+
+---
+
+## Module 3 — Investing
+
+### Lesson 17
+Saving vs Investing
+
+### Lesson 18
+Understanding Inflation
+
+### Lesson 19
+Compound Interest
+
+### Lesson 20
+Introduction to Mutual Funds, SIP and Asset Classes
+
+Tools:
+
+- SIP Calculator
+- Investment Growth Calculator
+- Inflation Calculator
+
+The education should be neutral and educational.
+
+Do not promise returns.
+
+Use assumptions clearly labelled as assumptions.
+
+---
+
+# 7. FREEDOM COURSE
+
+Approximately 10 lessons.
+
+## Module 1 — Financial Goals
+
+### Lesson 21
+How to Set Financial Goals
+
+### Lesson 22
+Short-, Medium- and Long-Term Goals
+
+### Lesson 23
+Planning Large Expenses
+
+Tools:
+
+- Goal Planner
+- Goal Projection Calculator
+
+---
+
+## Module 2 — Retirement
+
+### Lesson 24
+Why Retirement Planning Starts Early
+
+### Lesson 25
+Understanding Retirement Inflation
+
+### Lesson 26
+How Much Do You Need for Retirement?
+
+Tools:
+
+- Retirement Calculator
+- Retirement Corpus Planner
+
+---
+
+## Module 3 — FIRE
+
+### Lesson 27
+What Is FIRE?
+
+Teach:
+
+- Financial Independence
+- Early Retirement
+- Lean FIRE
+- Regular FIRE
+- Fat FIRE
+- Coast FIRE
+
+Do not present FIRE as universally suitable.
+
+---
+
+### Lesson 28
+Calculate Your FIRE Number
+
+Tool:
+
+> FIRE Calculator
+
+Display:
+
+```text
+Current Expenses
+Expected Retirement Expenses
+Inflation
+Target Corpus
+Current Investments
+Projected Corpus
+Estimated FIRE Age
+```
+
+Clearly distinguish estimates from guaranteed outcomes.
+
+---
+
+### Lesson 29
+Increase Your Financial Freedom Rate
+
+Teach:
+
+- Savings rate
+- Income growth
+- Expense optimization
+- Investment discipline
+- Debt reduction
+
+Tool:
+
+> Financial Freedom Simulator
+
+Allow users to model scenarios.
+
+---
+
+### Lesson 30
+Create Your Financial Freedom Roadmap
+
+Generate:
+
+```text
+Current Financial Position
+        ↓
+Priority Problems
+        ↓
+Recommended Actions
+        ↓
+Financial Goals
+        ↓
+Investment/Debt Strategy
+        ↓
+Projected Financial Independence
+```
+
+---
+
+# 8. LESSON STRUCTURE
+
+Every lesson must follow the same product pattern.
+
+```text
+1. LEARN
+2. CHECK
+3. APPLY
+4. ACT
+5. TRACK
+```
+
+Example:
+
+```text
+------------------------------------------------
+LESSON
+------------------------------------------------
+
+What Is an Emergency Fund?
+
+5–8 minute lesson
+
+[Start Lesson]
+------------------------------------------------
+
+CHECK YOUR UNDERSTANDING
+
+Question:
+How many months of essential expenses
+should an emergency fund generally cover?
+
+[Answer]
+------------------------------------------------
+
+APPLY TO YOUR FINANCES
+
+Your current essential expenses:
+
+₹45,000/month
+
+Your current emergency fund:
+
+₹1,20,000
+
+Recommended target:
+
+₹2,70,000
+
+Gap:
+
+₹1,50,000
+
+[Build My Emergency Fund]
+------------------------------------------------
+
+ACTION
+
+Create a monthly contribution:
+
+₹15,000/month
+
+Estimated completion:
+
+10 months
+
+[Create Goal]
+------------------------------------------------
+
+PROGRESS
+
+Emergency Fund:
+44%
+
+[Continue]
+------------------------------------------------
+```
+
+---
+
+# 9. LESSON CONTENT TYPES
+
+Support multiple content types.
+
+```text
+TEXT
+VIDEO
+IMAGE
+INFOGRAPHIC
+CALCULATOR
+INTERACTIVE TOOL
+QUIZ
+SCENARIO
+CHECKLIST
+ACTION
+REFLECTION
+```
+
+A lesson may contain multiple blocks.
+
+Example:
+
+```json
+{
+  "type": "lesson",
+  "blocks": [
+    {
+      "type": "text",
+      "content": "..."
+    },
+    {
+      "type": "video",
+      "url": "..."
+    },
+    {
+      "type": "quiz",
+      "questions": []
+    },
+    {
+      "type": "tool",
+      "tool": "emergency-fund-calculator"
+    },
+    {
+      "type": "action",
+      "action": "create-emergency-fund-goal"
+    }
+  ]
+}
+```
+
+---
+
+# 10. QUIZ SYSTEM
+
+Quizzes should test understanding, not memorization.
+
+Support:
+
+- Multiple choice
+- True/false
+- Scenario questions
+- Calculation questions
+- Reflection questions
+
+Example:
+
+```text
+Rahul earns ₹80,000/month.
+
+His essential expenses are ₹40,000.
+
+How much would 6 months
+of essential expenses be?
+
+A. ₹80,000
+B. ₹1,20,000
+C. ₹2,40,000
+D. ₹4,80,000
+```
+
+Correct:
+
+> ₹2,40,000
+
+After answering:
+
+Explain WHY.
+
+Do not simply display:
+
+> Correct.
+
+---
+
+# 11. PERSONALIZED LEARNING
+
+Create a recommendation engine.
+
+Inputs:
+
+```text
+Financial Health Score
+Debt Ratio
+Savings Rate
+Emergency Fund Coverage
+Insurance Coverage
+Investment Level
+Retirement Readiness
+Financial Goals
+User Knowledge
+Completed Lessons
+Quiz Results
+```
+
+Output:
+
+```text
+Recommended Lessons
+Recommended Tools
+Recommended Actions
+```
+
+Example:
+
+```text
+Financial Health Score: 54
+
+Top priorities:
+
+1. Emergency Fund
+2. High Interest Debt
+3. Insurance
+4. Budget Optimization
+
+Recommended learning:
+
+→ Emergency Fund
+→ Understanding Debt
+→ Debt Repayment Strategy
+→ Health Insurance
+```
+
+---
+
+# 12. FINANCIAL FREEDOM SCORE
+
+Create a score from 0–100.
+
+Possible categories:
+
+```text
+Cash Flow
+Debt
+Emergency Fund
+Insurance
+Investments
+Retirement
+Goals
+Net Worth
+```
+
+Example:
+
+```text
+Financial Freedom Score
+
+62 / 100
+
+Cash Flow           80
+Emergency Fund      40
+Debt                55
+Insurance           65
+Investments         70
+Retirement          45
+Goals               75
+```
+
+The scoring methodology must be transparent internally.
+
+Do not present the score as a regulated financial rating or guarantee.
+
+---
+
+# 13. PROGRESS DASHBOARD
+
+Create a dedicated:
+
+> **My Financial Freedom Journey**
+
+Dashboard.
+
+Display:
+
+```text
+YOUR JOURNEY
+
+Foundation       ██████████ 100%
+Growth           ██████░░░░ 60%
+Freedom          ██░░░░░░░░ 20%
+```
+
+Also display:
+
+```text
+Financial Freedom Score
+62 / 100
+
+Lessons completed
+18 / 30
+
+Actions completed
+11
+
+Goals
+3 active
+
+Financial improvements
+```
+
+---
+
+# 14. REAL FINANCIAL PROGRESS
+
+This is critical.
+
+Track actual outcomes, not just course completion.
+
+Examples:
+
+```text
+Debt reduced
+₹2,40,000
+
+Emergency fund increased
+₹80,000
+
+Monthly savings increased
+₹8,000
+
+Investment contribution increased
+₹5,000/month
+
+Financial Freedom Score
+48 → 62
+```
+
+Show:
+
+> **Your financial health improved by 14 points.**
+
+Do not fabricate improvements.
+
+Only calculate changes from actual user data.
+
+---
+
+# 15. ACTION SYSTEM
+
+Each lesson may generate an action.
+
+Examples:
+
+```text
+Create budget
+Review loan
+Reduce subscription
+Build emergency fund
+Start financial goal
+Review insurance
+Calculate FIRE number
+Increase SIP
+Review retirement plan
+```
+
+Action model:
+
+```text
+Action
+- id
+- userId
+- lessonId
+- type
+- title
+- description
+- status
+- dueDate
+- completedAt
+```
+
+Statuses:
+
+```text
+TODO
+IN_PROGRESS
+COMPLETED
+SKIPPED
+```
+
+---
+
+# 16. MISSION SYSTEM
+
+Create missions that group actions.
+
+## Foundation Mission
+
+> Build Your Financial Foundation
+
+Checklist:
+
+```text
+□ Understand your income
+□ Track expenses
+□ Calculate net worth
+□ Create budget
+□ Build emergency fund
+□ Review debt
+```
+
+## Growth Mission
+
+> Build and Protect Your Wealth
+
+```text
+□ Optimize debt
+□ Review insurance
+□ Start/increase investing
+□ Create financial goals
+□ Review taxes
+```
+
+## Freedom Mission
+
+> Build Financial Independence
+
+```text
+□ Calculate FIRE number
+□ Calculate retirement corpus
+□ Review savings rate
+□ Build wealth strategy
+□ Create financial freedom roadmap
+```
+
+---
+
+# 17. AI FINANCIAL COACH
+
+Integrate the existing Finance Freedom AI advisor.
+
+The AI should be aware of:
+
+- Current lesson
+- User financial profile
+- Financial Health Score
+- User goals
+- Existing calculations
+- Course progress
+- Previous actions
+
+Example:
+
+User asks:
+
+> "Why do I need an emergency fund?"
+
+AI answers using the current lesson context.
+
+User asks:
+
+> "I have ₹2 lakh saved. Is that enough?"
+
+AI should calculate based on the user's actual essential expenses.
+
+It must never invent missing financial information.
+
+If required information is missing:
+
+> "I need your average essential monthly expenses to calculate this."
+
+---
+
+# 18. AI SAFETY
+
+The AI must:
+
+- Clearly distinguish educational information from personalized financial advice.
+- Never guarantee investment returns.
+- Never fabricate financial figures.
+- Clearly label assumptions.
+- Encourage professional advice when appropriate.
+- Avoid pretending to be a SEBI-registered investment adviser unless the actual business has the required authorization.
+- Avoid specific product recommendations where regulatory requirements apply.
+- Use user-provided financial data whenever possible.
+- Never infer missing numbers as facts.
+
+---
+
+# 19. COURSE CONTENT ADMINISTRATION
+
+Create an admin interface.
+
+Admin should be able to:
+
+```text
+Create course
+Edit course
+Create module
+Create lesson
+Reorder lessons
+Publish/unpublish lesson
+Create quiz
+Create questions
+Create actions
+Attach tools
+Attach calculator
+Attach video
+Attach resources
+```
+
+Lesson status:
+
+```text
+DRAFT
+REVIEW
+PUBLISHED
+ARCHIVED
+```
+
+---
+
+# 20. COURSE DATA MODEL
+
+Use Prisma and PostgreSQL.
+
+Suggested models:
+
+```text
+Course
+CourseModule
+Lesson
+LessonBlock
+Quiz
+QuizQuestion
+QuizOption
+QuizAttempt
+CourseEnrollment
+LessonProgress
+Action
+UserAction
+Mission
+MissionAction
+LearningRecommendation
+```
+
+Suggested relationships:
+
+```text
+Course
+ └── CourseModule
+      └── Lesson
+           ├── LessonBlock
+           ├── Quiz
+           │    └── QuizQuestion
+           │         └── QuizOption
+           └── Actions
+```
+
+---
+
+# 21. USER PROGRESS MODEL
+
+Track:
+
+```text
+CourseEnrollment
+LessonProgress
+QuizAttempt
+ActionProgress
+MissionProgress
+```
+
+Lesson progress statuses:
+
+```text
+NOT_STARTED
+IN_PROGRESS
+COMPLETED
+```
+
+Store:
+
+```text
+startedAt
+completedAt
+timeSpent
+quizScore
+lastPosition
+```
+
+---
+
+# 22. IDEMPOTENCY
+
+All progress/action APIs must be idempotent.
+
+For example, repeatedly calling:
+
+```http
+POST /lessons/:id/complete
+```
+
+must not create duplicate records.
+
+Use unique constraints where appropriate.
+
+---
+
+# 23. API DESIGN
+
+Create REST endpoints.
+
+## Courses
+
+```http
+GET /api/courses
+GET /api/courses/:courseId
+GET /api/courses/:courseId/modules
+GET /api/modules/:moduleId/lessons
+GET /api/lessons/:lessonId
+```
+
+## Progress
+
+```http
+GET /api/learning/progress
+GET /api/learning/courses/:courseId/progress
+
+POST /api/lessons/:lessonId/start
+POST /api/lessons/:lessonId/progress
+POST /api/lessons/:lessonId/complete
+```
+
+## Quiz
+
+```http
+GET /api/lessons/:lessonId/quiz
+POST /api/quizzes/:quizId/attempt
+```
+
+## Actions
+
+```http
+GET /api/actions
+POST /api/actions/:actionId/start
+POST /api/actions/:actionId/complete
+```
+
+## Recommendations
+
+```http
+GET /api/learning/recommendations
+```
+
+## Missions
+
+```http
+GET /api/missions
+GET /api/missions/:missionId
+POST /api/missions/:missionId/start
+POST /api/missions/:missionId/complete-action
+```
+
+---
+
+# 24. FRONTEND STRUCTURE
+
+Create:
+
+```text
+/pages/learning
+/pages/learning/courses
+/pages/learning/course/:courseId
+/pages/learning/lesson/:lessonId
+/pages/learning/missions
+/pages/learning/progress
+/pages/learning/recommendations
+```
+
+Components:
+
+```text
+CourseCard
+CourseProgress
+ModuleCard
+LessonCard
+LessonPlayer
+LessonBlock
+Quiz
+QuizQuestion
+QuizResult
+ToolEmbed
+ActionCard
+MissionCard
+LearningPath
+FinancialFreedomScore
+JourneyProgress
+RecommendationCard
+```
+
+---
+
+# 25. LESSON UI
+
+The lesson UI should be distraction-free.
+
+Desktop:
+
+```text
+--------------------------------------------------------
+Finance Freedom
+--------------------------------------------------------
+
+← Back to Foundation
+
+Understanding Emergency Funds
+
+Module 3 · Lesson 6
+
+██████████████████░░░░ 72%
+
+--------------------------------------------------------
+
+WHY EMERGENCY FUNDS MATTER
+
+[Lesson Content]
+
+--------------------------------------------------------
+
+YOUR FINANCES
+
+Current emergency fund:
+₹1,20,000
+
+Recommended:
+₹2,70,000
+
+Gap:
+₹1,50,000
+
+[Calculate My Emergency Fund]
+
+--------------------------------------------------------
+
+✓ WHAT YOU LEARNED
+
+□ I understand why emergency funds matter
+□ I know my target
+□ I created my goal
+
+[Continue]
+--------------------------------------------------------
+```
+
+---
+
+# 26. MOBILE UI
+
+The entire experience must be mobile-first.
+
+Bottom navigation:
+
+```text
+Home
+Journey
+Tools
+AI
+Profile
+```
+
+Inside Journey:
+
+```text
+My Journey
+
+Financial Freedom Score
+62/100
+
+Continue Learning
+
+[Emergency Fund]
+
+Recommended for You
+
+[Understanding Debt]
+
+Your Missions
+
+[Build Financial Foundation]
+```
+
+---
+
+# 27. GAMIFICATION
+
+Use meaningful gamification.
+
+Avoid childish points/badges everywhere.
+
+Use:
+
+```text
+Progress
+Milestones
+Missions
+Completed actions
+Financial improvements
+```
+
+Optional:
+
+```text
+Foundation Completed
+Debt Freedom Milestone
+First ₹1L Emergency Fund
+First ₹1L Investment
+Positive Net Worth
+```
+
+Only award financial milestones based on actual user data.
+
+---
+
+# 28. NOTIFICATION SYSTEM
+
+Support optional reminders.
+
+Examples:
+
+> "You have one financial action waiting."
+
+> "You are ₹20,000 away from completing your emergency fund goal."
+
+> "Continue your Financial Freedom Journey."
+
+> "You completed your Debt Freedom mission."
+
+Users must be able to control notifications.
+
+---
+
+# 29. CONTENT PERSONALIZATION
+
+The system should adapt based on the user.
+
+Example:
+
+User has:
+
+```text
+High debt
+Low emergency fund
+No investments
+```
+
+Recommended:
+
+```text
+Emergency Fund
+Debt
+Budgeting
+```
+
+User has:
+
+```text
+Low debt
+Large emergency fund
+Strong savings
+No retirement planning
+```
+
+Recommended:
+
+```text
+Investing
+Retirement
+FIRE
+Asset Allocation
+```
+
+---
+
+# 30. COURSE COMPLETION
+
+Do not define success as:
+
+> "User watched 30 lessons."
+
+Instead define success as:
+
+```text
+Learning
++
+Understanding
++
+Action
++
+Financial Improvement
+```
+
+Course completion should display:
+
+```text
+FOUNDATION COMPLETE
+
+Lessons completed: 10/10
+Actions completed: 8/8
+Quiz score: 86%
+
+Financial Freedom Score:
+
+Before: 48
+Now: 61
+
+Your next priority:
+
+Debt Optimization
+```
+
+Only display score changes when actual underlying data supports the calculation.
+
+---
+
+# 31. ANALYTICS
+
+Track product analytics.
+
+Events:
+
+```text
+course_viewed
+module_viewed
+lesson_started
+lesson_completed
+quiz_started
+quiz_completed
+quiz_passed
+tool_opened
+action_created
+action_completed
+mission_started
+mission_completed
+recommendation_clicked
+financial_score_viewed
+```
+
+Also track:
+
+```text
+lesson completion rate
+drop-off rate
+quiz performance
+tool usage
+action completion
+financial improvement
+```
+
+Do not collect unnecessary personal data.
+
+---
+
+# 32. ADMIN ANALYTICS
+
+Admin dashboard:
+
+```text
+Total Learners
+Active Learners
+Course Completion
+Lesson Completion
+Average Quiz Score
+Action Completion Rate
+Mission Completion
+Most Used Tools
+Most Popular Lessons
+Highest Drop-off Lessons
+```
+
+---
+
+# 33. CONTENT VERSIONING
+
+Financial education content may change.
+
+Support:
+
+```text
+Lesson Version
+Content Version
+Published Version
+```
+
+Do not silently alter historical completed content in a way that breaks user progress.
+
+---
+
+# 34. LOCALIZATION
+
+Design the content model to support localization.
+
+Future languages may include:
+
+```text
+English
+Hindi
+Marathi
+Gujarati
+Tamil
+Telugu
+Kannada
+Bengali
+```
+
+Do not hardcode course text inside React components.
+
+Store content separately.
+
+---
+
+# 35. ACCESSIBILITY
+
+Follow WCAG-oriented practices.
+
+Support:
+
+- keyboard navigation
+- screen readers
+- readable font sizes
+- sufficient contrast
+- semantic HTML
+- accessible forms
+- captions/transcripts for videos
+- no color-only status indicators
+
+---
+
+# 36. PERFORMANCE
+
+Requirements:
+
+- Lazy-load lesson content.
+- Lazy-load videos.
+- Cache published course content.
+- Paginate admin lists.
+- Avoid unnecessary API calls.
+- Do not load all course lessons on the initial page.
+- Use optimistic UI only where safe.
+- Preserve lesson position.
+
+---
+
+# 37. SECURITY
+
+Apply existing application security standards.
+
+Requirements:
+
+- JWT authentication
+- authorization
+- role-based admin access
+- input validation with Zod
+- rate limiting where appropriate
+- audit logging for admin changes
+- secure file/video URLs
+- protection against unauthorized progress manipulation
+- server-side validation of quiz answers
+- server-side authorization for user actions
+
+Never trust:
+
+```text
+lesson completion
+quiz score
+financial score
+action completion
+```
+
+from the frontend.
+
+Calculate/validate important values server-side.
+
+---
+
+# 38. FINANCIAL DATA PRINCIPLE
+
+The course system should reuse the user's existing Finance Freedom financial profile.
+
+Example:
+
+If the user already entered:
+
+```text
+Income = ₹1,00,000
+Essential expenses = ₹50,000
+Loans = ₹25,000 EMI
+Investments = ₹10,000
+```
+
+the lesson should use that data.
+
+Do NOT ask:
+
+> "Enter your monthly income."
+
+again.
+
+Instead:
+
+> "Based on your current profile, your monthly income is ₹1,00,000."
+
+Provide:
+
+> [Edit financial information]
+
+---
+
+# 39. TOOL INTEGRATION
+
+Create a reusable tool embedding system.
+
+Example:
+
+```json
+{
+  "type": "tool",
+  "toolId": "emergency-fund-calculator",
+  "mode": "embedded"
+}
+```
+
+Supported tools:
+
+```text
+Financial Health
+Budget Planner
+Cash Flow Analyzer
+Emergency Fund Calculator
+Loan Calculator
+Debt Analyzer
+Debt Freedom Planner
+Insurance Calculator
+SIP Calculator
+Investment Calculator
+Inflation Calculator
+Goal Planner
+Retirement Calculator
+FIRE Calculator
+Financial Freedom Simulator
+Net Worth Calculator
+```
+
+Do not duplicate calculator logic inside lessons.
+
+Lessons should call the existing tool.
+
+---
+
+# 40. TOOL → ACTION CONNECTION
+
+Every tool should be capable of producing an action.
+
+Example:
+
+```text
+Emergency Fund Calculator
+        ↓
+Target = ₹3,00,000
+Current = ₹1,00,000
+Gap = ₹2,00,000
+        ↓
+[Create Goal]
+        ↓
+Monthly contribution = ₹20,000
+        ↓
+Action created
+```
+
+Similarly:
+
+```text
+Loan Analyzer
+        ↓
+High-interest loan detected
+        ↓
+[Create Debt Freedom Plan]
+```
+
+---
+
+# 41. FINANCIAL FREEDOM ROADMAP
+
+At the end of the learning journey, generate:
+
+```text
+YOUR FINANCIAL FREEDOM ROADMAP
+
+CURRENT STATE
+
+Financial Freedom Score: 62
+
+Monthly Income: ₹1,50,000
+Monthly Expenses: ₹90,000
+Monthly Surplus: ₹60,000
+
+Debt: ₹8,50,000
+Investments: ₹12,00,000
+Emergency Fund: ₹2,00,000
+
+------------------------------------------------
+
+PRIORITIES
+
+1. Increase emergency fund
+2. Reduce high-interest debt
+3. Improve insurance protection
+4. Increase long-term investments
+5. Review retirement target
+
+------------------------------------------------
+
+YOUR NEXT 90 DAYS
+
+□ Build emergency fund
+□ Reduce loan balance
+□ Review insurance
+□ Increase investment contribution
+
+------------------------------------------------
+
+YOUR LONG-TERM GOAL
+
+Financial Independence
+
+[View Financial Freedom Projection]
+```
+
+All values must come from actual user data or clearly labelled assumptions.
+
+---
+
+# 42. DESIGN LANGUAGE
+
+The UI should communicate:
+
+```text
+Trust
+Clarity
+Progress
+Calm
+Financial Confidence
+```
+
+Avoid:
+
+- casino-like gamification
+- aggressive investment claims
+- unrealistic wealth promises
+- "Get rich quick" language
+- excessive animations
+
+Use clean financial dashboards and visual progress.
+
+---
+
+# 43. HOME PAGE INTEGRATION
+
+Add a section to the Finance Freedom home dashboard:
+
+```text
+YOUR FINANCIAL FREEDOM JOURNEY
+
+Financial Freedom Score
+62 / 100
+
+Your next recommended lesson:
+
+"How to Reduce Your Interest Burden"
+
+Why?
+
+You currently have ₹8.5L of outstanding debt.
+
+[Continue Learning]
+```
+
+Also:
+
+```text
+Your next action
+
+Review your emergency fund
+
+[Take Action]
+```
+
+---
+
+# 44. AI + LEARNING INTEGRATION
+
+On every lesson page:
+
+```text
+Have a question?
+
+Ask Finance Freedom AI
+```
+
+Examples:
+
+> "Explain this in simple language."
+
+> "How does this apply to me?"
+
+> "What happens if I save ₹5,000 more every month?"
+
+> "What should I prioritize?"
+
+The AI should use the current lesson context.
+
+---
+
+# 45. DATABASE MIGRATION
+
+Implement Prisma migrations.
+
+Do not manually modify production databases.
+
+Use:
+
+```bash
+pnpm prisma migrate dev
+pnpm prisma generate
+```
+
+according to the existing project conventions.
+
+Create seed data for:
+
+```text
+3 courses
+10 lessons per course
+modules
+lesson blocks
+quiz questions
+missions
+actions
+```
+
+The seed must be deterministic and idempotent.
+
+---
+
+# 46. SEED CONTENT
+
+Seed the complete initial curriculum described in this specification.
+
+Do NOT create placeholder lessons such as:
+
+```text
+Lorem ipsum
+Lesson content coming soon
+Test lesson
+```
+
+Each lesson should have:
+
+- title
+- description
+- learning objectives
+- content
+- quiz
+- tool connection where appropriate
+- action where appropriate
+
+Content should be educational and practical.
+
+---
+
+# 47. TESTING
+
+Use the existing Vitest/testing conventions.
+
+Test:
+
+### Backend
+
+- course retrieval
+- lesson retrieval
+- authorization
+- progress
+- completion
+- quiz scoring
+- action creation
+- action completion
+- recommendations
+- financial score calculation
+- idempotency
+- localization
+- admin authorization
+
+### Frontend
+
+- course rendering
+- lesson rendering
+- quiz interaction
+- progress display
+- tool embedding
+- action completion
+- mobile layout
+- loading states
+- error states
+
+### Integration
+
+Test:
+
+```text
+Lesson
+ ↓
+Tool
+ ↓
+Financial Data
+ ↓
+Action
+ ↓
+Progress
+ ↓
+Recommendation
+```
+
+---
+
+# 48. ERROR HANDLING
+
+Every page must handle:
+
+```text
+Loading
+Empty
+Error
+Unauthorized
+Not Found
+Offline/Network Failure
+```
+
+Example:
+
+```text
+We couldn't load this lesson.
+
+[Try Again]
+```
+
+Do not expose internal stack traces.
+
+---
+
+# 49. API RESPONSE FORMAT
+
+Follow the existing API response conventions.
+
+If no convention exists, use:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "meta": {}
+}
+```
+
+Errors:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "LESSON_NOT_FOUND",
+    "message": "Lesson not found"
+  }
+}
+```
+
+Do not expose sensitive internal information.
+
+---
+
+# 50. TYPESCRIPT REQUIREMENTS
+
+Use strict TypeScript.
+
+Requirements:
+
+```text
+strict: true
+```
+
+No:
+
+```typescript
+any
+```
+
+unless absolutely unavoidable and explicitly justified.
+
+Use:
+
+- interfaces
+- discriminated unions
+- Zod schemas
+- typed API responses
+- typed domain objects
+
+---
+
+# 51. ARCHITECTURE REQUIREMENTS
+
+Respect the existing project architecture.
+
+Do not rewrite unrelated modules.
+
+Do not introduce a new framework unnecessarily.
+
+Reuse:
+
+- existing authentication
+- existing user model
+- existing financial models
+- existing API conventions
+- existing design system
+- existing logging
+- existing error handling
+- existing database patterns
+
+Before implementation:
+
+1. Inspect the repository.
+2. Identify existing architecture.
+3. Identify existing financial tools.
+4. Identify existing financial profile models.
+5. Identify existing AI module.
+6. Identify existing navigation.
+7. Identify existing admin system.
+8. Integrate rather than duplicate.
+
+---
+
+# 52. IMPLEMENTATION PHASES
+
+Implement in phases.
+
+## Phase 1 — Architecture
+
+- inspect repository
+- identify integration points
+- design database
+- create Prisma schema
+- create migration
+- create domain types
+
+## Phase 2 — Course Backend
+
+- courses
+- modules
+- lessons
+- blocks
+- progress
+- quizzes
+- actions
+- missions
+
+## Phase 3 — Course Frontend
+
+- Journey dashboard
+- course listing
+- course details
+- lesson page
+- quiz
+- progress
+- missions
+
+## Phase 4 — Financial Integration
+
+- Financial Freedom Score
+- recommendations
+- existing tools
+- user financial profile
+- action generation
+
+## Phase 5 — AI
+
+- lesson-aware AI
+- financial-context-aware AI
+- explain lesson
+- answer questions
+- recommend next step
+
+## Phase 6 — Admin
+
+- content management
+- lesson management
+- quizzes
+- publishing
+- analytics
+
+## Phase 7 — Testing
+
+- unit tests
+- integration tests
+- frontend tests
+- security testing
+
+## Phase 8 — Production
+
+- migration
+- seed
+- monitoring
+- analytics
+- documentation
+
+---
+
+# 53. DEFINITION OF DONE
+
+The implementation is complete only when:
+
+### User can:
+
+- open Financial Freedom Journey
+- see recommended learning path
+- browse Foundation/Growth/Freedom
+- open a lesson
+- complete lesson content
+- answer quiz
+- use an integrated financial tool
+- create a financial action
+- complete an action
+- track progress
+- see Financial Freedom Score
+- receive personalized recommendations
+- interact with AI
+- see financial improvement
+
+### Admin can:
+
+- create/edit courses
+- manage modules
+- manage lessons
+- manage blocks
+- manage quizzes
+- attach tools
+- create actions
+- publish/unpublish content
+- see analytics
+
+### Technical:
+
+- strict TypeScript
+- validated APIs
+- authorization
+- tests
+- migrations
+- seed data
+- no duplicate financial logic
+- no fabricated financial data
+- responsive UI
+- accessible UI
+- production-ready error handling
+
+---
+
+# 54. IMPORTANT CURSOR INSTRUCTIONS
+
+Before writing code:
+
+1. Inspect the entire repository structure.
+2. Read README and architecture documentation.
+3. Identify existing frontend/backend/database conventions.
+4. Identify existing financial modules and tools.
+5. Identify existing authentication and authorization.
+6. Identify existing AI implementation.
+7. Identify existing design system/components.
+8. Identify existing navigation.
+9. Identify existing admin architecture.
+10. Produce an implementation plan.
+
+Do NOT immediately start modifying files.
+
+First report:
+
+```text
+ARCHITECTURE FINDINGS
+INTEGRATION POINTS
+FILES TO MODIFY
+FILES TO CREATE
+DATABASE CHANGES
+API CHANGES
+FRONTEND CHANGES
+RISKS
+IMPLEMENTATION PLAN
+```
+
+Then implement the feature phase-by-phase.
+
+Do not rewrite unrelated code.
+
+Do not duplicate existing functionality.
+
+Do not invent APIs or existing modules.
+
+If an existing module already provides a capability, reuse it.
+
+If an assumption is necessary, explicitly document it before implementation.
+
+---
+
+# 55. FINAL PRODUCT PRINCIPLE
+
+The most important requirement:
+
+> **Finance Freedom should not teach users about money and then leave them alone.**
+
+Every important lesson should answer:
+
+```text
+What did I learn?
+        ↓
+What does this mean for MY finances?
+        ↓
+What should I do?
+        ↓
+Which Finance Freedom tool can help?
+        ↓
+What action should I take?
+        ↓
+Did my financial position improve?
+```
+
+The ultimate objective is not:
+
+> "Complete the course."
+
+The ultimate objective is:
+
+> **"Become financially stronger."**
+
+The product should therefore optimize for:
+
+```text
+Knowledge
+   +
+Understanding
+   +
+Action
+   +
+Financial Improvement
+   =
+Financial Freedom
+```
+
+Build the feature as a core part of the Finance Freedom product, not as an independent LMS.
