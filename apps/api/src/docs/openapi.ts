@@ -569,6 +569,16 @@ export const openApiDocument = {
                 exclusiveMinimum: 0,
                 description: "Optional EMI. When omitted, EMI is computed from amount, rate, and tenure.",
               },
+              prepaymentAmount: {
+                type: "number",
+                minimum: 0,
+                description: "Optional one-time prepayment applied immediately before the next month's interest.",
+              },
+              increasedMonthlyPayment: {
+                type: "number",
+                minimum: 0,
+                description: "Optional higher EMI starting with the next instalment. Must exceed the current or computed EMI.",
+              },
             },
           },
           {

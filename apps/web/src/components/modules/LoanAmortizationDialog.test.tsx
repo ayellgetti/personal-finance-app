@@ -99,4 +99,31 @@ describe("LoanAmortizationDialog", () => {
 
     expect(await screen.findByText("Session expired")).toBeInTheDocument();
   });
+
+  it("previews combined early-closure assumptions without updating the loan", async () => {
+    render(<LoanAmortizationDialog loan={loan} currency="₹" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /View amortization/ }));
+    fireEvent.change(await screen.findByLabelText("One-time prepayment"), {
+      target: { value: "500000" },
+    });
+    fireEvent.change(screen.getByLabelText("New higher monthly EMI"), {
+      target: { value: "75000" },
+    });
+
+    await waitFor(() =>
+      expect(previewCalculator).toHaveBeenCalledWith({
+        type: "loan",
+        principal: 6_790_000,
+        annualRatePct: 7.35,
+        months: 180,
+        monthlyPayment: 62_367,
+        prepaymentAmount: 500_000,
+        increasedMonthlyPayment: 75_000,
+      }),
+    );
+    expect(
+      screen.getByText(/This simulation does not change your saved loan/),
+    ).toBeInTheDocument();
+  });
 });

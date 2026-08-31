@@ -49,6 +49,8 @@ export type LoanInput = {
   annualRatePct: number;
   months: number;
   monthlyPayment?: number;
+  prepaymentAmount?: number;
+  increasedMonthlyPayment?: number;
 };
 
 export type FutureInput = GrowthInput & {
@@ -364,13 +366,55 @@ function computeLoan(input: LoanInput): CalculatorResult {
     input.annualRatePct,
     input.months,
   );
-  const monthlyPayment = input.monthlyPayment ?? scheduledMonthlyPayment;
-  const amortized = amortizeLoan(input.principal, input.annualRatePct, monthlyPayment);
+  const baselineMonthlyPayment = input.monthlyPayment ?? scheduledMonthlyPayment;
+  const baseline = amortizeLoan(
+    input.principal,
+    input.annualRatePct,
+    baselineMonthlyPayment,
+  );
+  const prepaymentAmount = input.prepaymentAmount ?? 0;
+  if (prepaymentAmount > input.principal) {
+    throw new Error("Prepayment amount cannot exceed the outstanding principal");
+  }
+  const increasedMonthlyPayment = input.increasedMonthlyPayment ?? 0;
+  const monthlyPayment =
+    increasedMonthlyPayment > 0
+      ? increasedMonthlyPayment
+      : baselineMonthlyPayment;
+  if (
+    increasedMonthlyPayment > 0 &&
+    increasedMonthlyPayment <= baselineMonthlyPayment
+  ) {
+    throw new Error("New monthly EMI must be greater than the current EMI");
+  }
+  const revisedPrincipal = input.principal - prepaymentAmount;
+  const amortized = amortizeLoan(
+    revisedPrincipal,
+    input.annualRatePct,
+    monthlyPayment,
+  );
+  const totalPayment = prepaymentAmount + amortized.totalPayment;
+  const interestSaved = Math.max(
+    0,
+    baseline.totalInterest - amortized.totalInterest,
+  );
+  const monthsSaved = Math.max(
+    0,
+    baseline.payoffMonths - amortized.payoffMonths,
+  );
   const notes = [
     "Assumes a fixed interest rate and equal monthly instalments.",
   ];
   if (input.monthlyPayment !== undefined) {
-    notes.push("Custom EMI is used instead of the tenure-based instalment.");
+    notes.push("Current EMI is used instead of the tenure-based instalment.");
+  }
+  if (prepaymentAmount > 0) {
+    notes.push(
+      "The one-time prepayment is applied immediately before the next month's interest.",
+    );
+  }
+  if (increasedMonthlyPayment > 0) {
+    notes.push("The higher EMI starts with the next monthly instalment.");
   }
 
   return {
@@ -378,10 +422,18 @@ function computeLoan(input: LoanInput): CalculatorResult {
     values: {
       monthlyPayment: round(monthlyPayment),
       scheduledMonthlyPayment: round(scheduledMonthlyPayment),
-      totalPayment: round(amortized.totalPayment),
+      totalPayment: round(totalPayment),
       totalInterest: round(amortized.totalInterest),
       months: input.months,
       payoffMonths: amortized.payoffMonths,
+      baselineMonthlyPayment: round(baselineMonthlyPayment),
+      baselineTotalPayment: round(baseline.totalPayment),
+      baselineTotalInterest: round(baseline.totalInterest),
+      baselinePayoffMonths: baseline.payoffMonths,
+      prepaymentAmount: round(prepaymentAmount),
+      paymentIncrease: round(monthlyPayment - baselineMonthlyPayment),
+      interestSaved: round(interestSaved),
+      monthsSaved,
     },
     schedule: amortized.yearly,
     monthlySchedule: amortized.monthly,

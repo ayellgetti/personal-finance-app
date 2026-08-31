@@ -120,6 +120,8 @@ type Draft = {
   annualStepUpPct: number;
   months: number;
   monthlyPayment: number;
+  prepaymentAmount: number;
+  increasedMonthlyPayment: number;
   targetAmount: number;
   method: DepreciationMethod;
   cost: number;
@@ -153,6 +155,8 @@ const DEFAULT_DRAFT: Draft = {
   annualStepUpPct: 10,
   months: 60,
   monthlyPayment: 20_000,
+  prepaymentAmount: 0,
+  increasedMonthlyPayment: 0,
   targetAmount: 1_000_000,
   method: "straight_line",
   cost: 500_000,
@@ -187,6 +191,8 @@ function initialDraft(type: CalculatorType): Draft {
           months: 240,
           years: 20,
           monthlyPayment: 0,
+          prepaymentAmount: 0,
+          increasedMonthlyPayment: 0,
         }
       : {}),
   };
@@ -242,6 +248,8 @@ function buildInput(draft: Draft): CalculatorInput {
         annualRatePct: draft.annualRatePct,
         months: Math.round(draft.months),
         ...(draft.monthlyPayment > 0 ? { monthlyPayment: draft.monthlyPayment } : {}),
+        prepaymentAmount: draft.prepaymentAmount,
+        increasedMonthlyPayment: draft.increasedMonthlyPayment,
       };
     case "future":
       return {
@@ -313,6 +321,8 @@ function draftFromScenario(scenario: CalculatorScenario): Draft {
         ...draft,
         ...input,
         monthlyPayment: input.monthlyPayment ?? 0,
+        prepaymentAmount: input.prepaymentAmount ?? 0,
+        increasedMonthlyPayment: input.increasedMonthlyPayment ?? 0,
         months: input.months ?? draft.months,
       };
     case "future":
@@ -344,6 +354,12 @@ const MONEY_KEYS = new Set([
   "balance",
   "monthlyPayment",
   "scheduledMonthlyPayment",
+  "baselineMonthlyPayment",
+  "baselineTotalPayment",
+  "baselineTotalInterest",
+  "prepaymentAmount",
+  "paymentIncrease",
+  "interestSaved",
   "totalPayment",
   "totalInterest",
   "targetAmount",
@@ -459,6 +475,12 @@ export function CalculatorsModule({
             ...(draft.monthlyPayment > 0
               ? { monthlyPayment: draft.monthlyPayment }
               : {}),
+            ...(draft.prepaymentAmount > 0
+              ? { prepaymentAmount: draft.prepaymentAmount }
+              : {}),
+            ...(draft.increasedMonthlyPayment > 0
+              ? { increasedMonthlyPayment: draft.increasedMonthlyPayment }
+              : {}),
           });
           if (!cancelled) {
             setResult(next);
@@ -481,6 +503,8 @@ export function CalculatorsModule({
     draft.annualRatePct,
     draft.months,
     draft.monthlyPayment,
+    draft.prepaymentAmount,
+    draft.increasedMonthlyPayment,
   ]);
 
   async function refreshScenarios() {
@@ -1261,6 +1285,13 @@ const MONTH_NAMES = [
   "Dec",
 ];
 
+function formatLoanMonths(value: number) {
+  const months = Math.max(0, Math.round(value));
+  const years = Math.floor(months / 12);
+  const remainder = months % 12;
+  return `${years ? `${years}y ` : ""}${remainder}m`;
+}
+
 function LoanCalculatorFields({
   draft,
   setDraft,
@@ -1273,6 +1304,11 @@ function LoanCalculatorFields({
   );
   const tenureValue = tenureUnit === "years" ? draft.months / 12 : draft.months;
   const tenureMax = tenureUnit === "years" ? 30 : 360;
+  const increasedEmiMax = Math.max(
+    1_00_000,
+    draft.monthlyPayment * 5,
+    draft.increasedMonthlyPayment,
+  );
 
   function setTenure(value: number) {
     const months =
@@ -1383,6 +1419,50 @@ function LoanCalculatorFields({
           unless you enter one.
         </p>
       </div>
+      <div className="space-y-5 rounded-xl border border-border bg-muted/20 p-4">
+        <div>
+          <p className="text-sm font-semibold">Close the loan earlier</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Simulate an immediate one-time prepayment, a higher EMI from next
+            month, or both together.
+          </p>
+        </div>
+        <SliderField
+          id="loan-prepayment"
+          label="One-time prepayment"
+          value={draft.prepaymentAmount}
+          min={0}
+          max={Math.max(10_000, draft.principal)}
+          step={1_000}
+          suffix="₹"
+          minLabel="₹0"
+          maxLabel={formatCurrency(draft.principal, "₹", true)}
+          onChange={(value) =>
+            setDraft((current) => ({ ...current, prepaymentAmount: value }))
+          }
+        />
+        <SliderField
+          id="loan-increased-emi"
+          label="New higher monthly EMI"
+          value={draft.increasedMonthlyPayment}
+          min={0}
+          max={increasedEmiMax}
+          step={500}
+          suffix="₹"
+          minLabel="No change"
+          maxLabel={formatCurrency(increasedEmiMax, "₹", true)}
+          onChange={(value) =>
+            setDraft((current) => ({
+              ...current,
+              increasedMonthlyPayment: value,
+            }))
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          The new EMI must be greater than the current EMI calculated above.
+          These values are what-if assumptions only.
+        </p>
+      </div>
     </div>
   );
 }
@@ -1478,6 +1558,9 @@ export function LoanResultPanel({
   const emi = result.values.monthlyPayment ?? 0;
   const totalInterest = result.values.totalInterest ?? 0;
   const totalPayment = result.values.totalPayment ?? 0;
+  const hasEarlyClosureStrategy =
+    (result.values.prepaymentAmount ?? 0) > 0 ||
+    (result.values.paymentIncrease ?? 0) > 0;
   const pieData = [
     { name: "Principal loan amount", value: principal },
     { name: "Total interest", value: totalInterest },
@@ -1519,6 +1602,35 @@ export function LoanResultPanel({
     <Panel title={showPreview ? "Loan summary" : "Amortization schedule"}>
       {showPreview && (
         <>
+          {hasEarlyClosureStrategy && (
+            <div className="mb-6">
+              <p className="mb-3 text-sm font-semibold">
+                Early closure comparison
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <LoanComparisonStat
+                  label="Current payoff"
+                  value={formatLoanMonths(
+                    result.values.baselinePayoffMonths ?? 0,
+                  )}
+                />
+                <LoanComparisonStat
+                  label="Revised payoff"
+                  value={formatLoanMonths(result.values.payoffMonths ?? 0)}
+                />
+                <LoanComparisonStat
+                  label="Tenure saved"
+                  value={formatLoanMonths(result.values.monthsSaved ?? 0)}
+                  positive
+                />
+                <LoanComparisonStat
+                  label="Interest saved"
+                  value={formatCurrency(result.values.interestSaved ?? 0)}
+                  positive
+                />
+              </div>
+            </div>
+          )}
           <div className="grid gap-6 lg:grid-cols-2">
         <div className="divide-y divide-dashed divide-border">
           <LoanStat
@@ -1731,6 +1843,29 @@ function LoanStat({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function LoanComparisonStat({
+  label,
+  value,
+  positive = false,
+}: {
+  label: string;
+  value: string;
+  positive?: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p
+        className={`mt-1 font-display text-xl font-bold ${
+          positive ? "text-primary" : ""
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { ExpenseQuickAdd } from "./ExpenseQuickAdd";
 import { StatCard } from "@/components/StatCard";
 import { Receipt, RefreshCw, Coins } from "lucide-react";
 import { QuickAddDialog } from "./QuickTypePicker";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 function expenseFields(expense: Expense, currency: string): FieldDef[] {
   return [
@@ -52,14 +52,25 @@ export function ExpenseModule() {
         <Panel className="lg:col-span-2" title="Expense Breakdown">
           {byCat.length ? (
             <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={byCat} layout="vertical" margin={{ left: 20 }}>
-                <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => formatCurrency(v, cur)} cursor={{ fill: "hsl(var(--muted))" }} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {byCat.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Bar>
-              </BarChart>
+              <PieChart>
+                <Pie
+                  data={byCat}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={55}
+                  outerRadius={95}
+                  paddingAngle={2}
+                >
+                  {byCat.map((_, i) => (
+                    <Cell key={byCat[i]?.name ?? i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(v: number) => formatCurrency(v, cur)}
+                />
+                <Legend wrapperStyle={{ fontSize: "0.7rem" }} />
+              </PieChart>
             </ResponsiveContainer>
           ) : <EmptyState message="No expenses yet" />}
         </Panel>

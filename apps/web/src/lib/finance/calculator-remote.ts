@@ -39,6 +39,8 @@ export type CalculatorInput =
       annualRatePct: number;
       months: number;
       monthlyPayment?: number;
+      prepaymentAmount?: number;
+      increasedMonthlyPayment?: number;
     }
   | (GrowthInput & { type: "future"; targetAmount: number })
   | {

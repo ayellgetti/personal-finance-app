@@ -51,8 +51,22 @@ const loanSchema = z
     annualRatePct: annualRate,
     months: z.number().int().positive().max(1_200),
     monthlyPayment: amount.optional(),
+    prepaymentAmount: nonNegativeAmount.optional(),
+    increasedMonthlyPayment: nonNegativeAmount.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      value.prepaymentAmount !== undefined &&
+      value.prepaymentAmount > value.principal
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["prepaymentAmount"],
+        message: "Prepayment amount cannot exceed the outstanding principal",
+      });
+    }
+  });
 
 const futureSchema = z
   .object({
@@ -175,7 +189,7 @@ export const createCalculatorScenarioBodySchema = z.discriminatedUnion("type", [
   sipSchema.extend({ title: title.optional() }),
   stepUpSipSchema.extend({ title: title.optional() }),
   emiSchema.extend({ title: title.optional() }),
-  loanSchema.extend({ title: title.optional() }),
+  loanSchema.safeExtend({ title: title.optional() }),
   futureSchema.extend({ title: title.optional() }),
   depreciationSchema.safeExtend({ title: title.optional() }),
   currencySchema.extend({ title: title.optional() }),
@@ -196,6 +210,8 @@ export const updateCalculatorScenarioBodySchema = z
     annualStepUpPct: annualRate.optional(),
     months: z.number().int().positive().max(1_200).optional(),
     monthlyPayment: amount.optional(),
+    prepaymentAmount: nonNegativeAmount.optional(),
+    increasedMonthlyPayment: nonNegativeAmount.optional(),
     targetAmount: amount.optional(),
     method: z.enum(["straight_line", "written_down_value"]).optional(),
     cost: amount.optional(),

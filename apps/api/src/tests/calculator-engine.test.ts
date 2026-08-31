@@ -115,6 +115,71 @@ test("loan payoff rejects a payment that does not cover monthly interest", () =>
   );
 });
 
+test("loan prepayment reduces tenure and interest from the current plan", () => {
+  const result = computeCalculator({
+    type: "loan",
+    principal: 1_000_000,
+    annualRatePct: 9,
+    months: 120,
+    prepaymentAmount: 200_000,
+  });
+
+  assert.equal(result.values.prepaymentAmount, 200_000);
+  assert.ok((result.values.payoffMonths ?? 0) < 120);
+  assert.ok((result.values.monthsSaved ?? 0) > 0);
+  assert.ok((result.values.interestSaved ?? 0) > 0);
+  assert.ok(
+    (result.values.totalInterest ?? 0) <
+      (result.values.baselineTotalInterest ?? 0),
+  );
+});
+
+test("loan supports a higher EMI and immediate prepayment together", () => {
+  const result = computeCalculator({
+    type: "loan",
+    principal: 1_000_000,
+    annualRatePct: 9,
+    months: 120,
+    monthlyPayment: 12_668,
+    prepaymentAmount: 100_000,
+    increasedMonthlyPayment: 18_000,
+  });
+
+  assert.equal(result.values.baselineMonthlyPayment, 12_668);
+  assert.equal(result.values.monthlyPayment, 18_000);
+  assert.equal(result.values.paymentIncrease, 5_332);
+  assert.ok((result.values.payoffMonths ?? 0) < 120);
+  assert.ok((result.values.interestSaved ?? 0) > 0);
+  assert.ok(
+    result.notes.some((note) => note.includes("higher EMI starts")),
+  );
+});
+
+test("loan rejects invalid early-closure assumptions", () => {
+  assert.throws(
+    () =>
+      computeCalculator({
+        type: "loan",
+        principal: 100_000,
+        annualRatePct: 12,
+        months: 12,
+        monthlyPayment: 10_000,
+        increasedMonthlyPayment: 9_000,
+      }),
+    /greater than the current EMI/,
+  );
+  assert.equal(
+    calculatorInputSchema.safeParse({
+      type: "loan",
+      principal: 100_000,
+      annualRatePct: 12,
+      months: 12,
+      prepaymentAmount: 100_001,
+    }).success,
+    false,
+  );
+});
+
 test("future target computes the required annuity-due SIP", () => {
   const result = computeCalculator({
     type: "future",

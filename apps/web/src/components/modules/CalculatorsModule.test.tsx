@@ -164,6 +164,36 @@ describe("CalculatorsModule", () => {
     );
   });
 
+  it("combines a one-time prepayment with a higher EMI", async () => {
+    render(<CalculatorsModule initialType="loan" />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /Recent saved calculations/ }),
+    );
+    await screen.findByText("No saved calculations");
+
+    fireEvent.change(screen.getByLabelText("Monthly EMI (optional)"), {
+      target: { value: "45000" },
+    });
+    fireEvent.change(screen.getByLabelText("One-time prepayment"), {
+      target: { value: "500000" },
+    });
+    fireEvent.change(screen.getByLabelText("New higher monthly EMI"), {
+      target: { value: "60000" },
+    });
+
+    await waitFor(() =>
+      expect(previewCalculator).toHaveBeenCalledWith({
+        type: "loan",
+        principal: 5_000_000,
+        annualRatePct: 9,
+        months: 240,
+        monthlyPayment: 45_000,
+        prepaymentAmount: 500_000,
+        increasedMonthlyPayment: 60_000,
+      }),
+    );
+  });
+
   it("previews an INR currency conversion with a manual rate", async () => {
     render(<CalculatorsModule initialType="currency" />);
     fireEvent.click(
