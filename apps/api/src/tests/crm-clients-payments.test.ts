@@ -68,11 +68,13 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
   const payment = await paymentService.create("user-1", {
     clientId: client.id,
     amount: 1500,
-    method: "upi",
+    mode: "UPI",
     status: "paid",
     paidAt: new Date("2026-09-02T00:00:00.000Z"),
   });
   assert.equal(payment.amount, 1500);
+  assert.equal(payment.type, "INCOME");
+  assert.equal(payment.mode, "UPI");
   const listed = await paymentService.list({
     clientId: client.id,
     status: "paid",
@@ -87,7 +89,7 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
     createPaymentBodySchema.safeParse({
       clientId: "00000000-0000-4000-8000-000000000001",
       amount: 0,
-      method: "upi",
+      mode: "UPI",
     }).success,
     false,
   );
@@ -95,7 +97,15 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
     createPaymentBodySchema.safeParse({
       clientId: "00000000-0000-4000-8000-000000000001",
       amount: -1,
-      method: "upi",
+      mode: "UPI",
+    }).success,
+    false,
+  );
+  assert.equal(
+    createPaymentBodySchema.safeParse({
+      clientId: "00000000-0000-4000-8000-000000000001",
+      amount: 10,
+      mode: "WALLET",
     }).success,
     false,
   );

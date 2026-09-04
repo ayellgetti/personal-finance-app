@@ -53,12 +53,8 @@ export function DashboardModule() {
                 <span className="font-medium">{snapshot.enquiries.open}</span>
               </p>
               <p className="flex justify-between">
-                <span>Won</span>
-                <span className="font-medium">{snapshot.enquiries.won}</span>
-              </p>
-              <p className="flex justify-between">
-                <span>Lost</span>
-                <span className="font-medium">{snapshot.enquiries.lost}</span>
+                <span>Closed</span>
+                <span className="font-medium">{snapshot.enquiries.closed}</span>
               </p>
             </CardContent>
           </Card>

@@ -1,10 +1,8 @@
 import { Prisma } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import {
-  crmContactModel,
   crmEnquiryModel,
   crmFollowUpModel,
-  type CrmContactModel,
   type CrmEnquiryModel,
   type CrmFollowUpModel,
 } from "../../../models/index";
@@ -19,14 +17,13 @@ import type {
 export class FollowUpService {
   constructor(
     private readonly model: CrmFollowUpModel = crmFollowUpModel,
-    private readonly contacts: CrmContactModel = crmContactModel,
     private readonly enquiries: CrmEnquiryModel = crmEnquiryModel,
   ) {}
 
   list(query: ListFollowUpsQuery) {
     const where: Prisma.CrmFollowUpWhereInput = { isActive: 1 };
-    if (query.status) {
-      where.status = query.status;
+    if (query.stage) {
+      where.stage = query.stage;
     }
     if (query.enquiryId) {
       where.enquiryId = query.enquiryId;
@@ -50,16 +47,12 @@ export class FollowUpService {
   }
 
   async create(actorId: string, input: CreateFollowUpBody) {
-    await this.requireActiveContact(input.contactId);
-    if (input.enquiryId) {
-      await this.requireActiveEnquiry(input.enquiryId);
-    }
+    const enquiry = await this.requireActiveEnquiry(input.enquiryId);
     return this.model.create({
-      contactId: input.contactId,
-      enquiryId: input.enquiryId ?? null,
+      enquiryId: enquiry.id,
+      contactId: enquiry.contactId,
+      stage: input.stage,
       dueAt: input.dueAt,
-      status: input.status ?? "pending",
-      assignedToId: input.assignedToId ?? null,
       notes: input.notes ?? null,
       ...actorCreate(actorId),
     });
@@ -67,9 +60,6 @@ export class FollowUpService {
 
   async update(actorId: string, id: string, input: UpdateFollowUpBody) {
     await this.getById(id);
-    if (input.contactId) {
-      await this.requireActiveContact(input.contactId);
-    }
     if (input.enquiryId) {
       await this.requireActiveEnquiry(input.enquiryId);
     }
@@ -88,14 +78,6 @@ export class FollowUpService {
     return { id: input.id, removed: true };
   }
 
-  private async requireActiveContact(contactId: string) {
-    const contact = await this.contacts.readOne({ id: contactId });
-    if (!contact || contact.isActive !== 1) {
-      throw new HttpError(404, "Contact not found");
-    }
-    return contact;
-  }
-
   private async requireActiveEnquiry(enquiryId: string) {
     const enquiry = await this.enquiries.readOne({ id: enquiryId });
     if (!enquiry || enquiry.isActive !== 1) {
@@ -103,6 +85,8 @@ export class FollowUpService {
     }
     return enquiry;
   }
+
 }
+
 
 export const followUpService = new FollowUpService();

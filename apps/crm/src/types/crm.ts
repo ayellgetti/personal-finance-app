@@ -75,14 +75,28 @@ export type CrmViewId =
 export const CRM_CONTACT_TYPES = ["lead", "client", "vendor", "employee"] as const;
 export type CrmContactType = (typeof CRM_CONTACT_TYPES)[number];
 
-export const CRM_ENQUIRY_STATUSES = ["new", "in_progress", "won", "lost", "on_hold"] as const;
+export const CRM_ENQUIRY_STATUSES = [
+  "new",
+  "contacted",
+  "qualified",
+  "discussion",
+  "quotation_sent",
+  "negotiation",
+  "schedule_meeting",
+  "closed",
+] as const;
 export type CrmEnquiryStatus = (typeof CRM_ENQUIRY_STATUSES)[number];
 
-export const CRM_FOLLOW_UP_STATUSES = ["pending", "completed", "cancelled"] as const;
-export type CrmFollowUpStatus = (typeof CRM_FOLLOW_UP_STATUSES)[number];
+// Follow-ups are activity logs for enquiries; their "stage" mirrors the enquiry stage.
 
 export const CRM_CLIENT_STATUSES = ["active", "inactive"] as const;
 export type CrmClientStatus = (typeof CRM_CLIENT_STATUSES)[number];
+
+export const CRM_PAYMENT_TYPES = ["INCOME", "EXPENSE"] as const;
+export type CrmPaymentType = (typeof CRM_PAYMENT_TYPES)[number];
+
+export const CRM_PAYMENT_MODES = ["CASH", "UPI", "CARD", "BANK_TRANSFER", "CHEQUE"] as const;
+export type CrmPaymentMode = (typeof CRM_PAYMENT_MODES)[number];
 
 export const CRM_PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export type CrmPaymentStatus = (typeof CRM_PAYMENT_STATUSES)[number];
@@ -106,6 +120,7 @@ export type CrmEnquiry = {
   title: string;
   source: string;
   status: CrmEnquiryStatus;
+  closedReason: string | null;
   expectedValue: number | null;
   assignedToId: string | null;
   notes: string | null;
@@ -113,11 +128,10 @@ export type CrmEnquiry = {
 
 export type CrmFollowUp = {
   id: string;
-  enquiryId: string | null;
+  enquiryId: string;
   contactId: string;
+  stage: CrmEnquiryStatus;
   dueAt: string;
-  status: CrmFollowUpStatus;
-  assignedToId: string | null;
   notes: string | null;
 };
 
@@ -136,7 +150,8 @@ export type CrmPayment = {
   enquiryId: string | null;
   amount: number;
   currency: string;
-  method: string;
+  type: CrmPaymentType;
+  mode: CrmPaymentMode;
   status: CrmPaymentStatus;
   paidAt: string | null;
   reference: string | null;
@@ -178,8 +193,7 @@ export type CrmDashboard = {
   contactsByType: Record<CrmContactType, number>;
   enquiries: {
     open: number;
-    won: number;
-    lost: number;
+    closed: number;
   };
   overdueFollowUps: number;
   paymentsPaidThisMonth: number;
@@ -245,17 +259,16 @@ export type CreateEnquiryInput = {
   title: string;
   source: string;
   status?: CrmEnquiryStatus;
+  closedReason?: string | null;
   expectedValue?: number | null;
   assignedToId?: string | null;
   notes?: string | null;
 };
 
 export type CreateFollowUpInput = {
-  contactId: string;
-  enquiryId?: string | null;
+  enquiryId: string;
+  stage: CrmEnquiryStatus;
   dueAt: string;
-  status?: CrmFollowUpStatus;
-  assignedToId?: string | null;
   notes?: string | null;
 };
 
@@ -272,7 +285,8 @@ export type CreatePaymentInput = {
   enquiryId?: string | null;
   amount: number;
   currency?: string;
-  method: string;
+  type?: CrmPaymentType;
+  mode: CrmPaymentMode;
   status?: CrmPaymentStatus;
   paidAt?: string | null;
   reference?: string | null;

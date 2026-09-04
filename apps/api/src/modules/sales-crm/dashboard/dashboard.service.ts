@@ -1,4 +1,4 @@
-import { CRM_CONTACT_TYPES, CRM_TASK_STATUSES } from "../crm.request";
+import { CRM_CONTACT_TYPES, CRM_TASK_STATUSES, OPEN_ENQUIRY_STATUSES } from "../crm.request";
 import {
   crmContactModel,
   crmEnquiryModel,
@@ -12,14 +12,11 @@ import {
   type CrmTaskModel,
 } from "../../../models/index";
 
-const OPEN_ENQUIRY_STATUSES = ["new", "in_progress", "on_hold"] as const;
-
 export type DashboardSnapshot = {
   contactsByType: Record<(typeof CRM_CONTACT_TYPES)[number], number>;
   enquiries: {
     open: number;
-    won: number;
-    lost: number;
+    closed: number;
   };
   overdueFollowUps: number;
   paymentsPaidThisMonth: number;
@@ -49,8 +46,7 @@ export class DashboardService {
     const [
       contactCounts,
       openEnquiries,
-      wonEnquiries,
-      lostEnquiries,
+      closedEnquiries,
       overdueFollowUps,
       paymentsPaidThisMonth,
       taskCounts,
@@ -65,11 +61,9 @@ export class DashboardService {
         isActive: 1,
         status: { in: [...OPEN_ENQUIRY_STATUSES] },
       }),
-      this.enquiries.count({ isActive: 1, status: "won" }),
-      this.enquiries.count({ isActive: 1, status: "lost" }),
+      this.enquiries.count({ isActive: 1, status: "closed" }),
       this.followUps.count({
         isActive: 1,
-        status: "pending",
         dueAt: { lt: now },
       }),
       this.payments.sumAmount({
@@ -96,8 +90,7 @@ export class DashboardService {
       contactsByType,
       enquiries: {
         open: openEnquiries,
-        won: wonEnquiries,
-        lost: lostEnquiries,
+        closed: closedEnquiries,
       },
       overdueFollowUps,
       paymentsPaidThisMonth,

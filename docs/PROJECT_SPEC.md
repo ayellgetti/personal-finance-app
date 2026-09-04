@@ -226,7 +226,7 @@ This is **not** a greenfield “User + Role + Permission only” scaffold. Finan
 
 **Finance:** `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `StatementImport`, `StatementLine`, `TaxScenario`, `CalculatorScenario`
 
-**CRM (Track D):** `Role`, `Permission`, `RolePermission`, `UserRole`, `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent`. Do not add `tenantId`.
+**CRM (Track D):** `Role`, `Permission`, `RolePermission`, `UserRole`, `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent`. Do not add `tenantId`. `CrmEnquiry.status` is the eight-stage sales pipeline: New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Do not add extra stages. `CrmPayment` uses `PaymentType` (`INCOME` / `EXPENSE`) and `PaymentMode` (`CASH`, `UPI`, `CARD`, `BANK_TRANSFER`, `CHEQUE`) only.
 
 **Unused / stub (do not build UI on these unless the plan says so):** `Contact` (chat-shaped; **not** the CRM party — do not reuse it), conversation tables, `Notification`, `Device`, `Socket`, `TradingView`, `Categories`, `Constant`, generic `Transaction`
 

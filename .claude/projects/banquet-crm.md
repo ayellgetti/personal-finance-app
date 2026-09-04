@@ -24,14 +24,20 @@ Do not assume exact fields or relationships without checking the current schema/
 
 ## Workflow
 
-A typical workflow may include:
-1. enquiry
-2. qualification
-3. follow-up
-4. proposal/package discussion
-5. booking
-6. event preparation
-7. event completion
-8. feedback
+The sales pipeline is these eight enquiry stages only (do not add extras):
+1. New
+2. Contacted
+3. Qualified
+4. Discussion
+5. Quotation Sent
+6. Negotiation
+7. Schedule Meeting / Site Visit
+8. Closed
 
-Actual statuses should come from the current product requirements or database schema.
+## Payments
+
+Use only these enums — do not add extras:
+
+PaymentType: INCOME, EXPENSE
+
+PaymentMode: CASH, UPI, CARD, BANK_TRANSFER, CHEQUE

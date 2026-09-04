@@ -20,21 +20,23 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
   ]);
   const enquiries = fakeCrud("enquiry", [
     { id: "e-1", status: "new", isActive: 1 },
-    { id: "e-2", status: "won", isActive: 1 },
-    { id: "e-3", status: "lost", isActive: 1 },
-    { id: "e-4", status: "on_hold", isActive: 1 },
+    { id: "e-2", status: "closed", isActive: 1 },
+    { id: "e-3", status: "closed", isActive: 1 },
+    { id: "e-4", status: "negotiation", isActive: 1 },
   ]);
   const followUps = fakeCrud("followup", [
     {
       id: "f-1",
-      status: "pending",
-      dueAt: new Date("2026-09-01T00:00:00.000Z"),
+      enquiryId: "e-1",
+      stage: "new",
+      dueAt: new Date("2026-09-01T00:00:00.000Z"), // past → overdue
       isActive: 1,
     },
     {
       id: "f-2",
-      status: "pending",
-      dueAt: new Date("2026-09-20T00:00:00.000Z"),
+      enquiryId: "e-4",
+      stage: "negotiation",
+      dueAt: new Date("2026-09-20T00:00:00.000Z"), // future → not overdue
       isActive: 1,
     },
   ]);
@@ -78,8 +80,7 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
   assert.equal(snapshot.contactsByType.lead, 2);
   assert.equal(snapshot.contactsByType.client, 1);
   assert.equal(snapshot.enquiries.open, 2);
-  assert.equal(snapshot.enquiries.won, 1);
-  assert.equal(snapshot.enquiries.lost, 1);
+  assert.equal(snapshot.enquiries.closed, 2);
   assert.equal(snapshot.overdueFollowUps, 1);
   assert.equal(snapshot.paymentsPaidThisMonth, 100);
   assert.equal(snapshot.tasksByStatus.todo, 1);

@@ -45,7 +45,7 @@ export async function persistEnquiryConversion(input: {
   return prisma.$transaction(async (tx) => {
     const enquiry = await tx.crmEnquiry.update({
       where: { id: input.enquiryId },
-      data: { status: "won", updatedBy: input.actorId },
+      data: { status: "closed", closedReason: "Booked", updatedBy: input.actorId },
     });
     const contact = await tx.crmContact.update({
       where: { id: input.contactId },
@@ -123,6 +123,9 @@ export class EnquiryService {
     if (input.contactId) {
       await this.requireUsableContact(input.contactId);
     }
+    if (input.status === "closed" && !input.closedReason?.trim()) {
+      throw new HttpError(422, "A closed reason is required when closing an enquiry");
+    }
     return this.model.update(
       { id },
       {
@@ -153,7 +156,7 @@ export class EnquiryService {
     const activeClient =
       existingClient && existingClient.isActive === 1 ? existingClient : null;
 
-    if (enquiry.status === "won" && activeClient) {
+    if (enquiry.status === "closed" && activeClient) {
       return { enquiry, contact, client: activeClient };
     }
 

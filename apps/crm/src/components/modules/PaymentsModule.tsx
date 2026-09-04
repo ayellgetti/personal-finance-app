@@ -17,26 +17,32 @@ import {
   RowActions,
 } from "@/components/modules/shared";
 import {
-  PAYMENT_METHODS,
+  PAYMENT_MODE_LABELS,
   PAYMENT_STATUS_LABELS,
+  PAYMENT_TYPE_LABELS,
   formatDateTime,
   formatMoney,
   isoToLocalInput,
   localInputToIso,
+  paymentModeOptions,
   paymentStatusOptions,
+  paymentTypeOptions,
 } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
 import {
   CRM_PERMISSIONS,
   type CreatePaymentInput,
   type CrmPayment,
+  type CrmPaymentMode,
   type CrmPaymentStatus,
+  type CrmPaymentType,
 } from "@/types/crm";
 
 type FormState = {
   clientId: string;
   amount: string;
-  method: string;
+  type: CrmPaymentType;
+  mode: CrmPaymentMode;
   status: CrmPaymentStatus;
   paidAt: string;
   reference: string;
@@ -45,7 +51,8 @@ type FormState = {
 const EMPTY: FormState = {
   clientId: "",
   amount: "",
-  method: "UPI",
+  type: "INCOME",
+  mode: "UPI",
   status: "pending",
   paidAt: "",
   reference: "",
@@ -58,7 +65,6 @@ function validate(form: FormState): Record<string, string> {
   if (!form.amount.trim() || !Number.isFinite(amount) || amount <= 0) {
     errors.amount = "Amount must be greater than 0";
   }
-  if (!form.method.trim()) errors.method = "Method is required";
   return errors;
 }
 
@@ -66,7 +72,8 @@ function toInput(form: FormState): CreatePaymentInput {
   return {
     clientId: form.clientId,
     amount: Number(form.amount),
-    method: form.method.trim(),
+    type: form.type,
+    mode: form.mode,
     status: form.status,
     paidAt: form.paidAt ? localInputToIso(form.paidAt) : null,
     reference: form.reference.trim() || null,
@@ -118,7 +125,8 @@ export function PaymentsModule({
     setForm({
       clientId: payment.clientId,
       amount: String(payment.amount),
-      method: payment.method,
+      type: payment.type,
+      mode: payment.mode,
       status: payment.status,
       paidAt: isoToLocalInput(payment.paidAt),
       reference: payment.reference ?? "",
@@ -186,7 +194,8 @@ export function PaymentsModule({
             <TableRow>
               <TableHead>Client</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Method</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Mode</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Paid at</TableHead>
               <TableHead>Reference</TableHead>
@@ -198,7 +207,8 @@ export function PaymentsModule({
               <TableRow key={payment.id}>
                 <TableCell className="font-medium">{clientName(payment.clientId)}</TableCell>
                 <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
-                <TableCell>{payment.method}</TableCell>
+                <TableCell>{PAYMENT_TYPE_LABELS[payment.type]}</TableCell>
+                <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
                 <TableCell>{PAYMENT_STATUS_LABELS[payment.status]}</TableCell>
                 <TableCell>{formatDateTime(payment.paidAt)}</TableCell>
                 <TableCell>{payment.reference ?? "—"}</TableCell>
@@ -265,17 +275,22 @@ export function PaymentsModule({
                 className="rounded-xl"
               />
             </Field>
-            <Field id="payment-method" label="Method" error={errors.method}>
+            <Field id="payment-type" label="Type">
               <NativeSelect
-                id="payment-method"
-                value={form.method}
-                onChange={(value) => setForm((current) => ({ ...current, method: value }))}
+                id="payment-type"
+                value={form.type}
+                onChange={(value) => setForm((current) => ({ ...current, type: value as CrmPaymentType }))}
               >
-                {PAYMENT_METHODS.map((method) => (
-                  <option key={method} value={method}>
-                    {method}
-                  </option>
-                ))}
+                {paymentTypeOptions()}
+              </NativeSelect>
+            </Field>
+            <Field id="payment-mode" label="Mode">
+              <NativeSelect
+                id="payment-mode"
+                value={form.mode}
+                onChange={(value) => setForm((current) => ({ ...current, mode: value as CrmPaymentMode }))}
+              >
+                {paymentModeOptions()}
               </NativeSelect>
             </Field>
             <Field id="payment-status" label="Status">

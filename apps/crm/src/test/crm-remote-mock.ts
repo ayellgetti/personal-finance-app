@@ -3,6 +3,7 @@ import {
   ALL_CRM_PERMISSIONS,
   type CrmClient,
   type CrmContact,
+  type CrmCalendarItem,
   type CrmEnquiry,
   type CrmMe,
   type CrmPaginated,
@@ -37,7 +38,7 @@ export const adminMe: CrmMe = {
 export const fetchCrmMe = vi.fn(async () => adminMe);
 export const fetchDashboard = vi.fn(async () => ({
   contactsByType: { lead: 0, client: 0, vendor: 0, employee: 0 },
-  enquiries: { open: 0, won: 0, lost: 0 },
+  enquiries: { open: 0, closed: 0 },
   overdueFollowUps: 0,
   paymentsPaidThisMonth: 0,
   tasksByStatus: { todo: 0, in_progress: 0, in_review: 0, done: 0 },
@@ -89,7 +90,7 @@ export const updateTaskStatus = vi.fn(async (id: string, status: CrmTaskStatus):
   enquiryId: null,
 }));
 export const removeTask = vi.fn();
-export const listCalendar = vi.fn(async () => ({ items: [] }));
+export const listCalendar = vi.fn(async (): Promise<{ items: CrmCalendarItem[] }> => ({ items: [] }));
 export const createCalendarEvent = vi.fn();
 export const updateCalendarEvent = vi.fn();
 export const removeCalendarEvent = vi.fn();

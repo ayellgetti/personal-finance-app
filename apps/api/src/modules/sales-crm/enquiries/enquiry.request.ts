@@ -20,6 +20,7 @@ export const createEnquiryBodySchema = z.object({
   title: z.string().trim().min(1).max(160),
   source: z.string().trim().min(1).max(80),
   status: crmEnquiryStatusSchema.optional(),
+  closedReason: z.string().trim().min(1).max(200).nullable().optional(),
   expectedValue: z.number().finite().nonnegative().nullable().optional(),
   assignedToId: z.string().uuid().nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),

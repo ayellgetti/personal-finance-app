@@ -69,6 +69,7 @@ const enquiry: CrmEnquiry = {
   title: "Banquet inquiry",
   source: "Website",
   status: "new",
+  closedReason: null,
   expectedValue: 50000,
   assignedToId: null,
   notes: null,
@@ -194,7 +195,7 @@ describe("CRM modules", () => {
     convertEnquiry.mockImplementation(async () => {
       created.push(client);
       return {
-        enquiry: { ...enquiry, status: "won" as const },
+        enquiry: { ...enquiry, status: "closed" as const },
         contact: { ...contact, type: "client" as const },
         client,
       };

@@ -25,7 +25,16 @@ type FakeEnquiry = {
   contactId: string;
   title: string;
   source: string;
-  status: "new" | "in_progress" | "won" | "lost" | "on_hold";
+  status:
+    | "new"
+    | "contacted"
+    | "qualified"
+    | "discussion"
+    | "quotation_sent"
+    | "negotiation"
+    | "schedule_meeting"
+    | "closed";
+  closedReason: string | null;
   expectedValue: number | null;
   assignedToId: string | null;
   notes: string | null;
@@ -57,7 +66,7 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
     async (input) => {
       const enquiry = await enquiries.model.update(
         { id: input.enquiryId },
-        { status: "won", updatedBy: input.actorId },
+        { status: "closed", closedReason: "Booked", updatedBy: input.actorId },
       );
       const contact = await contacts.model.update(
         { id: input.contactId },
@@ -99,7 +108,7 @@ test("enquiry create, list, update, and soft-delete hide the row", async () => {
   assert.equal(created.status, "new");
   const listed = await service.list({ contactId: "c-1" });
   assert.equal(listed.items.length, 1);
-  await service.update("user-1", created.id, { status: "in_progress" });
+  await service.update("user-1", created.id, { status: "contacted" });
   await service.remove("user-1", { id: created.id });
   assert.equal((await service.list({})).items.length, 0);
   assert.equal(contacts.rows[0]?.type, "lead");
@@ -120,7 +129,28 @@ test("enquiry against a soft-deleted contact is 422", async () => {
   );
 });
 
-test("convert sets won + client type and creates a client; second convert is idempotent", async () => {
+test("closing an enquiry without a reason is 422", async () => {
+  const { service } = setup([
+    { id: "c-1", name: "Ada", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const enquiry = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Banquet",
+    source: "web",
+  });
+  await assert.rejects(
+    () => service.update("user-1", enquiry.id, { status: "closed" }),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
+  );
+  // With a reason it should succeed
+  const updated = await service.update("user-1", enquiry.id, {
+    status: "closed",
+    closedReason: "Lost: Budget constraints",
+  });
+  assert.equal(updated.status, "closed");
+});
+
+test("convert sets closed + client type and creates a client; second convert is idempotent", async () => {
   const { service, contacts, clients } = setup([
     { id: "c-1", name: "Ada Lovelace", mobile: "111", type: "lead", isActive: 1 },
   ]);
@@ -130,7 +160,8 @@ test("convert sets won + client type and creates a client; second convert is ide
     source: "web",
   });
   const first = await service.convert("user-1", enquiry.id, { billingName: "Ada LLC" });
-  assert.equal(first.enquiry.status, "won");
+  assert.equal(first.enquiry.status, "closed");
+  assert.equal((first.enquiry as FakeEnquiry).closedReason, "Booked");
   assert.equal(first.contact.type, "client");
   assert.equal(first.client.billingName, "Ada LLC");
   assert.equal(first.client.contactId, "c-1");

@@ -16,11 +16,10 @@ function setup() {
   const followUps = fakeCrud("followup", [
     {
       id: "f-1",
+      enquiryId: "e-1",
       contactId: "c-1",
-      enquiryId: null,
+      stage: "new",
       dueAt: new Date("2026-09-10T10:00:00.000Z"),
-      status: "pending",
-      assignedToId: null,
       notes: "Call",
       isActive: 1,
     },
@@ -50,7 +49,9 @@ function setup() {
     },
   ]);
   const contacts = fakeCrud("contact", []);
-  const enquiries = fakeCrud("enquiry", []);
+  const enquiries = fakeCrud("enquiry", [
+    { id: "e-1", contactId: "c-1", status: "new", isActive: 1 },
+  ]);
   const service = new CalendarService(
     events.model as unknown as CrmCalendarEventModel,
     followUps.model as unknown as CrmFollowUpModel,

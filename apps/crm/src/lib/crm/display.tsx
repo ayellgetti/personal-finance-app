@@ -2,14 +2,16 @@ import {
   CRM_CLIENT_STATUSES,
   CRM_CONTACT_TYPES,
   CRM_ENQUIRY_STATUSES,
-  CRM_FOLLOW_UP_STATUSES,
+  CRM_PAYMENT_MODES,
   CRM_PAYMENT_STATUSES,
+  CRM_PAYMENT_TYPES,
   CRM_TASK_STATUSES,
   type CrmClientStatus,
   type CrmContactType,
   type CrmEnquiryStatus,
-  type CrmFollowUpStatus,
+  type CrmPaymentMode,
   type CrmPaymentStatus,
+  type CrmPaymentType,
   type CrmTaskStatus,
 } from "@/types/crm";
 
@@ -22,21 +24,31 @@ export const CONTACT_TYPE_LABELS: Record<CrmContactType, string> = {
 
 export const ENQUIRY_STATUS_LABELS: Record<CrmEnquiryStatus, string> = {
   new: "New",
-  in_progress: "In progress",
-  won: "Won",
-  lost: "Lost",
-  on_hold: "On hold",
-};
-
-export const FOLLOW_UP_STATUS_LABELS: Record<CrmFollowUpStatus, string> = {
-  pending: "Pending",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  contacted: "Contacted",
+  qualified: "Qualified",
+  discussion: "Discussion",
+  quotation_sent: "Quotation Sent",
+  negotiation: "Negotiation",
+  schedule_meeting: "Schedule Meeting / Site Visit",
+  closed: "Closed",
 };
 
 export const CLIENT_STATUS_LABELS: Record<CrmClientStatus, string> = {
   active: "Active",
   inactive: "Inactive",
+};
+
+export const PAYMENT_TYPE_LABELS: Record<CrmPaymentType, string> = {
+  INCOME: "Income",
+  EXPENSE: "Expense",
+};
+
+export const PAYMENT_MODE_LABELS: Record<CrmPaymentMode, string> = {
+  CASH: "Cash",
+  UPI: "UPI",
+  CARD: "Card",
+  BANK_TRANSFER: "Bank Transfer",
+  CHEQUE: "Cheque",
 };
 
 export const PAYMENT_STATUS_LABELS: Record<CrmPaymentStatus, string> = {
@@ -53,7 +65,21 @@ export const TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
   done: "Done",
 };
 
-export const PAYMENT_METHODS = ["UPI", "Bank transfer", "Cash", "Cheque", "Card"] as const;
+export function paymentTypeOptions() {
+  return CRM_PAYMENT_TYPES.map((type) => (
+    <option key={type} value={type}>
+      {PAYMENT_TYPE_LABELS[type]}
+    </option>
+  ));
+}
+
+export function paymentModeOptions() {
+  return CRM_PAYMENT_MODES.map((mode) => (
+    <option key={mode} value={mode}>
+      {PAYMENT_MODE_LABELS[mode]}
+    </option>
+  ));
+}
 
 export const MOBILE_PATTERN = /^\+?[0-9]{7,15}$/;
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -104,10 +130,21 @@ export function enquiryStatusOptions() {
   ));
 }
 
-export function followUpStatusOptions() {
-  return CRM_FOLLOW_UP_STATUSES.map((status) => (
-    <option key={status} value={status}>
-      {FOLLOW_UP_STATUS_LABELS[status]}
+export const CRM_ENQUIRY_SOURCES = [
+  "Walk-in",
+  "Referral",
+  "Instagram",
+  "Facebook",
+  "Google",
+  "WhatsApp",
+  "Wedding Wire",
+  "Other",
+] as const;
+
+export function enquirySourceOptions() {
+  return CRM_ENQUIRY_SOURCES.map((source) => (
+    <option key={source} value={source}>
+      {source}
     </option>
   ));
 }

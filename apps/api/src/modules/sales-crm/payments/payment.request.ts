@@ -2,7 +2,9 @@ import { z } from "zod";
 import {
   crmIdParamsSchema,
   crmListQuerySchema,
+  crmPaymentModeSchema,
   crmPaymentStatusSchema,
+  crmPaymentTypeSchema,
   crmRemoveBodySchema,
 } from "../crm.request";
 
@@ -21,7 +23,8 @@ export const createPaymentBodySchema = z.object({
   enquiryId: z.string().uuid().nullable().optional(),
   amount: z.number().finite().positive(),
   currency: z.string().trim().min(1).max(8).optional(),
-  method: z.string().trim().min(1).max(40),
+  type: crmPaymentTypeSchema.optional(),
+  mode: crmPaymentModeSchema,
   status: crmPaymentStatusSchema.optional(),
   paidAt: z.coerce.date().nullable().optional(),
   reference: z.string().trim().min(1).max(80).nullable().optional(),

@@ -49,3 +49,6 @@ docker compose -p personal-finance-prod --env-file .env.prod -f docker-compose.p
 
 docker compose -p personal-finance-prod stop
 ```
+
+Email: crm.admin@localhost.local
+Password: CrmAdmin#2026

@@ -56,7 +56,6 @@ model User {
   calculatorScenarios        CalculatorScenario[]
   userRoles                  UserRole[]
   assignedCrmEnquiries       CrmEnquiry[]       @relation("CrmEnquiryAssignedTo")
-  assignedCrmFollowUps       CrmFollowUp[]      @relation("CrmFollowUpAssignedTo")
   assignedCrmTasks           CrmTask[]          @relation("CrmTaskAssignee")
   assignedCrmCalendarEvents  CrmCalendarEvent[] @relation("CrmCalendarEventAssignee")
 }
@@ -671,21 +670,31 @@ enum CrmContactType {
 
 enum CrmEnquiryStatus {
   new
-  in_progress
-  won
-  lost
-  on_hold
-}
-
-enum CrmFollowUpStatus {
-  pending
-  completed
-  cancelled
+  contacted
+  qualified
+  discussion
+  quotation_sent
+  negotiation
+  schedule_meeting
+  closed
 }
 
 enum CrmClientStatus {
   active
   inactive
+}
+
+enum PaymentType {
+  INCOME
+  EXPENSE
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+  CHEQUE
 }
 
 enum CrmPaymentStatus {
@@ -804,6 +813,7 @@ model CrmEnquiry {
   title          String
   source         String
   status         CrmEnquiryStatus @default(new)
+  closedReason   String?          // required when status = "closed": "Booked" or "Lost: {reason}"
   expectedValue  Float?
   assignedToId   String?
   notes          String?
@@ -829,30 +839,26 @@ model CrmEnquiry {
 }
 
 model CrmFollowUp {
-  id           String            @id @default(uuid())
-  enquiryId    String?
-  contactId    String
-  dueAt        DateTime
-  status       CrmFollowUpStatus @default(pending)
-  assignedToId String?
-  notes        String?
-  isActive     Int               @default(1)
-  createdBy    String?
-  createdAt    DateTime          @default(now())
-  updatedBy    String?
-  updatedAt    DateTime          @updatedAt
-  deletedBy    String?
-  deletedAt    DateTime?
+  id        String           @id @default(uuid())
+  enquiryId String           // required — this follow-up belongs to an enquiry
+  contactId String           // denormalized from enquiry for efficient queries
+  stage     CrmEnquiryStatus // stage of the enquiry when this follow-up was recorded
+  dueAt     DateTime         // scheduled or actual date of this activity
+  notes     String?
+  isActive  Int              @default(1)
+  createdBy String?
+  createdAt DateTime         @default(now())
+  updatedBy String?
+  updatedAt DateTime         @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
 
-  enquiry    CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
-  contact    CrmContact  @relation(fields: [contactId], references: [id], onDelete: Restrict)
-  assignedTo User?       @relation("CrmFollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  enquiry CrmEnquiry @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  contact CrmContact @relation(fields: [contactId], references: [id], onDelete: Restrict)
 
-  @@index([dueAt])
-  @@index([status])
-  @@index([assignedToId])
-  @@index([contactId])
   @@index([enquiryId])
+  @@index([dueAt])
+  @@index([contactId])
 }
 
 model CrmClient {
@@ -881,7 +887,8 @@ model CrmPayment {
   enquiryId String?
   amount    Float
   currency  String           @default("INR")
-  method    String
+  type      PaymentType      @default(INCOME)
+  mode      PaymentMode
   status    CrmPaymentStatus @default(pending)
   paidAt    DateTime?
   reference String?

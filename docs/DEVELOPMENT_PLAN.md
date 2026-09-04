@@ -409,11 +409,13 @@ Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`
 
 Enquiries table with status filter and create/edit. Follow-ups list with overdue highlight. Shared loading / empty / error / 403 states.
 
+Enquiry pipeline (exactly these eight stages): New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Convert sets `closed`. Dashboard cards are open vs closed.
+
 ### Phase D5 — Convert, clients, payments
 
 **Status: COMPLETED**
 
-Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in the CRM store. Clients table links to the contact and payments views. Payments table records amount, method, and status (no gateway).
+Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in the CRM store. Clients table links to the contact and payments views. Payments table records amount, `PaymentType` (INCOME / EXPENSE), `PaymentMode` (CASH / UPI / CARD / BANK_TRANSFER / CHEQUE), and status (no gateway).
 
 `$transaction` on convert. No OpenAI/Redis inside the transaction.
 

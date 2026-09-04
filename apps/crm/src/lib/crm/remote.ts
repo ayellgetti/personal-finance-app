@@ -19,12 +19,13 @@ import type {
   CrmEnquiry,
   CrmEnquiryStatus,
   CrmFollowUp,
-  CrmFollowUpStatus,
   CrmMe,
   CrmPaginated,
   CrmPagination,
   CrmPayment,
+  CrmPaymentMode,
   CrmPaymentStatus,
+  CrmPaymentType,
   CrmPermission,
   CrmRoleDetail,
   CrmStaffUser,
@@ -51,9 +52,9 @@ export type ListEnquiriesQuery = {
 export type ListFollowUpsQuery = {
   page?: number;
   limit?: number;
-  status?: CrmFollowUpStatus;
   enquiryId?: string;
   contactId?: string;
+  stage?: CrmEnquiryStatus;
   from?: string;
   to?: string;
 };
@@ -160,6 +161,7 @@ function mapEnquiry(row: Record<string, unknown>): CrmEnquiry {
     title: String(row.title ?? ""),
     source: String(row.source ?? ""),
     status: row.status as CrmEnquiryStatus,
+    closedReason: row.closedReason == null ? null : String(row.closedReason),
     expectedValue: asNumberOrNull(row.expectedValue),
     assignedToId: row.assignedToId == null ? null : String(row.assignedToId),
     notes: row.notes == null ? null : String(row.notes),
@@ -169,11 +171,10 @@ function mapEnquiry(row: Record<string, unknown>): CrmEnquiry {
 function mapFollowUp(row: Record<string, unknown>): CrmFollowUp {
   return {
     id: String(row.id),
-    enquiryId: row.enquiryId == null ? null : String(row.enquiryId),
+    enquiryId: String(row.enquiryId),
     contactId: String(row.contactId),
+    stage: row.stage as CrmEnquiryStatus,
     dueAt: asIso(row.dueAt),
-    status: row.status as CrmFollowUpStatus,
-    assignedToId: row.assignedToId == null ? null : String(row.assignedToId),
     notes: row.notes == null ? null : String(row.notes),
   };
 }
@@ -196,7 +197,8 @@ function mapPayment(row: Record<string, unknown>): CrmPayment {
     enquiryId: row.enquiryId == null ? null : String(row.enquiryId),
     amount: typeof row.amount === "number" ? row.amount : Number(row.amount),
     currency: String(row.currency ?? "INR"),
-    method: String(row.method ?? ""),
+    type: row.type as CrmPaymentType,
+    mode: row.mode as CrmPaymentMode,
     status: row.status as CrmPaymentStatus,
     paidAt: asIsoOrNull(row.paidAt),
     reference: row.reference == null ? null : String(row.reference),
@@ -282,8 +284,7 @@ function mapDashboard(row: Record<string, unknown>): CrmDashboard {
     contactsByType,
     enquiries: {
       open: Number(enquiries.open ?? 0),
-      won: Number(enquiries.won ?? 0),
-      lost: Number(enquiries.lost ?? 0),
+      closed: Number(enquiries.closed ?? 0),
     },
     overdueFollowUps: Number(row.overdueFollowUps ?? 0),
     paymentsPaidThisMonth: Number(row.paymentsPaidThisMonth ?? 0),

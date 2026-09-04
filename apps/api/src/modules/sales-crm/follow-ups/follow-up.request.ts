@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  crmFollowUpStatusSchema,
+  crmEnquiryStatusSchema,
   crmIdParamsSchema,
   crmListQuerySchema,
   crmRemoveBodySchema,
@@ -10,19 +10,17 @@ export const followUpIdParamsSchema = crmIdParamsSchema;
 export const removeFollowUpBodySchema = crmRemoveBodySchema;
 
 export const listFollowUpsQuerySchema = crmListQuerySchema.extend({
-  status: crmFollowUpStatusSchema.optional(),
   enquiryId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional(),
+  stage: crmEnquiryStatusSchema.optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
 });
 
 export const createFollowUpBodySchema = z.object({
-  contactId: z.string().uuid(),
-  enquiryId: z.string().uuid().nullable().optional(),
+  enquiryId: z.string().uuid(),
+  stage: crmEnquiryStatusSchema,
   dueAt: z.coerce.date(),
-  status: crmFollowUpStatusSchema.optional(),
-  assignedToId: z.string().uuid().nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
 });
 
