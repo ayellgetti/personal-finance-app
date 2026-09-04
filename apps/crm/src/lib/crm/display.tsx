@@ -1,0 +1,137 @@
+import {
+  CRM_CLIENT_STATUSES,
+  CRM_CONTACT_TYPES,
+  CRM_ENQUIRY_STATUSES,
+  CRM_FOLLOW_UP_STATUSES,
+  CRM_PAYMENT_STATUSES,
+  CRM_TASK_STATUSES,
+  type CrmClientStatus,
+  type CrmContactType,
+  type CrmEnquiryStatus,
+  type CrmFollowUpStatus,
+  type CrmPaymentStatus,
+  type CrmTaskStatus,
+} from "@/types/crm";
+
+export const CONTACT_TYPE_LABELS: Record<CrmContactType, string> = {
+  lead: "Lead",
+  client: "Client",
+  vendor: "Vendor",
+  employee: "Employee",
+};
+
+export const ENQUIRY_STATUS_LABELS: Record<CrmEnquiryStatus, string> = {
+  new: "New",
+  in_progress: "In progress",
+  won: "Won",
+  lost: "Lost",
+  on_hold: "On hold",
+};
+
+export const FOLLOW_UP_STATUS_LABELS: Record<CrmFollowUpStatus, string> = {
+  pending: "Pending",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const CLIENT_STATUS_LABELS: Record<CrmClientStatus, string> = {
+  active: "Active",
+  inactive: "Inactive",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<CrmPaymentStatus, string> = {
+  pending: "Pending",
+  paid: "Paid",
+  failed: "Failed",
+  refunded: "Refunded",
+};
+
+export const TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
+  todo: "Todo",
+  in_progress: "In-Progress",
+  in_review: "In-Review",
+  done: "Done",
+};
+
+export const PAYMENT_METHODS = ["UPI", "Bank transfer", "Cash", "Cheque", "Card"] as const;
+
+export const MOBILE_PATTERN = /^\+?[0-9]{7,15}$/;
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+export function formatMoney(amount: number, currency = "INR"): string {
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
+export function isoToLocalInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function localInputToIso(value: string): string {
+  return new Date(value).toISOString();
+}
+
+export function contactTypeOptions() {
+  return CRM_CONTACT_TYPES.map((type) => (
+    <option key={type} value={type}>
+      {CONTACT_TYPE_LABELS[type]}
+    </option>
+  ));
+}
+
+export function enquiryStatusOptions() {
+  return CRM_ENQUIRY_STATUSES.map((status) => (
+    <option key={status} value={status}>
+      {ENQUIRY_STATUS_LABELS[status]}
+    </option>
+  ));
+}
+
+export function followUpStatusOptions() {
+  return CRM_FOLLOW_UP_STATUSES.map((status) => (
+    <option key={status} value={status}>
+      {FOLLOW_UP_STATUS_LABELS[status]}
+    </option>
+  ));
+}
+
+export function clientStatusOptions() {
+  return CRM_CLIENT_STATUSES.map((status) => (
+    <option key={status} value={status}>
+      {CLIENT_STATUS_LABELS[status]}
+    </option>
+  ));
+}
+
+export function paymentStatusOptions() {
+  return CRM_PAYMENT_STATUSES.map((status) => (
+    <option key={status} value={status}>
+      {PAYMENT_STATUS_LABELS[status]}
+    </option>
+  ));
+}
+
+export function taskStatusOptions() {
+  return CRM_TASK_STATUSES.map((status) => (
+    <option key={status} value={status}>
+      {TASK_STATUS_LABELS[status]}
+    </option>
+  ));
+}

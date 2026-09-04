@@ -1,0 +1,30 @@
+import { Router } from "express";
+import { requireAuth } from "../../middlewares/jwt-auth.middleware";
+import { calendarEventRouter, calendarRouter } from "./calendar/calendar.route";
+import { clientRouter } from "./clients/client.route";
+import { contactRouter } from "./contacts/contact.route";
+import { dashboardRouter } from "./dashboard/dashboard.route";
+import { enquiryRouter } from "./enquiries/enquiry.route";
+import { followUpRouter } from "./follow-ups/follow-up.route";
+import { meRouter } from "./me/me.route";
+import { paymentRouter } from "./payments/payment.route";
+import { permissionRouter, roleRouter } from "./roles/role.route";
+import { taskRouter } from "./tasks/task.route";
+import { crmUserRouter } from "./users/user.route";
+
+export const crmRouter = Router();
+
+crmRouter.use(requireAuth);
+crmRouter.use(meRouter);
+crmRouter.use("/dashboard", dashboardRouter);
+crmRouter.use("/contacts", contactRouter);
+crmRouter.use("/enquiries", enquiryRouter);
+crmRouter.use("/followups", followUpRouter);
+crmRouter.use("/clients", clientRouter);
+crmRouter.use("/payments", paymentRouter);
+crmRouter.use("/tasks", taskRouter);
+crmRouter.use("/calendar/events", calendarEventRouter);
+crmRouter.use("/calendar", calendarRouter);
+crmRouter.use("/users", crmUserRouter);
+crmRouter.use("/roles", roleRouter);
+crmRouter.use("/permissions", permissionRouter);

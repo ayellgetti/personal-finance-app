@@ -1,0 +1,171 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 150 30% 98%;
+    --foreground: 200 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 30% 12%;
+
+    --primary: 158 70% 36%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 158 72% 46%;
+
+    --secondary: 158 25% 94%;
+    --secondary-foreground: 200 30% 16%;
+
+    --muted: 160 18% 94%;
+    --muted-foreground: 200 12% 42%;
+
+    --accent: 38 92% 50%;
+    --accent-foreground: 30 40% 12%;
+
+    --success: 158 70% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 30 40% 12%;
+    --danger: 0 78% 56%;
+    --danger-foreground: 0 0% 100%;
+
+    --destructive: 0 78% 56%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 158 18% 88%;
+    --input: 158 18% 88%;
+    --ring: 158 70% 36%;
+
+    --radius: 1rem;
+
+    --chart-1: 158 70% 40%;
+    --chart-2: 200 80% 48%;
+    --chart-3: 38 92% 52%;
+    --chart-4: 280 60% 58%;
+    --chart-5: 0 72% 58%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(158 72% 38%), hsl(170 70% 46%));
+    --gradient-wealth: linear-gradient(135deg, hsl(158 70% 30%), hsl(190 75% 40%));
+    --gradient-gold: linear-gradient(135deg, hsl(38 92% 52%), hsl(28 90% 54%));
+    --gradient-hero: linear-gradient(135deg, hsl(200 40% 14%) 0%, hsl(168 55% 22%) 100%);
+
+    --shadow-sm: 0 1px 2px hsl(200 30% 12% / 0.06);
+    --shadow-card: 0 4px 24px -8px hsl(168 40% 20% / 0.12);
+    --shadow-elevated: 0 16px 48px -16px hsl(168 40% 20% / 0.24);
+    --shadow-glow: 0 0 40px -8px hsl(158 72% 46% / 0.5);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 200 20% 30%;
+    --sidebar-primary: 158 70% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 158 25% 95%;
+    --sidebar-accent-foreground: 158 70% 28%;
+    --sidebar-border: 158 18% 90%;
+    --sidebar-ring: 158 70% 36%;
+  }
+
+  .dark {
+    --background: 200 35% 8%;
+    --foreground: 160 20% 94%;
+
+    --card: 200 32% 11%;
+    --card-foreground: 160 20% 94%;
+
+    --popover: 200 32% 11%;
+    --popover-foreground: 160 20% 94%;
+
+    --primary: 158 68% 46%;
+    --primary-foreground: 200 40% 8%;
+    --primary-glow: 158 72% 56%;
+
+    --secondary: 200 26% 16%;
+    --secondary-foreground: 160 20% 94%;
+
+    --muted: 200 24% 16%;
+    --muted-foreground: 180 12% 64%;
+
+    --accent: 38 92% 56%;
+    --accent-foreground: 30 40% 10%;
+
+    --success: 158 68% 48%;
+    --success-foreground: 200 40% 8%;
+    --warning: 38 92% 56%;
+    --warning-foreground: 30 40% 10%;
+    --danger: 0 78% 62%;
+    --danger-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 22% 20%;
+    --input: 200 22% 20%;
+    --ring: 158 68% 46%;
+
+    --chart-1: 158 68% 50%;
+    --chart-2: 200 80% 58%;
+    --chart-3: 38 92% 58%;
+    --chart-4: 280 65% 68%;
+    --chart-5: 0 72% 64%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(158 68% 40%), hsl(170 70% 48%));
+    --gradient-wealth: linear-gradient(135deg, hsl(168 60% 28%), hsl(195 75% 42%));
+    --gradient-gold: linear-gradient(135deg, hsl(38 92% 54%), hsl(28 90% 56%));
+    --gradient-hero: linear-gradient(135deg, hsl(200 45% 10%) 0%, hsl(168 55% 16%) 100%);
+
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --shadow-card: 0 4px 24px -8px hsl(0 0% 0% / 0.45);
+    --shadow-elevated: 0 16px 48px -16px hsl(0 0% 0% / 0.6);
+    --shadow-glow: 0 0 40px -8px hsl(158 72% 56% / 0.4);
+
+    --sidebar-background: 200 34% 10%;
+    --sidebar-foreground: 160 16% 80%;
+    --sidebar-primary: 158 68% 46%;
+    --sidebar-primary-foreground: 200 40% 8%;
+    --sidebar-accent: 200 26% 16%;
+    --sidebar-accent-foreground: 160 20% 94%;
+    --sidebar-border: 200 22% 18%;
+    --sidebar-ring: 158 68% 46%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Sora', 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-xl border border-border/60;
+  }
+  .stat-card {
+    @apply rounded-2xl bg-card border border-border p-5 shadow-[var(--shadow-card)] transition-all duration-300 hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5;
+  }
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+}
+
+@layer utilities {
+  .bg-gradient-primary { background-image: var(--gradient-primary); }
+  .bg-gradient-wealth { background-image: var(--gradient-wealth); }
+  .bg-gradient-gold { background-image: var(--gradient-gold); }
+  .bg-gradient-hero { background-image: var(--gradient-hero); }
+}
