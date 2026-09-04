@@ -9,6 +9,9 @@ import { CrmSessionGate } from "@/components/CrmSessionGate";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
+import Banquet from "./pages/Banquet.tsx";
+import RealEstate from "./pages/RealEstate.tsx";
+import Freedom from "./pages/Freedom.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const App = () => (
@@ -21,6 +24,12 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/banquet" element={<Banquet />} />
+              <Route path="/banquet.html" element={<Banquet />} />
+              <Route path="/real-estate" element={<RealEstate />} />
+              <Route path="/real-estate.html" element={<RealEstate />} />
+              <Route path="/freedom" element={<Freedom />} />
+              <Route path="/freedom.html" element={<Freedom />} />
               <Route
                 path="/"
                 element={

@@ -86,6 +86,20 @@ export default function Login() {
           <p className="mt-5 text-center text-xs text-muted-foreground">
             Staff accounts are created by a CRM admin. There is no public sign-up.
           </p>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Use cases:{" "}
+            <Link to="/banquet" className="font-medium text-primary hover:underline">
+              Banquet
+            </Link>
+            {" · "}
+            <Link to="/real-estate" className="font-medium text-primary hover:underline">
+              Real estate
+            </Link>
+            {" · "}
+            <Link to="/freedom" className="font-medium text-primary hover:underline">
+              Freedom Planner
+            </Link>
+          </p>
         </div>
       </div>
     </div>

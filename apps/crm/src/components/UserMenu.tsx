@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { BookOpen, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth/store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,16 @@ export function UserMenu() {
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => navigate("/banquet")}>
+          <BookOpen className="mr-2 h-4 w-4" /> Banquet use case
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/real-estate")}>
+          <BookOpen className="mr-2 h-4 w-4" /> Real estate use case
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate("/freedom")}>
+          <BookOpen className="mr-2 h-4 w-4" /> Freedom Planner use case
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="text-danger focus:text-danger">
           <LogOut className="mr-2 h-4 w-4" /> Log out

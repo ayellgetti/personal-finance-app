@@ -393,7 +393,7 @@ Prisma `Crm*` + Role/Permission models and migration `20260904074646_sales_crm`;
 
 **Status: COMPLETED**
 
-Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`, admin nav hidden without `crm.users.read` / `crm.roles.read`, Docker/nginx/CORS examples. Pipeline/work/admin screens land in D3–D8.
+Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`, admin nav hidden without `crm.users.read` / `crm.roles.read`, Docker/nginx/CORS examples. Pipeline/work/admin screens land in D3–D8. Public use-case HTML pages (no auth, finance `/guide` pattern): `/banquet`, `/real-estate`, `/freedom`.
 
 **Validate:** `pnpm --filter crm test` (12 passing), `pnpm --filter crm typecheck`, `pnpm --filter crm lint`.
 

@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banquet enquiry → event booking — Sales CRM</title>
+    <meta
+      name="description"
+      content="How a WhatsApp banquet enquiry becomes a booked wedding in Sales CRM: eight pipeline stages, follow-ups, convert, token, and event-day expenses."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("crm-theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+          else if (window.parent && window.parent !== window) {
+            var parentHtml = window.parent.document.documentElement;
+            if (parentHtml.classList.contains("light")) theme = "light";
+            else if (parentHtml.classList.contains("dark")) theme = "dark";
+          }
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-inner">
+        <a class="brand" href="/login" target="_top">
+          <div class="gem">◆</div>
+          <div>
+            <strong>Sales CRM</strong>
+            <span>Banquet walkthrough</span>
+          </div>
+        </a>
+        <nav class="toc" aria-label="Use cases">
+          <a class="here" href="/banquet" target="_top">Banquet</a>
+          <a href="/real-estate" target="_top">Real estate</a>
+          <a href="/freedom" target="_top">Freedom Planner</a>
+        </nav>
+        <div class="header-actions">
+          <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch color theme">
+            <span class="sun" aria-hidden="true">☀</span>
+            <span class="moon" aria-hidden="true">☾</span>
+          </button>
+          <a class="btn" href="/login" target="_top">Open the CRM</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <p class="kicker">Use case · Banquet hall</p>
+        <h1>WhatsApp enquiry to a booked wedding — then token, menu, décor, and event-day spend.</h1>
+        <p>
+          Priya Sharma messages the hall’s Business WhatsApp. Sales agent Ravi runs the eight CRM stages.
+          If they book, he Converts. After that the work is clients, payments, tasks, and calendar — not a ninth pipeline stage.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="#happy">Happy path</a>
+          <a class="btn ghost" href="#alts">Lost / reject</a>
+        </div>
+      </div>
+
+      <section id="actors">
+        <h2>Who is in this story</h2>
+        <p class="lede">Fictional names. The screens and statuses are the ones in this CRM today.</p>
+        <div class="grid-3">
+          <article class="card">
+            <h3>Priya Sharma</h3>
+            <p>Bride’s father. Inbound WhatsApp. Becomes a <strong>lead</strong>, then a <strong>client</strong> after Convert.</p>
+          </article>
+          <article class="card">
+            <h3>Ravi · sales</h3>
+            <p>Owns the enquiry. Calls, follow-ups, quote, visit, Convert, records the token.</p>
+          </article>
+          <article class="card">
+            <h3>Meera · ops</h3>
+            <p>After booking: menu tasting, décor mock-up, event-day tasks. Not a second enquiry.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <h2>Eight stages only</h2>
+        <p class="lede">Do not add Menu, Token, or Décor as enquiry statuses. Those happen after Convert.</p>
+        <div class="pipe">
+          <span class="on">1 New</span>
+          <span class="on">2 Contacted</span>
+          <span class="on">3 Qualified</span>
+          <span class="on">4 Discussion</span>
+          <span class="on">5 Quotation Sent</span>
+          <span class="on">6 Negotiation</span>
+          <span class="on">7 Site Visit</span>
+          <span class="on">8 Closed</span>
+        </div>
+        <p class="caption">WhatsApp is the <em>source</em> field. There is no WhatsApp sync in this product.</p>
+      </section>
+
+      <section id="happy">
+        <h2>Happy path — wedding booked</h2>
+        <p class="lede">
+          Message: “Need hall for daughter’s wedding, 12 Dec, ~350 guests, vegetarian + Jain, budget around 8–10 lakh.”
+        </p>
+        <ol class="steps">
+          <li>
+            <div class="n">1</div>
+            <div>
+              <strong>New — capture the WhatsApp</strong>
+              <p class="muted">Contacts → create Priya Sharma, type <code>lead</code>, mobile = WhatsApp number. Enquiries → title <code>Wedding — 12 Dec 2026 — ~350 pax</code>, source <code>WhatsApp Business</code>, status <code>new</code>, expected value ₹9,00,000, assigned to Ravi.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">2</div>
+            <div>
+              <strong>Contacted — first call</strong>
+              <p class="muted">Ravi confirms the date is free and they want a sit-down dinner. Status → <code>contacted</code>. Follow-up 1 due tomorrow: “Family to choose lawn vs indoor.”</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">3</div>
+            <div>
+              <strong>Qualified — it fits</strong>
+              <p class="muted">350 pax fits Grand Lawn, 12 Dec is open, 8–10L is inside package range. Status → <code>qualified</code>. Expected value ₹9,50,000. If it did not fit, close here — do not Convert.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">4</div>
+            <div>
+              <strong>Discussion — 2–3 follow-ups</strong>
+              <p class="muted">Status → <code>discussion</code>. Lock menu, décor, rooms, parking in enquiry notes. Three follow-ups: menu PDF, Jain count, GSTIN for billing.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">5</div>
+            <div>
+              <strong>Quotation Sent</strong>
+              <p class="muted">Quote on WhatsApp: hall + menu + décor ₹9.5L + GST, 25% token to block the date. Status → <code>quotation_sent</code>. Store quote ref <code>Q-2026-118</code> in notes (PDF is not stored in CRM).</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">6</div>
+            <div>
+              <strong>Negotiation</strong>
+              <p class="muted">Include entrance décor, DJ power in. Offer ₹9.2L all-in. Status → <code>negotiation</code>, expected value ₹9,20,000.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">7</div>
+            <div>
+              <strong>Schedule Meeting / Site Visit</strong>
+              <p class="muted">Status → <code>schedule_meeting</code>. Calendar event: dusk walk of Grand Lawn. Task for Meera: décor sample board. Follow-up next morning for the decision.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">8</div>
+            <div>
+              <strong>Closed — Convert (Booked)</strong>
+              <p class="muted">Priya: “Book it.” Hit <strong>Convert</strong>, not only Closed. That sets <code>closedReason: Booked</code>, contact type → <code>client</code>, and creates the Client row. Without Convert there is no client and no payments.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="notes">
+        <h2>What goes in enquiry notes</h2>
+        <p class="lede">There is no menu, décor, or venue inventory table. The requirement sheet lives on the enquiry.</p>
+        <pre class="sheet">Event: Wedding reception
+Date: 12 Dec 2026, 6pm–11pm
+Pax: 350
+Venue: Grand Lawn
+Menu: Veg + Jain (40)
+Décor: ivory + gold, stage + entrance
+DJ: client’s vendor
+Rooms: 4 deluxe
+Parking: 80 cars
+Quote: Q-2026-118 · ₹9.2L all-in + GST</pre>
+      </section>
+
+      <section id="crm">
+        <h2>How it looks in the CRM</h2>
+        <div class="shot">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            crm.local.uat · Enquiries
+          </div>
+          <div class="shot-body">
+            <div class="app">
+              <div class="side">
+                <p class="g">Pipeline</p>
+                <p>Dashboard</p>
+                <p>Contacts</p>
+                <p class="active">Enquiries</p>
+                <p>Follow-ups</p>
+                <p class="g">After booking</p>
+                <p>Clients</p>
+                <p>Payments</p>
+                <p>Tasks</p>
+                <p>Calendar</p>
+              </div>
+              <div class="main">
+                <div class="nw">
+                  <div class="label">Open enquiry</div>
+                  <div class="value">Wedding · 12 Dec</div>
+                  <p style="margin:0;color:#c5ddd4;font-size:13px">Priya Sharma · WhatsApp Business · assigned Ravi</p>
+                </div>
+                <div class="pills">
+                  <div class="pill"><span>Stage</span><b>Site visit</b></div>
+                  <div class="pill"><span>Expected</span><b>₹9.2L</b></div>
+                  <div class="pill"><span>Follow-ups</span><b>3 done</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Screenshot-style. Real data lives in Enquiries, Follow-ups, and Calendar — not in this page.</p>
+      </section>
+
+      <section id="after">
+        <h2>After Convert — ops, not a new enquiry</h2>
+        <p class="lede">Follow-ups can still be logged on the <em>same closed enquiry</em>. Payments need the client that Convert created.</p>
+        <div class="grid-2">
+          <article class="card">
+            <h3>Follow-ups and tasks</h3>
+            <p>Menu tasting 20 Nov. Décor mock-up 5 Dec. Confirm 4 deluxe rooms. Calendar event for 12 Dec 4pm–12am.</p>
+          </article>
+          <article class="card">
+            <h3>Payments</h3>
+            <p>Token and balance are <strong>INCOME</strong>. Extra florist or generator on the day are <strong>EXPENSE</strong>. Link <code>enquiryId</code> so the wedding still shows on the original deal.</p>
+          </article>
+        </div>
+        <div class="shot">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            Payments · Priya Sharma
+          </div>
+          <div class="shot-body">
+            <table>
+              <thead>
+                <tr><th>What</th><th>Type</th><th>Mode</th><th>Status</th><th class="num">Amount</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Token wedding 12 Dec</td><td>INCOME</td><td>UPI</td><td>paid</td><td class="num">₹2,30,000</td></tr>
+                <tr><td>Balance Q-2026-118</td><td>INCOME</td><td>BANK_TRANSFER</td><td>paid</td><td class="num">₹6,90,000</td></tr>
+                <tr><td>Emergency roses — event day</td><td>EXPENSE</td><td>CASH</td><td>paid</td><td class="num">₹18,000</td></tr>
+                <tr><td>Power backup 12 Dec</td><td>EXPENSE</td><td>UPI</td><td>paid</td><td class="num">₹8,000</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="caption">Modes are only CASH, UPI, CARD, BANK_TRANSFER, CHEQUE. Types are only INCOME and EXPENSE.</p>
+      </section>
+
+      <section id="alts">
+        <h2>When they do not book</h2>
+        <p class="lede">Close the enquiry with a reason. Do not Convert. Contact stays a lead.</p>
+        <div class="rec">
+          <span class="tag high">Reject</span>
+          <div>
+            <h3>Not a fit at qualify</h3>
+            <p>Birthday for 40 people, budget ₹25,000 vs 150 pax minimum. Status <code>closed</code>, reason <code>Lost: below minimum pax / budget</code>.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag med">Lost</span>
+          <div>
+            <h3>Booked another venue</h3>
+            <p>Visit done, then Hotel X. Status <code>closed</code>, reason <code>Lost: booked another venue</code>. No token payment.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag low">Dropped</span>
+          <div>
+            <h3>Event postponed</h3>
+            <p>Reason <code>Lost: event postponed / dropped</code>. If they return later, open a <em>new</em> enquiry on the same contact.</p>
+          </div>
+        </div>
+      </section>
+
+      <p class="note">
+        This walkthrough is a sample. WhatsApp, quotation PDFs, hall inventory, and menu SKUs are not modules in this CRM.
+        Capture them in contact / enquiry notes, tasks, and calendar. Pipeline stages are fixed: do not add extras.
+      </p>
+
+      <section>
+        <h2>Share the other verticals</h2>
+        <div class="hero-actions">
+          <a class="btn" href="/login" target="_top">Sign in to the CRM</a>
+          <a class="btn ghost" href="/real-estate" target="_top">Real estate sales</a>
+          <a class="btn ghost" href="/freedom" target="_top">Freedom Planner sales</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <div class="wrap">
+        Sales CRM · banquet use case · sample names are fictional.
+        Also: <a href="/real-estate" target="_top">/real-estate</a>
+        · <a href="/freedom" target="_top">/freedom</a>.
+      </div>
+    </footer>
+    <script>
+      (function () {
+        var button = document.getElementById("theme-toggle");
+        if (!button) return;
+        function apply(theme) {
+          var dark = theme === "dark";
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.dataset.theme = theme;
+          button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+          try { localStorage.setItem("crm-theme", theme); } catch (e) {}
+          try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
+        }
+        apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
+        button.addEventListener("click", function () {
+          apply(document.documentElement.classList.contains("dark") ? "light" : "dark");
+        });
+      })();
+    </script>
+  </body>
+</html>

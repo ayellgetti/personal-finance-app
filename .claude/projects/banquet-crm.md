@@ -41,3 +41,13 @@ Use only these enums — do not add extras:
 PaymentType: INCOME, EXPENSE
 
 PaymentMode: CASH, UPI, CARD, BANK_TRANSFER, CHEQUE
+
+## Shareable walkthroughs
+
+Public CRM pages (no login), same HTML-in-iframe pattern as Freedom Planner `/guide`:
+
+- `http://crm.local.uat/banquet` — WhatsApp banquet enquiry → event booking
+- `http://crm.local.uat/real-estate` — WhatsApp 2BHK enquiry → unit booking
+- `http://crm.local.uat/freedom` — myfinancefreedom.com sales agent → Freedom Planner onboarding
+
+Do not add extra pipeline stages for menu, décor, token, or demo. Those are notes, follow-ups, tasks, calendar, and payments after Convert.

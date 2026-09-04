@@ -7,7 +7,7 @@ pnpm + Turborepo monorepo with a TypeScript Express API, Vite React product app,
 - `apps/api` — Express API on port `5001` (Swagger UI at `http://localhost:5001/docs`)
 - `apps/web` — Product app (login, dashboard, planner). Vite on port `8080` in Compose (`5173` if you run Vite on the host). Walkthrough: `/guide`. Internal brief: `/why`. Course outline: `/course`
 - `apps/website` — Public marketing site only. No auth, no finance data. Vite on port `8081`. “Open the app” links to `VITE_APP_URL` (default `http://localhost:8080`)
-- `apps/crm` — Sales CRM UI. Vite on port `8082`. Login reuses `/api/auth`; session is `GET /api/crm/me`. Prefer the Vite `/api` proxy. Local/dev admin (migration `20260904093300_crm_admin_user`, not a production secret): `crm.admin@localhost.local` / `CrmAdmin#2026`.
+- `apps/crm` — Sales CRM UI. Vite on port `8082`. Login reuses `/api/auth`; session is `GET /api/crm/me`. Prefer the Vite `/api` proxy. Local/dev admin (migration `20260904093300_crm_admin_user`, not a production secret): `crm.admin@localhost.local` / `CrmAdmin#2026`. Public use-case walkthroughs (no login): `/banquet`, `/real-estate`, `/freedom`.
 
 Local Postgres is exposed on **5433** (avoids clashing with an existing 5432 instance). Connection string is in `apps/api/.env`.
 

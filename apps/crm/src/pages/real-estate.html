@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Real estate sales — Sales CRM</title>
+    <meta
+      name="description"
+      content="How a WhatsApp 2BHK enquiry becomes a booked unit in Sales CRM: qualify, quote, site visit, convert, token, and registration-day expenses."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("crm-theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+          else if (window.parent && window.parent !== window) {
+            var parentHtml = window.parent.document.documentElement;
+            if (parentHtml.classList.contains("light")) theme = "light";
+            else if (parentHtml.classList.contains("dark")) theme = "dark";
+          }
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-inner">
+        <a class="brand" href="/login" target="_top">
+          <div class="gem">◆</div>
+          <div>
+            <strong>Sales CRM</strong>
+            <span>Real estate walkthrough</span>
+          </div>
+        </a>
+        <nav class="toc" aria-label="Use cases">
+          <a href="/banquet" target="_top">Banquet</a>
+          <a class="here" href="/real-estate" target="_top">Real estate</a>
+          <a href="/freedom" target="_top">Freedom Planner</a>
+        </nav>
+        <div class="header-actions">
+          <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch color theme">
+            <span class="sun" aria-hidden="true">☀</span>
+            <span class="moon" aria-hidden="true">☾</span>
+          </button>
+          <a class="btn" href="/login" target="_top">Open the CRM</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <p class="kicker">Use case · Real estate</p>
+        <h1>WhatsApp 2BHK lead to a booked unit — then token, loan file, and registration-day spend.</h1>
+        <p>
+          Amit Patel messages from a Facebook ad that lands on Business WhatsApp. Sales agent Sneha runs the same
+          eight CRM stages as a banquet enquiry. Unit, tower, and facing live in notes — there is no property inventory module.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="#happy">Happy path</a>
+          <a class="btn ghost" href="#alts">Lost / drop</a>
+        </div>
+      </div>
+
+      <section id="actors">
+        <h2>Who is in this story</h2>
+        <div class="grid-3">
+          <article class="card">
+            <h3>Amit Patel</h3>
+            <p>End-user buyer. Budget ₹80–90L, Whitefield, 6-month occupancy. Lead → client after Convert.</p>
+          </article>
+          <article class="card">
+            <h3>Sneha · sales</h3>
+            <p>Owns the enquiry. Cost sheet, negotiation with manager, Convert, booking token.</p>
+          </article>
+          <article class="card">
+            <h3>Karan · site</h3>
+            <p>Sample flat and dummy key. Calendar + task, not a second pipeline.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <h2>Same eight stages</h2>
+        <p class="lede">“Site visit” here is the sample flat. After Convert, loan chase and registration are follow-ups and tasks.</p>
+        <div class="pipe">
+          <span class="on">1 New</span>
+          <span class="on">2 Contacted</span>
+          <span class="on">3 Qualified</span>
+          <span class="on">4 Discussion</span>
+          <span class="on">5 Quotation Sent</span>
+          <span class="on">6 Negotiation</span>
+          <span class="on">7 Site Visit</span>
+          <span class="on">8 Closed</span>
+        </div>
+      </section>
+
+      <section id="happy">
+        <h2>Happy path — 2BHK booked</h2>
+        <p class="lede">
+          Message: “Interested in 2BHK, Whitefield, budget 80–90L, need to move in 6 months.”
+        </p>
+        <ol class="steps">
+          <li>
+            <div class="n">1</div>
+            <div>
+              <strong>New — capture the WhatsApp</strong>
+              <p class="muted">Contact Amit Patel, type <code>lead</code>. Enquiry title <code>2BHK Whitefield — 80-90L — 6mo occupancy</code>, source <code>WhatsApp Business</code>, expected value ₹85,00,000, assigned Sneha.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">2</div>
+            <div>
+              <strong>Contacted</strong>
+              <p class="muted">End-user (not investor), east-facing, ready-to-move or 6 months. Status → <code>contacted</code>. Follow-up: send brochure + price sheet.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">3</div>
+            <div>
+              <strong>Qualified — a unit exists</strong>
+              <p class="muted">Tower B-1203, 2BHK, 1180 sqft, ₹84.5L. Status → <code>qualified</code>. If they want 3BHK at 2BHK price, close as lost — do not Convert.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">4</div>
+            <div>
+              <strong>Discussion — 2–3 follow-ups</strong>
+              <p class="muted">Three options, they like B-1203. GST, corpus, car park. Father will co-apply for loan. Status → <code>discussion</code>.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">5</div>
+            <div>
+              <strong>Quotation Sent</strong>
+              <p class="muted">Cost sheet on WhatsApp: ₹84.5L + GST, 10% token to block. Status → <code>quotation_sent</code>. Follow-up in 2 days.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">6</div>
+            <div>
+              <strong>Negotiation</strong>
+              <p class="muted">Floor-rise waiver + extra parking at cost. Manager approval in notes. Status → <code>negotiation</code>.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">7</div>
+            <div>
+              <strong>Site visit</strong>
+              <p class="muted">Status → <code>schedule_meeting</code>. Calendar: “Site visit B-1203 — Amit Patel”. Task for Karan: dummy key + sample flat. Follow-up next morning.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">8</div>
+            <div>
+              <strong>Convert — Booked</strong>
+              <p class="muted">Amit pays token ₹8.45L. Convert: enquiry <code>closed</code> / <code>Booked</code>, contact → <code>client</code>, billing name Amit Patel (joint names in notes if needed).</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="notes">
+        <h2>Unit details in notes</h2>
+        <pre class="sheet">Unit: B-1203, 2BHK, 1180 sqft, east
+Base: 84.5L + GST + corpus
+Parking: 1 covered (2nd at cost)
+Possession: Mar 2027
+Loan: HDFC pre-approved in principle
+Token: 10% to block</pre>
+      </section>
+
+      <section id="after">
+        <h2>After Convert — what maps from banquet</h2>
+        <div class="grid-2">
+          <article class="card">
+            <h3>Banquet analogue</h3>
+            <p>Menu tasting → cost-sheet / loan document chase. Décor → interiors or extra parking. Token → booking amount. Event-day expense → registration day.</p>
+          </article>
+          <article class="card">
+            <h3>Where it lives</h3>
+            <p>Follow-ups on the closed enquiry. Tasks for agreement and loan file. Calendar for registration. Payments on the client.</p>
+          </article>
+        </div>
+        <table>
+          <thead>
+            <tr><th>What</th><th>Type</th><th>Mode</th><th class="num">Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Booking token B-1203</td><td>INCOME</td><td>BANK_TRANSFER</td><td class="num">₹8,45,000</td></tr>
+            <tr><td>Agreement 20%</td><td>INCOME</td><td>BANK_TRANSFER</td><td class="num">₹16,90,000</td></tr>
+            <tr><td>Stamp / liaison paid by office</td><td>EXPENSE</td><td>CASH</td><td class="num">₹12,000</td></tr>
+            <tr><td>Channel partner brokerage</td><td>EXPENSE</td><td>BANK_TRANSFER</td><td class="num">₹85,000</td></tr>
+          </tbody>
+        </table>
+        <p class="caption">If a token must be returned, mark the INCOME payment <code>refunded</code>. Do not invent a fourth payment type.</p>
+      </section>
+
+      <section id="alts">
+        <h2>When they do not book</h2>
+        <div class="rec">
+          <span class="tag high">Reject</span>
+          <div>
+            <h3>Requirement / budget mismatch</h3>
+            <p>Close at qualify: <code>Lost: requirement / budget mismatch</code>. No Convert.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag med">Lost</span>
+          <div>
+            <h3>Booked a competitor</h3>
+            <p>Visit done. Reason <code>Lost: booked competitor</code>. Keep the contact as a lead for the next launch.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag low">Dropped</span>
+          <div>
+            <h3>Loan rejected / plan cancelled</h3>
+            <p>Reason <code>Lost: loan rejected</code> or <code>Lost: dropped purchase plan</code>. If Convert already happened, refund the token as status <code>refunded</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <p class="note">
+        Sample rupees are illustrative. This CRM has no tower/unit inventory, cost-sheet PDF store, or WhatsApp sync.
+        Put unit details in enquiry notes. Do not add extra pipeline stages.
+      </p>
+
+      <section>
+        <div class="hero-actions">
+          <a class="btn" href="/login" target="_top">Sign in to the CRM</a>
+          <a class="btn ghost" href="/banquet" target="_top">Banquet booking</a>
+          <a class="btn ghost" href="/freedom" target="_top">Freedom Planner sales</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <div class="wrap">
+        Sales CRM · real estate use case · sample names are fictional.
+        Also: <a href="/banquet" target="_top">/banquet</a>
+        · <a href="/freedom" target="_top">/freedom</a>.
+      </div>
+    </footer>
+    <script>
+      (function () {
+        var button = document.getElementById("theme-toggle");
+        if (!button) return;
+        function apply(theme) {
+          var dark = theme === "dark";
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.dataset.theme = theme;
+          button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+          try { localStorage.setItem("crm-theme", theme); } catch (e) {}
+          try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
+        }
+        apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
+        button.addEventListener("click", function () {
+          apply(document.documentElement.classList.contains("dark") ? "light" : "dark");
+        });
+      })();
+    </script>
+  </body>
+</html>

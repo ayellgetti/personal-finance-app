@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Freedom Planner sales — Sales CRM</title>
+    <meta
+      name="description"
+      content="How a myfinancefreedom.com lead becomes a paying Freedom Planner household in Sales CRM: WhatsApp, demo, quote, convert, onboarding follow-ups, and ad spend."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("crm-theme");
+          if (stored === "light" || stored === "dark") theme = stored;
+          else if (window.parent && window.parent !== window) {
+            var parentHtml = window.parent.document.documentElement;
+            if (parentHtml.classList.contains("light")) theme = "light";
+            else if (parentHtml.classList.contains("dark")) theme = "dark";
+          }
+        } catch (e) {}
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap top-inner">
+        <a class="brand" href="/login" target="_top">
+          <div class="gem">◆</div>
+          <div>
+            <strong>Sales CRM</strong>
+            <span>Freedom Planner walkthrough</span>
+          </div>
+        </a>
+        <nav class="toc" aria-label="Use cases">
+          <a href="/banquet" target="_top">Banquet</a>
+          <a href="/real-estate" target="_top">Real estate</a>
+          <a class="here" href="/freedom" target="_top">Freedom Planner</a>
+        </nav>
+        <div class="header-actions">
+          <button type="button" class="theme-btn" id="theme-toggle" aria-label="Switch color theme">
+            <span class="sun" aria-hidden="true">☀</span>
+            <span class="moon" aria-hidden="true">☾</span>
+          </button>
+          <a class="btn" href="/login" target="_top">Open the CRM</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <p class="kicker">Use case · myfinancefreedom.com</p>
+        <h1>Website or WhatsApp lead to a signed-up household — then setup, advisor session, and renewal.</h1>
+        <p>
+          Kavya Iyer hits myfinancefreedom.com, then messages Business WhatsApp. Sales agent Deepak sells Freedom Planner
+          onboarding. The customer’s money lives in the finance app (<code>apps/web</code>). This CRM only tracks the
+          <em>sales</em> motion: enquiry → demo → fee → Convert → follow-ups.
+        </p>
+        <div class="hero-actions">
+          <a class="btn" href="#happy">Happy path</a>
+          <a class="btn ghost" href="#alts">Not a fit</a>
+        </div>
+      </div>
+
+      <section id="actors">
+        <h2>Who is in this story</h2>
+        <div class="grid-3">
+          <article class="card">
+            <h3>Kavya Iyer</h3>
+            <p>29, salaried, Bengaluru. Saw the marketing site, has EMIs + SIPs, wants a FIRE picture. Lead → client.</p>
+          </article>
+          <article class="card">
+            <h3>Deepak · sales</h3>
+            <p>myfinancefreedom.com sales agent. Owns the enquiry, runs the demo, Convert, records the plan fee.</p>
+          </article>
+          <article class="card">
+            <h3>Finance app</h3>
+            <p>She signs up on web.local.uat / myfinancefreedom.com. CRM does not store her salary or SIPs.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <h2>Eight stages, “site visit” = product demo</h2>
+        <p class="lede">
+          Same pipeline as banquet and real estate. The meeting is a 30-minute screen-share of
+          <code>/guide</code> (Arjun Mehta) and a blank Quick Setup — not a physical venue.
+        </p>
+        <div class="pipe">
+          <span class="on">1 New</span>
+          <span class="on">2 Contacted</span>
+          <span class="on">3 Qualified</span>
+          <span class="on">4 Discussion</span>
+          <span class="on">5 Quotation Sent</span>
+          <span class="on">6 Negotiation</span>
+          <span class="on">7 Site Visit</span>
+          <span class="on">8 Closed</span>
+        </div>
+      </section>
+
+      <section id="happy">
+        <h2>Happy path — household onboarded</h2>
+        <p class="lede">
+          WhatsApp: “I saw myfinancefreedom.com. Can this show if I can retire at 50? I have a home loan and two SIPs.”
+        </p>
+        <ol class="steps">
+          <li>
+            <div class="n">1</div>
+            <div>
+              <strong>New — capture the inbound</strong>
+              <p class="muted">Contact Kavya Iyer, type <code>lead</code>. Enquiry title <code>Freedom Planner — Kavya Iyer — FIRE 50</code>, source <code>WhatsApp Business</code> (or <code>myfinancefreedom.com</code> if they used the site form). Expected value = sample annual plan fee. Assigned Deepak.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">2</div>
+            <div>
+              <strong>Contacted</strong>
+              <p class="muted">Call: salaried India, two dependents later, wants surplus and debt picture — not stock tips. Status → <code>contacted</code>. Follow-up: send the public <code>/guide</code> link so she can see Arjun’s sample before the demo.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">3</div>
+            <div>
+              <strong>Qualified — audience match</strong>
+              <p class="muted">Product audience is salaried / self-employed adult in India, INR, household finance. She fits. Status → <code>qualified</code>. If they only want live trading or tax filing, close as not a fit — those are out of product scope.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">4</div>
+            <div>
+              <strong>Discussion — 2–3 follow-ups</strong>
+              <p class="muted">Pain: “I do not know surplus after EMIs.” Follow-ups: she read /guide; she listed loans; she asked whether insurance is in the planner. Status → <code>discussion</code>. Notes hold what she wants from Quick Setup — CRM still does not store rupee amounts as finance data.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">5</div>
+            <div>
+              <strong>Quotation Sent</strong>
+              <p class="muted">Sample commercial offer (illustrative, not a live SKU): annual Planner Assist ₹4,999 + optional 1:1 setup call ₹3,000. Status → <code>quotation_sent</code>. Quote ref in notes. Payment will be recorded in CRM after Convert, not in Freedom Planner.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">6</div>
+            <div>
+              <strong>Negotiation</strong>
+              <p class="muted">Waive setup fee if she pays the annual plan on the demo call. Status → <code>negotiation</code>. Expected value ₹4,999.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">7</div>
+            <div>
+              <strong>Schedule Meeting — product demo</strong>
+              <p class="muted">Status → <code>schedule_meeting</code>. Calendar: “Freedom Planner demo — Kavya Iyer”, 30 min screen-share. Walk /guide, then login page. Task: “Send calendar invite + /guide link”. This is the site-visit analogue.</p>
+            </div>
+          </li>
+          <li>
+            <div class="n">8</div>
+            <div>
+              <strong>Convert — she pays and signs up</strong>
+              <p class="muted">She pays UPI on the call and creates her Freedom Planner account. Deepak hits <strong>Convert</strong>: enquiry <code>Booked</code>, contact → <code>client</code>, billing name Kavya Iyer. Then record the plan fee as Payment INCOME. Do not copy her salary into CRM.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="notes">
+        <h2>What the sales agent writes in notes</h2>
+        <pre class="sheet">Product: Freedom Planner (myfinancefreedom.com)
+Goal: FIRE picture, retire ~50
+Fit: salaried IN, home loan + SIPs, not trading
+Offer: annual assist ₹4,999; setup waived if paid on demo
+Demo: 18 Sep 7pm · screen-share /guide
+Signup: she will use her own email on the finance app
+Do not store: salary, EMI rupees, PAN</pre>
+      </section>
+
+      <section id="crm">
+        <h2>CRM vs finance app</h2>
+        <div class="shot">
+          <div class="chrome">
+            <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+            Two products · same login User, different jobs
+          </div>
+          <div class="shot-body">
+            <div class="grid-2">
+              <article class="card">
+                <h3>Sales CRM · crm.local.uat</h3>
+                <p>Contact, enquiry pipeline, follow-ups, Convert, plan-fee INCOME, ads EXPENSE, demo on calendar. Staff RBAC.</p>
+              </article>
+              <article class="card">
+                <h3>Freedom Planner · web.local.uat</h3>
+                <p>Her income, EMIs, SIPs, insurance, Quick Setup, advisor, /guide. Owned by her userId. Not this CRM.</p>
+              </article>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Same User identity can exist, but do not fold CRM into the finance app or store planner numbers on the enquiry.</p>
+      </section>
+
+      <section id="after">
+        <h2>After Convert — onboarding, not a new deal</h2>
+        <p class="lede">Like menu and décor after a banquet booking: the sale is closed; the work is making the product stick.</p>
+        <div class="rec">
+          <span class="tag low">Follow-up</span>
+          <div>
+            <h3>Quick Setup complete</h3>
+            <p>Due +3 days. Confirm she finished profile, emergency fund, and one FIRE path. Still on the closed enquiry.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag med">Task</span>
+          <div>
+            <h3>Advisor session</h3>
+            <p>Help her open AI Advisor once numbers are in. Do not invent balances in CRM notes.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag low">Calendar</span>
+          <div>
+            <h3>Renewal reminder</h3>
+            <p>11 months later: annual plan. New enquiry only if you treat renewal as a fresh sales cycle; otherwise a follow-up on this one.</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>What</th><th>Type</th><th>Mode</th><th>Status</th><th class="num">Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Annual Planner Assist — Kavya</td><td>INCOME</td><td>UPI</td><td>paid</td><td class="num">₹4,999</td></tr>
+            <tr><td>Meta ads — Sept cohort (share)</td><td>EXPENSE</td><td>CARD</td><td>paid</td><td class="num">₹800</td></tr>
+          </tbody>
+        </table>
+        <p class="caption">Ad spend can be one EXPENSE row for the campaign, not necessarily per lead. Token analogue is the plan fee — only after Convert.</p>
+      </section>
+
+      <section id="alts">
+        <h2>When they do not buy</h2>
+        <div class="rec">
+          <span class="tag high">Reject</span>
+          <div>
+            <h3>Wrong product</h3>
+            <p>Wants live F&amp;O tips, tax e-filing, or a shared household login. Close: <code>Lost: out of product scope</code>. Point them at /why if useful. No Convert.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag med">Lost</span>
+          <div>
+            <h3>Signed up without paying / used a competitor sheet</h3>
+            <p>They created a free account and disappeared, or stayed on Excel. Reason <code>Lost: no paid plan</code> or <code>Lost: stayed on spreadsheet</code>.</p>
+          </div>
+        </div>
+        <div class="rec">
+          <span class="tag low">Dropped</span>
+          <div>
+            <h3>Not now</h3>
+            <p>Reason <code>Lost: deferred</code>. Follow-up in 90 days as a <em>new</em> enquiry if you want a clean pipeline card.</p>
+          </div>
+        </div>
+      </section>
+
+      <p class="note">
+        Plan fees in this page are a sample sales story so agents can practise the CRM. They are not a live SKU in Freedom Planner.
+        Never copy passwords, OTPs, or household rupee data into CRM notes. WhatsApp stays the source field, not an integration.
+      </p>
+
+      <section>
+        <div class="hero-actions">
+          <a class="btn" href="/login" target="_top">Sign in to the CRM</a>
+          <a class="btn ghost" href="/banquet" target="_top">Banquet booking</a>
+          <a class="btn ghost" href="/real-estate" target="_top">Real estate sales</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page">
+      <div class="wrap">
+        Sales CRM · myfinancefreedom.com sales use case · sample names and fees are fictional.
+        Also: <a href="/banquet" target="_top">/banquet</a>
+        · <a href="/real-estate" target="_top">/real-estate</a>.
+      </div>
+    </footer>
+    <script>
+      (function () {
+        var button = document.getElementById("theme-toggle");
+        if (!button) return;
+        function apply(theme) {
+          var dark = theme === "dark";
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.dataset.theme = theme;
+          button.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+          try { localStorage.setItem("crm-theme", theme); } catch (e) {}
+          try { window.parent.postMessage({ type: "guide-theme", theme: theme }, "*"); } catch (e) {}
+        }
+        apply(document.documentElement.classList.contains("dark") ? "dark" : "light");
+        button.addEventListener("click", function () {
+          apply(document.documentElement.classList.contains("dark") ? "light" : "dark");
+        });
+      })();
+    </script>
+  </body>
+</html>

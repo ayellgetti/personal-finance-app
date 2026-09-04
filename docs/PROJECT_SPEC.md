@@ -111,7 +111,7 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 | --- | --- | --- |
 | Web | `apps/web` | Authenticated Freedom Planner UI (`8080` in Compose) |
 | Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
-| CRM | `apps/crm` | Sales CRM UI (`8082`); dashboard, pipeline, tasks, calendar, users/roles |
+| CRM | `apps/crm` | Sales CRM UI (`8082`); dashboard, pipeline, tasks, calendar, users/roles. Public walkthroughs (no auth): `/banquet`, `/real-estate`, `/freedom`. |
 | API | `apps/api` | Express backend (`5001`), Swagger `/docs`; finance + `/api/crm` |
 
 Do not import `apps/web` source from `apps/website`, `apps/crm`, or the reverse.
@@ -151,7 +151,7 @@ apps/crm/src/
 ├── lib/api.ts
 ├── lib/auth/
 ├── lib/crm/              # remote.ts, store.tsx (me + list caches)
-├── pages/                # Login, ForgotPassword, Index, NotFound
+├── pages/                # Login, ForgotPassword, Index, NotFound, public HTML walkthroughs (`/banquet`, `/real-estate`, `/freedom`)
 ├── types/crm.ts
 └── main.tsx
 ```
@@ -226,7 +226,7 @@ This is **not** a greenfield “User + Role + Permission only” scaffold. Finan
 
 **Finance:** `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `StatementImport`, `StatementLine`, `TaxScenario`, `CalculatorScenario`
 
-**CRM (Track D):** `Role`, `Permission`, `RolePermission`, `UserRole`, `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent`. Do not add `tenantId`. `CrmEnquiry.status` is the eight-stage sales pipeline: New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Do not add extra stages. `CrmPayment` uses `PaymentType` (`INCOME` / `EXPENSE`) and `PaymentMode` (`CASH`, `UPI`, `CARD`, `BANK_TRANSFER`, `CHEQUE`) only.
+**CRM (Track D):** `Role`, `Permission`, `RolePermission`, `UserRole`, `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent`. Do not add `tenantId`. `CrmEnquiry.status` is the eight-stage sales pipeline: New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Do not add extra stages. `CrmPayment` uses `PaymentType` (`INCOME` / `EXPENSE`) and `PaymentMode` (`CASH`, `UPI`, `CARD`, `BANK_TRANSFER`, `CHEQUE`) only. Public HTML walkthroughs on `apps/crm` (same iframe pattern as finance `/guide`): `/banquet` (hall enquiry → booking), `/real-estate` (2BHK enquiry → token), `/freedom` (myfinancefreedom.com sales agent → Freedom Planner onboarding). These routes are unauthenticated.
 
 **Unused / stub (do not build UI on these unless the plan says so):** `Contact` (chat-shaped; **not** the CRM party — do not reuse it), conversation tables, `Notification`, `Device`, `Socket`, `TradingView`, `Categories`, `Constant`, generic `Transaction`
 

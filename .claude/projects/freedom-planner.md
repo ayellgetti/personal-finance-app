@@ -37,3 +37,7 @@ When information is missing:
 - provide a conditional explanation where useful
 
 Project-specific financial rules should be maintained in the actual product specification, not inferred by the AI.
+
+## Sales CRM walkthrough
+
+How a myfinancefreedom.com sales agent runs an enquiry in Sales CRM (not in this finance app): `http://crm.local.uat/freedom`. Do not store household rupee data on the CRM enquiry.
