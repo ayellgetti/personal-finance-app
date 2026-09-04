@@ -8,6 +8,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/website/package.json apps/website/
+COPY apps/crm/package.json apps/crm/
 COPY packages/tsconfig packages/tsconfig
 COPY apps/api/prisma apps/api/prisma
 RUN pnpm install --frozen-lockfile --filter api...
@@ -34,6 +35,7 @@ COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
 COPY apps/website/package.json apps/website/
+COPY apps/crm/package.json apps/crm/
 RUN mkdir -p apps/api/uploads
 EXPOSE 5001
 WORKDIR /app/apps/api

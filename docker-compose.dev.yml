@@ -26,28 +26,8 @@ services:
         condition: service_healthy
       website:
         condition: service_healthy
-
-  certbot:
-    image: certbot/certbot:latest
-    restart: unless-stopped
-    volumes:
-      - ./containers/certbot/letsencrypt:/etc/letsencrypt
-      - ./containers/certbot/www:/var/www/certbot
-    entrypoint: /bin/sh
-    command:
-      - -c
-      - |
-        trap exit TERM
-        while :; do
-          certbot renew \
-            --webroot \
-            -w /var/www/certbot \
-            --quiet
-
-          sleep 12h
-        done
-    depends_on:
-      - web
+      crm:
+        condition: service_healthy
 
   postgres:
     image: postgres:16-alpine
@@ -191,6 +171,33 @@ services:
       - /app/apps/website/node_modules
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8081/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  crm:
+    build:
+      context: .
+      dockerfile: apps/crm/Dockerfile
+    container_name: docker-crm
+    restart: unless-stopped
+    env_file:
+      - ./.env.dev
+    environment:
+      VITE_API_PROXY: ${VITE_API_PROXY:-http://api:5001}
+      VITE_DEV_ALLOWED_HOSTS: ${VITE_CRM_DEV_ALLOWED_HOSTS:-crm.local.uat,localhost}
+      VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./apps/crm:/app/apps/crm
+      - /app/apps/crm/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8082/"]
       interval: 10s
       timeout: 5s
       retries: 5

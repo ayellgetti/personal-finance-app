@@ -1,23 +1,24 @@
 # example
 
-pnpm + Turborepo monorepo with a TypeScript Express API, Vite React product app, a separate marketing site, and PostgreSQL.
+pnpm + Turborepo monorepo with a TypeScript Express API, Vite React product app, a separate marketing site, Sales CRM, and PostgreSQL.
 
 ## Apps
 
 - `apps/api` — Express API on port `5001` (Swagger UI at `http://localhost:5001/docs`)
 - `apps/web` — Product app (login, dashboard, planner). Vite on port `8080` in Compose (`5173` if you run Vite on the host). Walkthrough: `/guide`. Internal brief: `/why`. Course outline: `/course`
 - `apps/website` — Public marketing site only. No auth, no finance data. Vite on port `8081`. “Open the app” links to `VITE_APP_URL` (default `http://localhost:8080`)
+- `apps/crm` — Sales CRM UI. Vite on port `8082`. Login reuses `/api/auth`; session is `GET /api/crm/me`. Prefer the Vite `/api` proxy.
 
 Local Postgres is exposed on **5433** (avoids clashing with an existing 5432 instance). Connection string is in `apps/api/.env`.
 
-The Compose stack also runs nginx on **http://localhost** (port 80). Hosts: `local.uat` / `www.local.uat` → marketing (`apps/website`); `web.local.uat` → product app (`apps/web`, `/api` and `/health` still proxied); `api.local.uat` → API. Hitting `http://localhost:8080` (app) or `http://localhost:8081` (website) directly still works.
+The Compose stack also runs nginx on **http://localhost** (port 80). Hosts: `local.uat` / `www.local.uat` → marketing (`apps/website`); `web.local.uat` → product app (`apps/web`, `/api` and `/health` still proxied); `crm.local.uat` → Sales CRM (`apps/crm`, `/api` and `/health` still proxied); `api.local.uat` → API. Hitting `http://localhost:8080` (app), `http://localhost:8081` (website), or `http://localhost:8082` (CRM) directly still works.
 
 These hostnames resolve only if they are in `/etc/hosts`. Without them the browser fails on DNS before nginx is reached:
 
 ```bash
 sudo tee -a /etc/hosts >/dev/null <<'EOF'
 127.0.0.1       local.uat www.local.uat website.local.uat
-127.0.0.1       web.local.uat api.local.uat
+127.0.0.1       web.local.uat crm.local.uat api.local.uat
 EOF
 ```
 
@@ -39,12 +40,13 @@ pnpm dev
 
 | Command | Description |
 | --- | --- |
-| `pnpm dev` | Run api, web, and website in watch mode |
+| `pnpm dev` | Run api, web, website, and crm in watch mode |
 | `pnpm build` | Build all apps |
 | `pnpm typecheck` | Typecheck all apps |
 | `pnpm lint` | Lint all apps |
 | `pnpm --filter api db:migrate` | Apply Prisma migrations |
 | `pnpm --filter api db:generate` | Generate the Prisma client |
+| `pnpm --filter crm test` | CRM UI tests |
 
 ## API architecture
 

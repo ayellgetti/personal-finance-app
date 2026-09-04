@@ -23,7 +23,9 @@ Never start the next phase while the current phase has unresolved:
 - build failures
 - database migration failures
 
-Do not treat unused boilerplate as the next job: Pino, Winston, Playwright, Husky, `packages/database`, `apps/admin`, `/api/v1`, `{ success, error }` envelopes, Node 24, Role/Permission tables. Those sit in **Track C** and need explicit approval.
+Do not treat unused boilerplate as the next job: Pino, Winston, Playwright, Husky, `packages/database`, `apps/admin`, `/api/v1`, `{ success, error }` envelopes, Node 24. Those sit in **Track C** and need explicit approval.
+
+CRM-only Role/Permission tables are **Track D** (approved). Do not extend that RBAC onto finance routes.
 
 ---
 
@@ -121,7 +123,9 @@ Prisma: `apps/api/prisma/schema.prisma` + migrations. Client: `apps/api/src/util
 
 Models in use: `User`, auth sessions/OTP, `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `FailureLog`, `StatementImport`, `StatementLine`, `TaxScenario`, `CalculatorScenario`.
 
-**Not created (Track C):** `Role`, `Permission`, `UserRole`, `RolePermission`, generic `Log`, `packages/database`, `pnpm db:seed`.
+CRM RBAC tables (`Role`, `Permission`, `UserRole`, `RolePermission`) and `Crm*` models are **Track D**, not a finance scaffold.
+
+**Not created (Track C):** generic `Log`, `packages/database`, `pnpm db:seed`. Platform-wide RBAC beyond CRM is still deferred (Phase A8).
 
 Commands: `pnpm --filter api db:migrate:dev`, `db:migrate`, `db:generate`.
 
@@ -159,9 +163,11 @@ Gaps (tests): broaden invalid login, expiry, refresh, logout coverage — Track 
 
 ### Phase A8 — Authorization
 
-**Status: DEFERRED**
+**Status: DEFERRED** (finance / platform-wide)
 
-Ownership is `userId` from the token. No Role/Permission matrix. Do not implement RBAC unless requested.
+Finance ownership stays `userId` from the token. Do not put `requirePermission` on finance routes.
+
+CRM-only Role/Permission RBAC is approved as **Track D**. Do not treat that as a green light for `apps/admin` or finance RBAC.
 
 ### Phase A9 — Users module
 
@@ -308,7 +314,7 @@ Not required for product completeness. Do not mix into Track B PRs. Requires exp
 | Pino / Winston / `Log` table | 4, 6 | Replaces working logger + `FailureLog` |
 | `/api/v1` + new JSON envelope + repositories | 5 | Breaking API |
 | `GET /ready` | 4, 17 | Additive; lowest-risk item if needed |
-| RBAC | 8 | New product surface |
+| RBAC (finance / platform-wide) | 8 | CRM-only RBAC is Track D; do not apply it to finance |
 | `apps/admin` | 10, 13 | New app |
 | Playwright E2E | 11, 12, 18 | New toolchain |
 | Husky + lint-staged | 14 | |
@@ -332,11 +338,13 @@ If a Track C item is approved, implement **that item only**, keep the current `/
 ## Current architecture (do not “fix” toward the generic diagram)
 
 ```text
-React web (:5173)
+React web (:5173)     Freedom Planner
+apps/crm (:8082)      Sales CRM UI
     → API client (/api proxy)
 Express API (:5001)
     → middleware (requestId, auth, validate, errors)
-    → route → controller → service → model
+    → /api/auth, /api/users, finance modules (userId ownership)
+    → /api/crm/* (Role/Permission; requirePermission)
     → Prisma → PostgreSQL (:5433 host)
     → Redis (advisor cache)
     → OpenAI (optional advisor)
@@ -344,4 +352,88 @@ Express API (:5001)
 
 Shared today: `packages/tsconfig` only.
 
+Do not add `tenantId`, a second Prisma schema, a second API, `/api/v1`, or a new JSON envelope. The unused `Contact` stub stays unused; CRM parties are `Crm*` models.
+
 The system should stay modular without extra packages or an admin app until Track C is approved.
+
+---
+
+# Track D — Sales CRM
+
+Second product on the same Express/Prisma API. Frontend is `apps/crm`. Backend modules live under `apps/api/src/modules/sales-crm/` and models under `apps/api/src/models/sales-crm/`.
+
+**Constraints (do not violate):**
+
+- Same `User` login identity as Freedom Planner. Staff created later by CRM Admin still need finance `User` fields (`dob`, `gender`, …).
+- RBAC is CRM-only. Finance routes stay `requireAuth` + `userId` ownership.
+- Unused Prisma `Contact` stub stays unused. New tables are `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent` plus `Role` / `Permission` / `RolePermission` / `UserRole`.
+- No `tenantId`. All CRM rows are company-wide; access is Role + Permission.
+- No second Prisma client, no second API process, no `/api/v1`, no envelope change.
+- Do not fold CRM into `apps/web`. Do not scaffold banquet entities.
+
+**RBAC bootstrap (no seed script):** if `Permission` is empty, insert the catalog and four roles (`admin`, `manager`, `sales`, `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`. Later authenticated users with no CRM role get `403` on `/api/crm/*` (they can still use `/api/auth` and finance). Permissions are loaded per request, not stored in the JWT.
+
+Do not start D2 while D1 typecheck, tests, or migration are failing.
+
+### Phase D0 — Docs
+
+**Status: COMPLETED**
+
+Record Track D, `apps/crm` as a second product, CRM-only RBAC, unused `Contact` stays unused, and the no-tenant / no-second-API constraints in this file, `docs/PROJECT_SPEC.md`, and `CLAUDE.md`.
+
+### Phase D1 — Schema + RBAC + `/me`
+
+**Status: COMPLETED**
+
+Prisma `Crm*` + Role/Permission models and migration `20260904074646_sales_crm`; `requirePermission`; catalog + first-admin bootstrap; `GET /api/crm/me` → `{ user, roles, permissions }`. No `apps/crm` scaffold. No contact/enquiry HTTP CRUD.
+
+**Validate:** `pnpm --filter api test` (82 passing, including CRM bootstrap/401/403), `pnpm --filter api typecheck`, migration `20260904074646_sales_crm`.
+
+### Phase D2 — `apps/crm` shell
+
+**Status: COMPLETED**
+
+Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`, admin nav hidden without `crm.users.read` / `crm.roles.read`, Docker/nginx/CORS examples. Pipeline/work/admin screens land in D3–D8.
+
+**Validate:** `pnpm --filter crm test` (12 passing), `pnpm --filter crm typecheck`, `pnpm --filter crm lint`.
+
+### Phase D3 — Contacts
+
+**Status: COMPLETED**
+
+`apps/crm` Contacts module: table, type filter, search, create/edit dialog (name, mobile, type, email, company), remove confirm. Client: `lib/crm/remote.ts` + list cache in `CrmProvider`. Backend contacts API was already in `/api/crm/contacts`.
+
+### Phase D4 — Enquiry + follow-up
+
+**Status: COMPLETED**
+
+Enquiries table with status filter and create/edit. Follow-ups list with overdue highlight. Shared loading / empty / error / 403 states.
+
+### Phase D5 — Convert, clients, payments
+
+**Status: COMPLETED**
+
+Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in the CRM store. Clients table links to the contact and payments views. Payments table records amount, method, and status (no gateway).
+
+`$transaction` on convert. No OpenAI/Redis inside the transaction.
+
+### Phase D6 — Tasks kanban
+
+**Status: COMPLETED**
+
+Four columns (Todo / In-Progress / In-Review / Done). Status changes via native select or “Move to …” actions. No drag-and-drop library.
+
+### Phase D7 — Calendar
+
+**Status: COMPLETED**
+
+Month grid of `GET /api/crm/calendar?from&to` (follow-ups, tasks, standalone events). Click an item for detail; create-event dialog.
+
+Union of follow-up due dates, task due dates, and standalone `CrmCalendarEvent`.
+
+### Phase D8 — Users/roles admin UI
+
+**Status: COMPLETED**
+
+Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`) and patch roles. Roles: list and edit permission ids; hidden without `crm.roles.read`, edit disabled without `crm.roles.update`. Admin nav still hidden without read permissions.
+

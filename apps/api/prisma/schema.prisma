@@ -54,6 +54,11 @@ model User {
   statementLines             StatementLine[]
   taxScenarios               TaxScenario[]
   calculatorScenarios        CalculatorScenario[]
+  userRoles                  UserRole[]
+  assignedCrmEnquiries       CrmEnquiry[]       @relation("CrmEnquiryAssignedTo")
+  assignedCrmFollowUps       CrmFollowUp[]      @relation("CrmFollowUpAssignedTo")
+  assignedCrmTasks           CrmTask[]          @relation("CrmTaskAssignee")
+  assignedCrmCalendarEvents  CrmCalendarEvent[] @relation("CrmCalendarEventAssignee")
 }
 
 model FinancialProfile {
@@ -153,6 +158,7 @@ model Otp {
   @@index([mobileNo, type])
 }
 
+// Chat-shaped stub. Unused. Do not reuse for Sales CRM — parties are CrmContact.
 model Contact {
   id               String    @id @default(uuid())
   userId           String
@@ -654,4 +660,299 @@ model Tradingview {
 
   @@index([symbol])
   @@index([timestamp])
+}
+
+enum CrmContactType {
+  lead
+  client
+  vendor
+  employee
+}
+
+enum CrmEnquiryStatus {
+  new
+  in_progress
+  won
+  lost
+  on_hold
+}
+
+enum CrmFollowUpStatus {
+  pending
+  completed
+  cancelled
+}
+
+enum CrmClientStatus {
+  active
+  inactive
+}
+
+enum CrmPaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum CrmTaskStatus {
+  todo
+  in_progress
+  in_review
+  done
+}
+
+model Role {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  slug      String    @unique
+  isActive  Int       @default(1)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+}
+
+model Permission {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  isActive  Int       @default(1)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String    @id @default(uuid())
+  roleId       String
+  permissionId String
+  isActive     Int       @default(1)
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedBy    String?
+  updatedAt    DateTime  @updatedAt
+  deletedBy    String?
+  deletedAt    DateTime?
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model UserRole {
+  id        String    @id @default(uuid())
+  userId    String
+  roleId    String
+  isActive  Int       @default(1)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([roleId])
+}
+
+model CrmContact {
+  id          String         @id @default(uuid())
+  name        String
+  /// Unique among active rows (`isActive` = 1) via a partial unique index in SQL.
+  mobile      String
+  type        CrmContactType
+  email       String?
+  companyName String?
+  notes       String?
+  isActive    Int            @default(1)
+  createdBy   String?
+  createdAt   DateTime       @default(now())
+  updatedBy   String?
+  updatedAt   DateTime       @updatedAt
+  deletedBy   String?
+  deletedAt   DateTime?
+
+  enquiries      CrmEnquiry[]
+  followUps      CrmFollowUp[]
+  client         CrmClient?
+  tasks          CrmTask[]
+  calendarEvents CrmCalendarEvent[]
+
+  @@index([mobile])
+  @@index([type])
+}
+
+model CrmEnquiry {
+  id             String           @id @default(uuid())
+  contactId      String
+  title          String
+  source         String
+  status         CrmEnquiryStatus @default(new)
+  expectedValue  Float?
+  assignedToId   String?
+  notes          String?
+  isActive       Int              @default(1)
+  createdBy      String?
+  createdAt      DateTime         @default(now())
+  updatedBy      String?
+  updatedAt      DateTime         @updatedAt
+  deletedBy      String?
+  deletedAt      DateTime?
+
+  contact         CrmContact          @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  assignedTo      User?               @relation("CrmEnquiryAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  followUps       CrmFollowUp[]
+  convertedClient CrmClient?          @relation("CrmEnquiryConvertedClient")
+  payments        CrmPayment[]
+  tasks           CrmTask[]
+  calendarEvents  CrmCalendarEvent[]
+
+  @@index([status])
+  @@index([contactId])
+  @@index([assignedToId])
+}
+
+model CrmFollowUp {
+  id           String            @id @default(uuid())
+  enquiryId    String?
+  contactId    String
+  dueAt        DateTime
+  status       CrmFollowUpStatus @default(pending)
+  assignedToId String?
+  notes        String?
+  isActive     Int               @default(1)
+  createdBy    String?
+  createdAt    DateTime          @default(now())
+  updatedBy    String?
+  updatedAt    DateTime          @updatedAt
+  deletedBy    String?
+  deletedAt    DateTime?
+
+  enquiry    CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  contact    CrmContact  @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  assignedTo User?       @relation("CrmFollowUpAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([dueAt])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([contactId])
+  @@index([enquiryId])
+}
+
+model CrmClient {
+  id                      String          @id @default(uuid())
+  contactId               String          @unique
+  status                  CrmClientStatus @default(active)
+  billingName             String
+  gstin                   String?
+  convertedFromEnquiryId  String?         @unique
+  isActive                Int             @default(1)
+  createdBy               String?
+  createdAt               DateTime        @default(now())
+  updatedBy               String?
+  updatedAt               DateTime        @updatedAt
+  deletedBy               String?
+  deletedAt               DateTime?
+
+  contact              CrmContact  @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  convertedFromEnquiry CrmEnquiry? @relation("CrmEnquiryConvertedClient", fields: [convertedFromEnquiryId], references: [id], onDelete: SetNull)
+  payments             CrmPayment[]
+}
+
+model CrmPayment {
+  id        String           @id @default(uuid())
+  clientId  String
+  enquiryId String?
+  amount    Float
+  currency  String           @default("INR")
+  method    String
+  status    CrmPaymentStatus @default(pending)
+  paidAt    DateTime?
+  reference String?
+  isActive  Int              @default(1)
+  createdBy String?
+  createdAt DateTime         @default(now())
+  updatedBy String?
+  updatedAt DateTime         @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  client  CrmClient   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  enquiry CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+
+  @@index([clientId])
+  @@index([status])
+  @@index([paidAt])
+  @@index([enquiryId])
+}
+
+model CrmTask {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  status      CrmTaskStatus @default(todo)
+  assigneeId  String?
+  dueAt       DateTime?
+  contactId   String?
+  enquiryId   String?
+  isActive    Int           @default(1)
+  createdBy   String?
+  createdAt   DateTime      @default(now())
+  updatedBy   String?
+  updatedAt   DateTime      @updatedAt
+  deletedBy   String?
+  deletedAt   DateTime?
+
+  assignee User?       @relation("CrmTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  contact  CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  enquiry  CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([assigneeId])
+  @@index([dueAt])
+  @@index([contactId])
+  @@index([enquiryId])
+}
+
+model CrmCalendarEvent {
+  id         String    @id @default(uuid())
+  title      String
+  startsAt   DateTime
+  endsAt     DateTime
+  contactId  String?
+  enquiryId  String?
+  assigneeId String?
+  notes      String?
+  isActive   Int       @default(1)
+  createdBy  String?
+  createdAt  DateTime  @default(now())
+  updatedBy  String?
+  updatedAt  DateTime  @updatedAt
+  deletedBy  String?
+  deletedAt  DateTime?
+
+  contact  CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  enquiry  CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  assignee User?       @relation("CrmCalendarEventAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([startsAt])
+  @@index([assigneeId])
+  @@index([contactId])
+  @@index([enquiryId])
 }

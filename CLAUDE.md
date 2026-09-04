@@ -4,7 +4,7 @@
 
 Mandatory engineering rules for developers and AI agents (Cursor, Claude Code, Copilot, Codex, and others) working in this repository.
 
-This is a TypeScript monorepo: multiple apps, shared packages, PostgreSQL, auth, and personal-finance modules, with room for more services later.
+This is a TypeScript monorepo: multiple apps, shared packages, PostgreSQL, auth, personal-finance modules, and Sales CRM (Track D) on the same API, with room for more services later.
 
 Before changing code, read:
 
@@ -253,9 +253,10 @@ No seed pipeline yet. If added, seeds must be deterministic and idempotent. Seed
 # 15. Monorepo architecture
 
 ```text
-apps/api      Express API
-apps/web      Product React app
+apps/api      Express API (finance + /api/crm)
+apps/web      Freedom Planner React app
 apps/website  Public marketing site (no auth / finance)
+apps/crm      Sales CRM React app (Track D)
 packages/tsconfig
 ```
 
@@ -285,9 +286,19 @@ apps/web/src/
 ├── pages/
 ├── types/
 └── main.tsx
+
+apps/crm/src/
+├── components/layout/
+├── components/modules/
+├── lib/api.ts
+├── lib/auth/
+├── lib/crm/           # remote.ts, store.tsx
+├── pages/
+├── types/crm.ts
+└── main.tsx
 ```
 
-Do not put business logic or API calls in components when `lib/finance/remote.ts` or a service already exists.
+Do not put business logic or API calls in components when `lib/finance/remote.ts`, `lib/crm/remote.ts`, or a service already exists.
 
 Keep server round-trips in `remote.ts`. Keep planner/display math in `lib/finance/calculations.ts` or the API planner.
 
@@ -307,8 +318,9 @@ apps/api/src/
 ├── middlewares/       # *.middleware.ts (request-id, auth, validate, errors)
 ├── modules/
 │   ├── shared/        # auth, user, otp, device, ai, logging
-│   └── personal-finance/
-├── models/
+│   ├── personal-finance/
+│   └── sales-crm/     # CRM session, RBAC, contacts, pipeline, calendar, admin
+├── models/            # including models/sales-crm/
 ├── utils/             # prisma, redis, uploads, http-error, jwt, api, logger
 ├── tests/             # Node test runner files
 ├── docs/
@@ -328,9 +340,14 @@ modules/personal-finance/loan/
   loan.controller.ts
   loan.service.ts
   loan.request.ts      # Zod
+
+modules/sales-crm/me/
+  me.route.ts
+  me.controller.ts
+  me.service.ts
 ```
 
-- **Routes** — HTTP paths and middleware (`requireAuth`, `validateBody`).
+- **Routes** — HTTP paths and middleware (`requireAuth`, `requirePermission` on CRM, `validateBody`).
 - **Controllers** — thin HTTP adapters.
 - **Services** — business rules.
 - **Models** — Prisma access.
@@ -346,7 +363,7 @@ Do not put Prisma queries in controllers.
 
 **Current prefix:** `/api/...` (not `/api/v1`).
 
-Examples: `/api/auth/login`, `/api/loans`, `/api/advisor`, `/api/statements`, `/api/tax`, `/api/calculators`.
+Examples: `/api/auth/login`, `/api/loans`, `/api/advisor`, `/api/statements`, `/api/tax`, `/api/calculators`, `/api/crm/me`, `/api/crm/contacts`.
 
 Do not introduce `/api/v1` without an approved migration of all clients.
 
@@ -414,23 +431,25 @@ Never store plaintext passwords.
 
 Never log credentials, OTPs, or tokens.
 
-Finance routes use `requireAuth`.
+Finance routes use `requireAuth`. CRM routes use `requireAuth` plus `requirePermission` (not on finance).
 
 ---
 
 # 25. Authorization
 
-Today: authenticated user owns their finance rows (userId from the token). There is no Role/Permission matrix.
+Finance: authenticated user owns their rows (`userId` from the token). Do not put `requirePermission` on finance routes.
 
-Do not hard-code a second ad-hoc admin model in one controller.
+CRM (Track D, approved for CRM only): `Role` / `Permission` / `RolePermission` / `UserRole`. `requirePermission` runs after `requireAuth`, loads codes per request (not from the JWT), and returns `403` when missing. If `Permission` is empty, bootstrap the catalog and four roles (`admin` / `manager` / `sales` / `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`.
 
-Do not scaffold RBAC until the plan asks for it.
+Do not hard-code a second ad-hoc admin model in one finance controller.
+
+Do not extend CRM RBAC onto finance. Do not add `tenantId`.
 
 ---
 
 # 26. Multi-tenancy
 
-Single-user-per-account today. Do not add `tenantId` / `organizationId` everywhere “just in case.”
+Finance is single-user-per-account. CRM is single-company (shared rows, Role + Permission). Do not add `tenantId` / `organizationId` everywhere “just in case.”
 
 Avoid unique constraints that would block a later org model if that work is approved.
 
@@ -542,7 +561,7 @@ Do not reformat unrelated files.
 
 # 39. ESLint
 
-Web ESLint is the frontend linter. API typecheck is `tsc`.
+Web and CRM ESLint are the frontend linters. API typecheck is `tsc`.
 
 Do not disable rules globally. Do not ignore lint in the area you changed.
 
@@ -562,7 +581,7 @@ Do not use `--no-verify` as normal workflow if hooks are added later.
 
 Keep production images lean. Do not run as root in production images when changing Dockerfiles, where practical.
 
-Local Postgres is **5433** on the host. Redis **6379**. API **5001**. Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**.
+Local Postgres is **5433** on the host. Redis **6379**. API **5001**. Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**.
 
 ---
 
@@ -636,6 +655,8 @@ Agents must not:
 
 When adding a finance entity: Prisma migrate → model/service/route → OpenAPI → `remote.ts` + store + UI.
 
+When adding a CRM entity: Prisma migrate → `models/sales-crm` → `modules/sales-crm` → OpenAPI → `apps/crm` `remote.ts` + UI. Apply `requirePermission`; do not scope CRM rows by finance `userId`.
+
 Planner math: `apps/api/src/modules/personal-finance/planner/planner.engine.ts`.
 Tax slabs: `apps/api/src/modules/personal-finance/tax/tax.engine.ts` + `tax.catalog.ts`.
 Calculator math: `apps/api/src/modules/personal-finance/calculator/calculator.engine.ts`.
@@ -644,7 +665,7 @@ Statement parse: `apps/api/src/modules/personal-finance/statement/statement.pars
 
 Advisor: prompt + `advisor.schema.ts` together; cache in Redis.
 
-Schema stubs (chat, notifications, devices, TradingView, `Transaction`) stay unused until the plan says otherwise.
+Schema stubs (chat, notifications, devices, TradingView, `Transaction`, the unused `Contact` stub) stay unused until the plan says otherwise. CRM parties are `Crm*` models — do not reuse `Contact`.
 
 ---
 

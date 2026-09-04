@@ -56,3 +56,23 @@ export {
   conversationMessageStatusModel,
 } from "./chat/conversation-message-status.model";
 export { TradingviewModel, tradingviewModel } from "./tradingview.model";
+export { RoleModel, roleModel } from "./sales-crm/role.model";
+export { PermissionModel, permissionModel } from "./sales-crm/permission.model";
+export {
+  RolePermissionModel,
+  rolePermissionModel,
+} from "./sales-crm/role-permission.model";
+export { UserRoleModel, userRoleModel } from "./sales-crm/user-role.model";
+export { CrmContactModel, crmContactModel } from "./sales-crm/crm-contact.model";
+export { CrmEnquiryModel, crmEnquiryModel } from "./sales-crm/crm-enquiry.model";
+export {
+  CrmFollowUpModel,
+  crmFollowUpModel,
+} from "./sales-crm/crm-follow-up.model";
+export { CrmClientModel, crmClientModel } from "./sales-crm/crm-client.model";
+export { CrmPaymentModel, crmPaymentModel } from "./sales-crm/crm-payment.model";
+export { CrmTaskModel, crmTaskModel } from "./sales-crm/crm-task.model";
+export {
+  CrmCalendarEventModel,
+  crmCalendarEventModel,
+} from "./sales-crm/crm-calendar-event.model";

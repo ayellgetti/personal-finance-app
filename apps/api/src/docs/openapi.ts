@@ -1,3 +1,5 @@
+import { crmOpenApiPaths, crmOpenApiSchemas, crmOpenApiTags } from "./crm.openapi";
+
 export const openApiDocument = {
   openapi: "3.0.3",
   info: {
@@ -42,6 +44,7 @@ export const openApiDocument = {
       name: "Calculators",
       description: "Deterministic financial calculators and saved scenarios",
     },
+    ...crmOpenApiTags,
   ],
   components: {
     securitySchemes: {
@@ -1051,6 +1054,35 @@ export const openApiDocument = {
           disclaimer: { type: "string" },
         },
       },
+      CrmRole: {
+        type: "object",
+        required: ["id", "name", "slug"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          name: { type: "string", example: "Admin" },
+          slug: {
+            type: "string",
+            enum: ["admin", "manager", "sales", "viewer"],
+          },
+        },
+      },
+      CrmMe: {
+        type: "object",
+        required: ["user", "roles", "permissions"],
+        properties: {
+          user: { $ref: "#/components/schemas/PublicUser" },
+          roles: {
+            type: "array",
+            items: { $ref: "#/components/schemas/CrmRole" },
+          },
+          permissions: {
+            type: "array",
+            items: { type: "string" },
+            example: ["crm.dashboard.read", "crm.contacts.read"],
+          },
+        },
+      },
+      ...crmOpenApiSchemas,
     },
     responses: {
       EnvelopeError: {
@@ -1084,6 +1116,21 @@ export const openApiDocument = {
               status: false,
               data: null,
               message: "Missing access token",
+              timestamp: "2026-08-20T13:00:00.000Z",
+              requestId: "84cd23aa-0b1e-4f2e-b222-6dc63cf84cb8",
+            },
+          },
+        },
+      },
+      Forbidden: {
+        description: "Authenticated but missing a CRM role or permission.",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+            example: {
+              status: false,
+              data: null,
+              message: "Forbidden",
               timestamp: "2026-08-20T13:00:00.000Z",
               requestId: "84cd23aa-0b1e-4f2e-b222-6dc63cf84cb8",
             },
@@ -3059,5 +3106,6 @@ export const openApiDocument = {
         },
       },
     },
+    ...crmOpenApiPaths,
   },
 } as const;

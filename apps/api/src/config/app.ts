@@ -10,6 +10,7 @@ import { closeRedis } from "../utils/redis.util";
 import { route } from "./route";
 import { middleware } from "./middleware";
 import { util } from "./util";
+import { rbacService } from "../modules/sales-crm/rbac/rbac.service";
 
 export class App {
   private static instance?: App;
@@ -41,6 +42,12 @@ export class App {
       logger.info("API started", {
         port: setting.port,
         environment: setting.environment,
+      });
+    });
+
+    void rbacService.ensureCatalog("system").catch((error: unknown) => {
+      logger.error("CRM RBAC catalog bootstrap failed", {
+        message: error instanceof Error ? error.message : String(error),
       });
     });
 

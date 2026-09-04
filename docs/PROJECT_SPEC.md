@@ -6,15 +6,19 @@ Engineering rules: root `CLAUDE.md`.
 Build order: `docs/DEVELOPMENT_PLAN.md`.  
 Local setup: `README.md`.
 
-Existing implementation wins over generic platform boilerplate. Do not create `apps/admin`, empty `@repo/*` packages, RBAC tables, or move Prisma until that work is approved in the development plan.
+Existing implementation wins over generic platform boilerplate. Do not create `apps/admin`, empty `@repo/*` packages, or move Prisma until that work is approved in the development plan.
+
+Sales CRM (Track D) is an approved second product: `apps/crm` UI and `modules/sales-crm` in the existing `apps/api`. CRM-only Role/Permission RBAC is approved. Finance stays `userId` ownership. Do not add `tenantId`, a second Prisma schema, a second API, `/api/v1`, or a new JSON envelope. The unused `Contact` stub stays unused; CRM parties use `Crm*` models.
 
 ---
 
 ## 1. Project objective
 
-Build a **production-ready TypeScript monorepo** that hosts a personal-finance product today and can host more apps and modules later without a full restructure.
+Build a **production-ready TypeScript monorepo** that hosts a personal-finance product today, a Sales CRM (Track D) on the same API, and can host more apps and modules later without a full restructure.
 
-The running product: an **India-first personal finance web app** — capture a household’s money, project cash flow and net worth, and turn that into an AI advisor report.
+The running finance product: an **India-first personal finance web app** — capture a household’s money, project cash flow and net worth, and turn that into an AI advisor report.
+
+The Sales CRM (same login `User`, company-wide data, CRM-only RBAC) is specified in `docs/DEVELOPMENT_PLAN.md` Track D. `apps/crm` is the CRM UI. CRM HTTP lives under `/api/crm` (session, contacts, enquiries, follow-ups, clients, payments, tasks, calendar, users, roles, dashboard).
 
 The system must be scalable, maintainable, secure, testable, modular, developer-friendly, and AI-agent friendly.
 
@@ -75,9 +79,10 @@ Redis is already used for advisor caching. Do not add BullMQ or a second queue u
 ```text
 .
 ├── apps/
-│   ├── api/                 # Express API
-│   ├── web/                 # Product React app
-│   └── website/             # Public marketing site
+│   ├── api/                 # Express API (finance + /api/crm)
+│   ├── web/                 # Freedom Planner React app
+│   ├── website/             # Public marketing site
+│   └── crm/                 # Sales CRM React app (Track D)
 ├── packages/
 │   └── tsconfig/
 ├── docs/
@@ -92,7 +97,7 @@ Redis is already used for advisor caching. Do not add BullMQ or a second queue u
 └── turbo.json
 ```
 
-**Do not create** unused apps or packages (`admin`, `database`, `shared-api`, `ui`, root Playwright/Prettier configs) “because the boilerplate listed them.”
+**Do not create** unused apps or packages (`admin`, `database`, `shared-api`, `ui`, root Playwright/Prettier configs) “because the boilerplate listed them.” `apps/crm` is the Track D product UI, not an unused admin scaffold.
 
 Prisma lives at `apps/api/prisma/`, not `packages/database/`.
 
@@ -104,13 +109,14 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 
 | App | Path | Role |
 | --- | --- | --- |
-| Web | `apps/web` | Authenticated product UI (`8080` in Compose) |
+| Web | `apps/web` | Authenticated Freedom Planner UI (`8080` in Compose) |
 | Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
-| API | `apps/api` | Express backend (`5001`), Swagger `/docs` |
+| CRM | `apps/crm` | Sales CRM UI (`8082`); dashboard, pipeline, tasks, calendar, users/roles |
+| API | `apps/api` | Express backend (`5001`), Swagger `/docs`; finance + `/api/crm` |
 
-Do not import `apps/web` source from `apps/website` or the reverse.
+Do not import `apps/web` source from `apps/website`, `apps/crm`, or the reverse.
 
-**Admin (`apps/admin`)** does not exist. Do not scaffold it unless requested.
+**Admin (`apps/admin`)** does not exist. Do not scaffold it unless requested. CRM admin (users/roles) lives inside `apps/crm`, not a third app.
 
 Do not split the API into microservices.
 
@@ -136,6 +142,20 @@ Do not reshape into `src/features/*` in an unrelated PR.
 
 Marketing site (`apps/website`) is a second Vite app: `src/pages`, `src/components`. It has no auth store and must not import `apps/web`.
 
+Sales CRM (`apps/crm`) copies the web auth/API/shadcn pattern. LocalStorage keys are prefixed `crm-`. Do not import `apps/web` source.
+
+```text
+apps/crm/src/
+├── components/layout/
+├── components/modules/
+├── lib/api.ts
+├── lib/auth/
+├── lib/crm/              # remote.ts, store.tsx (me + list caches)
+├── pages/                # Login, ForgotPassword, Index, NotFound
+├── types/crm.ts
+└── main.tsx
+```
+
 - Keep API calls in `lib/finance/remote.ts` and `lib/api.ts`.
 - Keep finance state in `lib/finance/store.tsx`.
 - Do not put app-specific finance logic in a future `packages/ui`.
@@ -152,7 +172,8 @@ apps/api/src/
 ├── middlewares/          # *.middleware.ts
 ├── modules/
 │   ├── shared/           # auth, user, otp, device, ai, logging
-│   └── personal-finance/
+│   ├── personal-finance/
+│   └── sales-crm/        # CRM session, contacts, pipeline, calendar, admin
 ├── models/               # Prisma access
 ├── utils/                # prisma, redis, uploads, http-error, jwt, api, logger
 ├── tests/                # API tests
@@ -205,11 +226,11 @@ This is **not** a greenfield “User + Role + Permission only” scaffold. Finan
 
 **Finance:** `FinancialProfile`, `Budget`, `Loan`, `Investment`, `Insurance`, `Goal`, `Planner`, `StatementImport`, `StatementLine`, `TaxScenario`, `CalculatorScenario`
 
-**Unused / stub (do not build UI on these unless the plan says so):** `Contact`, conversation tables, `Notification`, `Device`, `Socket`, `TradingView`, `Categories`, `Constant`, generic `Transaction`
+**CRM (Track D):** `Role`, `Permission`, `RolePermission`, `UserRole`, `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent`. Do not add `tenantId`.
 
-There is **no** `Role` / `Permission` / `UserRole` graph. Authorization is: authenticated user + `userId` on their rows.
+**Unused / stub (do not build UI on these unless the plan says so):** `Contact` (chat-shaped; **not** the CRM party — do not reuse it), conversation tables, `Notification`, `Device`, `Socket`, `TradingView`, `Categories`, `Constant`, generic `Transaction`
 
-Do not add RBAC tables in a finance feature PR.
+Finance authorization is: authenticated user + `userId` on their rows. CRM authorization is Role + Permission (`requirePermission` after `requireAuth`). Do not put CRM permissions in the JWT. Do not apply CRM RBAC to finance routes.
 
 Integrity: use Prisma relations and DB constraints, not only client checks.
 
@@ -247,7 +268,7 @@ Logging must not dominate request latency (current failure-log write is acceptab
 
 Base path: **`/api`** (not `/api/v1`).
 
-Examples: `/api/auth/login`, `/api/otp/stats`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`, `/api/statements`, `/api/tax`, `/api/calculators`.
+Examples: `/api/auth/login`, `/api/otp/stats`, `/api/users`, `/api/budgets`, `/api/loans`, `/api/investments`, `/api/insurances`, `/api/setup`, `/api/goals`, `/api/financial-profile`, `/api/planner`, `/api/advisor`, `/api/statements`, `/api/tax`, `/api/calculators`, `/api/crm/me`, `/api/crm/contacts`, `/api/crm/enquiries`, `/api/crm/dashboard`.
 
 Also: `GET /health`.
 
@@ -309,9 +330,11 @@ SSO is out of scope until requested; do not block it with one-off token formats 
 
 ## 20. Authorization
 
-Current: `requireAuth` + row ownership by `userId`.
+Finance: `requireAuth` + row ownership by `userId`. No finance Role/Permission matrix.
 
-No roles/permissions middleware. Do not scatter a second admin check in one controller. Do not scaffold RBAC until planned.
+CRM (Track D): `requireAuth` then `requirePermission`. Load permission codes per request via `UserRole` → `RolePermission` → `Permission`. Missing permission → `403`. First authenticated `GET /api/crm/me` caller becomes `admin` if `UserRole` is empty; later users with no CRM role get `403` on `/api/crm/*`.
+
+Do not scatter a second ad-hoc admin check in one finance controller. Do not put permissions in the JWT.
 
 ---
 
@@ -481,15 +504,17 @@ Never commit `.env`, `node_modules`, `dist`, coverage, or secrets.
 - Chat, contacts, push, sockets
 - Shared household accounts
 - Native mobile
-- CRM, banquet, society, school, social, habits — other verticals are **not** this product; do not scaffold them
+- Banquet, society, school, social, habits — other verticals are **not** this product; do not scaffold them
+- Sales CRM is Track D (`apps/crm` + `/api/crm`); do not fold it into `apps/web`
 
 ### Out (platform boilerplate)
 
-- `apps/admin`
-- RBAC (Role / Permission)
-- Full multi-tenancy
+- `apps/admin` (CRM admin UI is inside `apps/crm`, D8)
+- Finance / platform-wide RBAC (CRM-only Role/Permission is Track D)
+- Full multi-tenancy / `tenantId`
 - `/api/v1` and new JSON envelope
 - Moving Prisma to `packages/database`
+- Reusing the unused `Contact` stub for CRM
 
 ### UX
 

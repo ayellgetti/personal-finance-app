@@ -13,10 +13,25 @@ export type CreateUserInput = {
   mobileNo: string;
   email: string;
   password: string;
+  createdBy?: string;
+  updatedBy?: string;
 };
 
 export type UpdateUserInput = Partial<
-  Pick<User, "firstName" | "lastName" | "gender" | "avatar" | "avatarBackground" | "quickStep">
+  Pick<
+    User,
+    | "firstName"
+    | "lastName"
+    | "gender"
+    | "avatar"
+    | "avatarBackground"
+    | "quickStep"
+    | "dob"
+    | "countryCode"
+    | "mobileNo"
+    | "email"
+    | "updatedBy"
+  >
 >;
 
 export type SetPasswordInput = Pick<User, "password" | "oldPasswords">;
