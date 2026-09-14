@@ -13,12 +13,14 @@ import {
   Menu,
   Gem,
   GraduationCap,
+  BookMarked,
   CalendarClock,
   ClipboardList,
   FileSpreadsheet,
   Calculator,
   Percent,
   CreditCard,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -45,7 +47,9 @@ export type ViewId =
   | "calculators"
   | "freedom"
   | "advisor"
+  | "chat"
   | "learn"
+  | "course"
   | "report";
 
 type NavItem = {
@@ -69,7 +73,9 @@ export const NAV: NavItem[] = [
   { id: "statements", label: "Statement Analyzer", icon: FileSpreadsheet, group: "Plan" },
   { id: "daily", label: "Budget Tracker", icon: CalendarClock, group: "Plan" },
   { id: "advisor", label: "AI Advisor", icon: Sparkles, group: "Plan" },
+  { id: "chat", label: "AI Chat", icon: MessageSquare, group: "Plan" },
   { id: "learn", label: "Learning Hub", icon: GraduationCap, group: "Plan" },
+  { id: "course", label: "Course", icon: BookMarked, group: "Plan" },
   { id: "report", label: "Summary Report", icon: FileText, group: "Report" },
   { id: "tax", label: "Tax Calculator", icon: Percent, group: "Calculators" },
   { id: "freedom", label: "Freedom Calculator", icon: Rocket, group: "Calculators" },

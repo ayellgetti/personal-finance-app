@@ -55,8 +55,8 @@ interface FinanceContextValue {
   data: FinanceData;
   loading: boolean;
   updateProfile: (p: Partial<Profile>) => Promise<void> | void;
-  addItem: <K extends Collections>(key: K, item: FinanceData[K][number]) => Promise<void> | void;
-  updateItem: <K extends Collections>(key: K, id: string, patch: Partial<FinanceData[K][number]>) => Promise<void> | void;
+  addItem: <K extends Collections>(key: K, item: FinanceData[K][number]) => Promise<string | undefined>;
+  updateItem: <K extends Collections>(key: K, id: string, patch: Partial<FinanceData[K][number]>) => Promise<boolean>;
   removeItem: (key: Collections, id: string) => Promise<void> | void;
 }
 
@@ -72,6 +72,7 @@ const SAMPLE_PROFILE_NAME = "Arjun Mehta";
 const FINANCIAL_KEYS: (keyof Profile)[] = [
   "retirementAge",
   "dependents",
+  "familyMembers",
   "inflationRate",
   "employmentType",
   "currency",
@@ -166,6 +167,7 @@ function financialPayload(profile: Profile): RemoteFinancialProfile {
   return {
     retirementAge: profile.retirementAge,
     dependents: profile.dependents,
+    familyMembers: profile.familyMembers,
     inflationRate: profile.inflationRate,
     employmentType: profile.employmentType,
     currency: profile.currency,
@@ -285,22 +287,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (key === "loans") {
         const created = await createRemoteLoan(item as Loan);
         setData((d) => ({ ...d, loans: [...d.loans, created] }));
-        return;
+        return created.id;
       }
       if (key === "incomes") {
         const created = await createRemoteIncome(item as Income);
         setData((d) => ({ ...d, incomes: [...d.incomes, created] }));
-        return;
+        return created.id;
       }
       if (key === "expenses") {
         const created = await createRemoteExpense(item as Expense);
         setData((d) => ({ ...d, expenses: [...d.expenses, created] }));
-        return;
+        return created.id;
       }
       if (key === "investments") {
         const created = await createRemoteInvestment(item as Investment);
         setData((d) => ({ ...d, investments: [...d.investments, created] }));
-        return;
+        return created.id;
       }
       if (key === "goals") {
         const goal = item as Goal;
@@ -320,22 +322,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
               current.id === existingEmergencyFund.id ? updated : current,
             ),
           }));
-          return;
+          return updated.id;
         }
         const created = await createRemoteGoal(goal);
         setData((d) => ({ ...d, goals: [...d.goals, created] }));
-        return;
+        return created.id;
       }
       setData((d) => ({ ...d, [key]: [...(d[key] as any[]), item] }));
+      return item.id;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save");
+      return undefined;
     }
   };
 
   const updateItem: FinanceContextValue["updateItem"] = async (key, id, patch) => {
     if (key === "loans") {
       const current = data.loans.find((loan) => loan.id === id);
-      if (!current) return;
+      if (!current) return false;
       try {
         const updated = await updateRemoteLoan(id, { ...current, ...(patch as Partial<Loan>), id } as Loan);
         setData((d) => ({
@@ -343,14 +347,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           loans: d.loans.map((loan) => (loan.id === id ? updated : loan)),
         }));
         toast.success("Loan updated");
+        return true;
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not update loan");
+        return false;
       }
-      return;
     }
     if (key === "incomes") {
       const current = data.incomes.find((income) => income.id === id);
-      if (!current) return;
+      if (!current) return false;
       try {
         const updated = await updateRemoteIncome(id, { ...current, ...(patch as Partial<Income>), id } as Income);
         setData((d) => ({
@@ -358,14 +363,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           incomes: d.incomes.map((income) => (income.id === id ? updated : income)),
         }));
         toast.success("Income updated");
+        return true;
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not update income");
+        return false;
       }
-      return;
     }
     if (key === "expenses") {
       const current = data.expenses.find((expense) => expense.id === id);
-      if (!current) return;
+      if (!current) return false;
       try {
         const updated = await updateRemoteExpense(id, { ...current, ...(patch as Partial<Expense>), id } as Expense);
         setData((d) => ({
@@ -373,14 +379,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           expenses: d.expenses.map((expense) => (expense.id === id ? updated : expense)),
         }));
         toast.success("Expense updated");
+        return true;
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not update expense");
+        return false;
       }
-      return;
     }
     if (key === "investments") {
       const current = data.investments.find((investment) => investment.id === id);
-      if (!current) return;
+      if (!current) return false;
       try {
         const updated = await updateRemoteInvestment(id, {
           ...current,
@@ -392,14 +399,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           investments: d.investments.map((investment) => (investment.id === id ? updated : investment)),
         }));
         toast.success("Investment updated");
+        return true;
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not update investment");
+        return false;
       }
-      return;
     }
     if (key === "goals") {
       const current = data.goals.find((goal) => goal.id === id);
-      if (!current) return;
+      if (!current) return false;
       try {
         const updated = await updateRemoteGoal(id, {
           ...current,
@@ -410,16 +418,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           ...d,
           goals: d.goals.map((goal) => (goal.id === id ? updated : goal)),
         }));
+        return true;
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not update goal");
-        throw error;
+        return false;
       }
-      return;
     }
     setData((d) => ({
       ...d,
       [key]: (d[key] as any[]).map((item) => (item.id === id ? { ...item, ...patch } : item)),
     }));
+    return true;
   };
 
   const removeItem = async (key: Collections, id: string) => {

@@ -71,6 +71,177 @@ export function totalInterestPaid(loan: Loan): number {
   return loan.emi * months - loan.outstanding;
 }
 
+/** Interest charged between two EMI counts, using reducing-balance math. */
+export function interestPaidOverMonths(loan: Loan, startMonth: number, endMonth: number): number {
+  if (loan.outstanding <= 0) return 0;
+  const payoff = loanRemainingMonths(loan);
+  const from = Math.max(0, startMonth);
+  const to = Math.max(from, isFinite(payoff) ? Math.min(endMonth, payoff) : endMonth);
+  if (to <= from) return 0;
+  const startBal = loanBalanceAfterMonths(loan.outstanding, loan.interestRate, loan.emi, from);
+  const endBal = loanBalanceAfterMonths(loan.outstanding, loan.interestRate, loan.emi, to);
+  return Math.max(0, loan.emi * (to - from) - (startBal - endBal));
+}
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function addCalendarMonths(from: Date, months: number): Date {
+  return new Date(from.getFullYear(), from.getMonth() + months, 1);
+}
+
+export function formatMonthYear(date: Date): string {
+  const month = MONTH_SHORT[date.getMonth()] ?? "Jan";
+  return `${month} ${date.getFullYear()}`;
+}
+
+export function formatTenureMonths(months: number): string {
+  if (!isFinite(months)) return "Never";
+  if (months <= 0) return "Paid off";
+  const years = Math.floor(months / 12);
+  const leftover = months % 12;
+  return `${years ? `${years}y ` : ""}${leftover}m`.trim();
+}
+
+/** Months until this loan is fully paid on the current EMI. */
+export function loanRemainingMonths(loan: Loan): number {
+  if (loan.outstanding <= 0) return 0;
+  return loanPayoffMonths(loan.outstanding, loan.interestRate, loan.emi);
+}
+
+export function loanEndDate(loan: Loan, from = new Date()): Date | null {
+  const months = loanRemainingMonths(loan);
+  if (!isFinite(months) || months < 0) return null;
+  return addCalendarMonths(from, months);
+}
+
+export function loanChartSeriesKey(loan: Loan, loans: Loan[]): string {
+  const sameName = loans.filter((item) => item.name === loan.name);
+  if (sameName.length <= 1) return loan.name;
+  const sameType = sameName.filter((item) => item.type === loan.type);
+  if (sameType.length <= 1) return `${loan.name} · ${loan.type}`;
+  return `${loan.name} · ${loan.id.slice(0, 6)}`;
+}
+
+export interface LoanPayoffBar {
+  id: string;
+  name: string;
+  seriesKey: string;
+  months: number;
+  neverEnds: boolean;
+  endLabel: string;
+  outstanding: number;
+  interestLeft: number;
+}
+
+export function loanPayoffBars(loans: Loan[], from = new Date()): LoanPayoffBar[] {
+  const active = loans.filter((loan) => loan.outstanding > 0);
+  return active
+    .map((loan) => {
+      const months = loanRemainingMonths(loan);
+      const neverEnds = !isFinite(months);
+      const end = neverEnds ? null : addCalendarMonths(from, months);
+      return {
+        id: loan.id,
+        name: loan.name,
+        seriesKey: loanChartSeriesKey(loan, active),
+        months: neverEnds ? 0 : months,
+        neverEnds,
+        endLabel: end ? formatMonthYear(end) : "Never",
+        outstanding: loan.outstanding,
+        interestLeft: neverEnds ? Infinity : totalInterestPaid(loan),
+      };
+    })
+    .sort((a, b) => {
+      if (a.neverEnds !== b.neverEnds) return a.neverEnds ? 1 : -1;
+      if (a.months !== b.months) return a.months - b.months;
+      return a.seriesKey.localeCompare(b.seriesKey);
+    });
+}
+
+export type LoanBalanceChartPoint = {
+  month: number;
+  label: string;
+  [loanKey: string]: number | string;
+};
+
+export function loanBalanceChartData(loans: Loan[], from = new Date()): LoanBalanceChartPoint[] {
+  const active = loans.filter((loan) => loan.outstanding > 0);
+  if (active.length === 0) return [];
+
+  const remaining = active.map((loan) => loanRemainingMonths(loan));
+  const finite = remaining.filter((months) => isFinite(months) && months > 0);
+  const maxMonths = Math.min(finite.length ? Math.max(...finite) : 24, 360);
+  const step = maxMonths <= 24 ? 1 : maxMonths <= 60 ? 3 : 12;
+  const months = new Set<number>([0]);
+  for (let month = step; month < maxMonths; month += step) months.add(month);
+  months.add(maxMonths);
+  for (const payoff of remaining) {
+    if (isFinite(payoff) && payoff > 0 && payoff <= maxMonths) months.add(payoff);
+  }
+
+  return [...months].sort((a, b) => a - b).map((month) => {
+    const point: LoanBalanceChartPoint = {
+      month,
+      label: month === 0 ? "Now" : formatMonthYear(addCalendarMonths(from, month)),
+    };
+    for (const loan of active) {
+      const key = loanChartSeriesKey(loan, active);
+      const payoff = loanRemainingMonths(loan);
+      const balance =
+        isFinite(payoff) && month >= payoff
+          ? 0
+          : loanBalanceAfterMonths(loan.outstanding, loan.interestRate, loan.emi, month);
+      point[key] = Math.round(balance);
+    }
+    return point;
+  });
+}
+
+export type LoanYearlyInterestPoint = {
+  year: number;
+  label: string;
+  total: number;
+  [loanKey: string]: number | string;
+};
+
+export function loanYearlyInterestChartData(loans: Loan[], from = new Date()): LoanYearlyInterestPoint[] {
+  const active = loans.filter((loan) => loan.outstanding > 0);
+  if (active.length === 0) return [];
+
+  const remaining = active.map((loan) => loanRemainingMonths(loan));
+  const finite = remaining.filter((months) => isFinite(months) && months > 0);
+  const maxMonths = Math.min(finite.length ? Math.max(...finite) : 24, 360);
+  if (maxMonths <= 0) return [];
+
+  const points: LoanYearlyInterestPoint[] = [];
+  let startMonth = 0;
+  let calendarYear = from.getFullYear();
+
+  while (startMonth < maxMonths) {
+    const span = startMonth === 0 ? 12 - from.getMonth() : 12;
+    const endMonth = Math.min(startMonth + Math.max(1, span), maxMonths);
+    const point: LoanYearlyInterestPoint = {
+      year: calendarYear,
+      label: String(calendarYear),
+      total: 0,
+    };
+    for (const loan of active) {
+      const key = loanChartSeriesKey(loan, active);
+      const interest = Math.round(interestPaidOverMonths(loan, startMonth, endMonth));
+      point[key] = interest;
+      point.total += interest;
+    }
+    points.push(point);
+    startMonth = endMonth;
+    calendarYear += 1;
+  }
+
+  while (points.length > 0 && (points[points.length - 1]?.total ?? 0) === 0) {
+    points.pop();
+  }
+  return points;
+}
+
 /* ---------------- aggregate metrics ---------------- */
 export function monthlyIncome(d: FinanceData): number {
   return d.incomes.reduce((s, i) => s + i.monthlyAmount, 0);
@@ -591,6 +762,78 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
 
 export function prepaymentStrategy(d: FinanceData): Loan[] {
   return [...d.loans].sort((a, b) => b.interestRate - a.interestRate);
+}
+
+export interface LoanWhatIfSaving {
+  extraNow: number;
+  extraMonthly: number;
+  newEmi: number;
+  originalMonths: number;
+  newMonths: number;
+  monthsSaved: number;
+  originalInterest: number;
+  newInterest: number;
+  interestSaved: number;
+  makesClosable: boolean;
+}
+
+function loanPayoffInterest(
+  outstanding: number,
+  annualRatePct: number,
+  emi: number,
+): { months: number; interest: number } | null {
+  if (outstanding <= 0) return { months: 0, interest: 0 };
+  if (emi <= 0) return null;
+  const months = loanPayoffMonths(outstanding, annualRatePct, emi);
+  if (!isFinite(months)) return null;
+  if (months <= 0) return { months: 0, interest: 0 };
+  const beforeLast = loanBalanceAfterMonths(outstanding, annualRatePct, emi, months - 1);
+  const lastInterest = beforeLast * (annualRatePct / 100 / 12);
+  const paid = emi * (months - 1) + beforeLast + lastInterest;
+  return { months, interest: Math.max(0, paid - outstanding) };
+}
+
+function compareLoanPayoff(
+  loan: Loan,
+  extraNow: number,
+  extraMonthly: number,
+  newEmi: number,
+  revisedOutstanding: number,
+): LoanWhatIfSaving | null {
+  const next = loanPayoffInterest(revisedOutstanding, loan.interestRate, newEmi);
+  if (!next) return null;
+  const baseline = loanPayoffInterest(loan.outstanding, loan.interestRate, loan.emi);
+  const newInterest = next.interest;
+  const originalInterest = baseline?.interest ?? Infinity;
+  const originalMonths = baseline?.months ?? Infinity;
+  const interestSaved = baseline ? Math.max(0, Math.round(originalInterest - newInterest)) : 0;
+  const monthsSaved = baseline ? Math.max(0, originalMonths - next.months) : 0;
+  if (baseline && interestSaved <= 0 && monthsSaved <= 0) return null;
+  return {
+    extraNow,
+    extraMonthly,
+    newEmi,
+    originalMonths,
+    newMonths: next.months,
+    monthsSaved,
+    originalInterest,
+    newInterest: Math.round(newInterest),
+    interestSaved,
+    makesClosable: !baseline,
+  };
+}
+
+export function extraEmiInterestSaving(loan: Loan): LoanWhatIfSaving | null {
+  if (loan.outstanding <= 0 || loan.emi <= 0) return null;
+  const extraNow = Math.min(loan.emi, loan.outstanding);
+  return compareLoanPayoff(loan, extraNow, 0, loan.emi, Math.max(0, loan.outstanding - extraNow));
+}
+
+export function emiIncreaseInterestSaving(loan: Loan, percent: number): LoanWhatIfSaving | null {
+  if (loan.outstanding <= 0 || loan.emi <= 0 || percent <= 0) return null;
+  const newEmi = Math.round(loan.emi * (1 + percent / 100));
+  if (newEmi <= loan.emi) return null;
+  return compareLoanPayoff(loan, 0, newEmi - loan.emi, newEmi, loan.outstanding);
 }
 
 /* ---------------- emergency fund ---------------- */

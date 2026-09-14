@@ -65,6 +65,7 @@ function publicUser(id: string): PublicUser {
     quickStep: 0,
     aiReportCount: 0,
     aiReportLimit: 1,
+    isPaid: false,
     isActive: 1,
     createdBy: null,
     createdAt: now,

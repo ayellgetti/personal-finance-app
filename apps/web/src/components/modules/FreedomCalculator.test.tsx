@@ -14,6 +14,7 @@ const data: FinanceData = {
     inflationRate: 10,
     emergencyFund: 0,
     dependents: 0,
+    familyMembers: [],
     employmentType: "Salaried",
     monthlyEssentialExpenses: 0,
     liquidAssets: 0,

@@ -19,6 +19,7 @@ export type StoredUser = {
   gender: string;
   dob: string;
   quickStep?: number;
+  isPaid?: boolean;
   createdAt: string;
 };
 

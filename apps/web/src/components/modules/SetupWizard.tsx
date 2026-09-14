@@ -1,36 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useFinance, newId } from "@/lib/finance/store";
 import { useAuth } from "@/lib/auth/store";
 import { ageFromDob } from "@/lib/finance/profile";
 import {
   EmploymentType,
-  EXPENSE_CATEGORIES,
   FIRE_GOAL_DESCRIPTIONS,
   FIRE_GOAL_TYPES,
   FIRE_POST_RETIREMENT_YEARS,
-  FireGoalType,
-  FinanceData,
+  FamilyMember,
+  FamilyMemberDraft,
   Goal,
-  USER_GOAL_TYPES,
 } from "@/types/finance";
-import { FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge } from "./shared";
 import { ExpenseQuickAdd } from "./ExpenseQuickAdd";
+import { FamilyMemberFields } from "./FamilyMemberFields";
+import { GoalQuickAdd } from "./GoalQuickAdd";
+import { IncomeQuickAdd } from "./IncomeQuickAdd";
+import { InsuranceQuickAdd } from "./InsuranceQuickAdd";
+import { InvestmentQuickAdd } from "./InvestmentQuickAdd";
+import { LoanQuickAdd } from "./LoanQuickAdd";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
-  Plus, Check, ChevronLeft, ChevronRight, User, Wallet, Receipt, Landmark,
-  TrendingUp, ShieldCheck, PartyPopper, ShieldAlert, Target,
+  Check, ChevronLeft, ChevronRight, User, Wallet, Receipt, Landmark,
+  TrendingUp, ShieldCheck, PartyPopper, ShieldAlert, Target, Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { firePathTargets, formatCurrency } from "@/lib/finance/calculations";
+import {
+  resizeFamilyMembers,
+  toSavedFamilyMembers,
+  validateEmergencyDraft,
+  validateSetupProfile,
+  type FieldErrors,
+  type SetupDraftHandle,
+} from "@/lib/finance/setup-validation";
 
 type Collection =
   | "incomes"
@@ -44,12 +54,27 @@ interface EntityStep {
   key: Collection;
   label: string;
   icon: typeof Wallet;
-  fields: FieldDef[];
-  summary: (item: any, cur: string) => { title: string; subtitle?: string; badge?: string; value: string };
+  summary: (item: Record<string, unknown> & { id?: string }, cur: string) => {
+    title: string;
+    subtitle?: string;
+    badge?: string;
+    value: string;
+  };
 }
+
+type ProfileDraft = {
+  retirementAge: number;
+  currency: string;
+  inflationRate: number;
+  dependents: number;
+  employmentType: EmploymentType;
+  familyMembers: FamilyMemberDraft[];
+};
 
 const fmt = (n: number, cur: string) =>
   `${cur}${Number(n || 0).toLocaleString("en-IN")}`;
+
+const SAVE_BTN = "gap-2 rounded-xl ring-2 ring-primary ring-offset-2";
 
 function isFireGoal(goal: Goal) {
   return FIRE_GOAL_TYPES.some((type) => type === goal.type);
@@ -57,6 +82,10 @@ function isFireGoal(goal: Goal) {
 
 function hasValidFireGoal(goals: Goal[]) {
   return goals.some((goal) => isFireGoal(goal) && goal.targetAmount > 0);
+}
+
+function asFamilyMembers(members: FamilyMember[] | FamilyMemberDraft[] | undefined, dependents: number) {
+  return resizeFamilyMembers(members ?? [], dependents);
 }
 
 export function SetupWizard({ onDone }: { onDone: () => void }) {
@@ -72,24 +101,38 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
   const cur = data.profile.currency;
   const accountName = user?.name ?? data.profile.name;
   const accountAge = user ? ageFromDob(user.dob) : data.profile.age;
+  const entityRef = useRef<SetupDraftHandle>(null);
 
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<ProfileDraft>({
     retirementAge: data.profile.retirementAge,
     currency: data.profile.currency,
     inflationRate: data.profile.inflationRate,
     dependents: data.profile.dependents,
     employmentType: data.profile.employmentType,
+    familyMembers: asFamilyMembers(data.profile.familyMembers, data.profile.dependents),
   });
+  const [profileSaved, setProfileSaved] = useState(() => validateSetupProfile({
+    retirementAge: data.profile.retirementAge,
+    inflationRate: data.profile.inflationRate,
+    dependents: data.profile.dependents,
+    employmentType: data.profile.employmentType,
+    familyMembers: asFamilyMembers(data.profile.familyMembers, data.profile.dependents),
+  }).ok);
+  const [profileErrors, setProfileErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
     if (loading) return;
-    setProfile({
+    const next: ProfileDraft = {
       retirementAge: data.profile.retirementAge,
       currency: data.profile.currency,
       inflationRate: data.profile.inflationRate,
       dependents: data.profile.dependents,
       employmentType: data.profile.employmentType,
-    });
+      familyMembers: asFamilyMembers(data.profile.familyMembers, data.profile.dependents),
+    };
+    setProfile(next);
+    setProfileSaved(validateSetupProfile(next).ok);
+    setProfileErrors({});
   }, [
     loading,
     data.profile.retirementAge,
@@ -97,91 +140,36 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
     data.profile.inflationRate,
     data.profile.dependents,
     data.profile.employmentType,
+    data.profile.familyMembers,
   ]);
-
-  const today = new Date().toISOString().slice(0, 10);
 
   const ENTITY_STEPS: EntityStep[] = [
     {
       key: "incomes", label: "Income", icon: Wallet,
-      fields: [
-        { name: "name", label: "Source Name", type: "text", span: 2 },
-        { name: "type", label: "Income Type", type: "select", span: 2, options: ["Salary", "Business Income", "Rental Income", "Dividend Income", "Freelancing Income", "Interest Income", "Other Income"] },
-        { name: "monthlyAmount", label: "Monthly Amount", type: "number", prefix: cur },
-        { name: "growthRate", label: "Growth Rate (%)", type: "number" },
-        { name: "startDate", label: "Start Date", type: "date", span: 2, defaultValue: today },
-      ],
-      summary: (i, c) => ({ title: i.name, badge: i.type, value: `${fmt(i.monthlyAmount, c)}/mo` }),
+      summary: (i, c) => ({ title: String(i.name ?? ""), badge: String(i.type ?? ""), value: `${fmt(Number(i.monthlyAmount), c)}/mo` }),
     },
     {
       key: "expenses", label: "Expenses", icon: Receipt,
-      // Expenses use the category-first ExpenseQuickAdd form instead of the generic field grid.
-      fields: [
-        { name: "name", label: "Expense Name", type: "text", span: 2 },
-        { name: "category", label: "Category", type: "select", span: 2, options: EXPENSE_CATEGORIES },
-        { name: "amount", label: "Amount", type: "number", prefix: cur },
-        { name: "recurring", label: "Monthly Recurring", type: "switch" },
-        { name: "date", label: "Date", type: "date", span: 2, defaultValue: today },
-      ],
-      summary: (e, c) => ({ title: e.name, badge: e.category, value: fmt(e.amount, c) }),
+      summary: (e, c) => ({ title: String(e.name ?? ""), badge: String(e.category ?? ""), value: fmt(Number(e.amount), c) }),
     },
     {
       key: "loans", label: "Loans", icon: Landmark,
-      fields: [
-        { name: "name", label: "Loan Name", type: "text", span: 2 },
-        { name: "type", label: "Loan Type", type: "select", span: 2, options: ["Home Loan", "Personal Loan", "Business Loan", "Vehicle Loan", "Education Loan"] },
-        { name: "outstanding", label: "Outstanding", type: "number", prefix: cur },
-        { name: "interestRate", label: "Interest Rate (%)", type: "number" },
-        { name: "emi", label: "EMI", type: "number", prefix: cur },
-        { name: "remainingTenure", label: "Tenure (months)", type: "number" },
-        { name: "emiDay", label: "Day of the Month", type: "number", defaultValue: 5 },
-        { name: "prepaymentAllowed", label: "Prepayment Allowed", type: "switch" },
-      ],
-      summary: (l, c) => ({ title: l.name, badge: l.type, value: `${fmt(l.emi, c)}/mo` }),
+      summary: (l, c) => ({ title: String(l.name ?? ""), badge: String(l.type ?? ""), value: `${fmt(Number(l.emi), c)}/mo` }),
     },
     {
       key: "investments", label: "Investments", icon: TrendingUp,
-      fields: [
-        { name: "name", label: "Investment Name", type: "text", span: 2 },
-        { name: "type", label: "Type", type: "select", span: 2, options: ["Mutual Funds", "Stocks", "Bonds", "Fixed Deposits", "PPF", "EPF", "NPS", "Gold", "Real Estate", "Crypto", "Other"] },
-        { name: "currentValue", label: "Current Value", type: "number", prefix: cur },
-        { name: "monthlySip", label: "Monthly SIP", type: "number", prefix: cur },
-        { name: "expectedReturn", label: "Expected Return (%)", type: "number" },
-        { name: "horizon", label: "Horizon (years)", type: "number" },
-      ],
-      summary: (iv, c) => ({ title: iv.name, badge: iv.type, value: fmt(iv.currentValue, c) }),
+      summary: (iv, c) => ({ title: String(iv.name ?? ""), badge: String(iv.type ?? ""), value: fmt(Number(iv.currentValue), c) }),
     },
     {
       key: "insurances", label: "Insurance", icon: ShieldCheck,
-      fields: [
-        { name: "name", label: "Policy Name", type: "text", span: 2 },
-        { name: "type", label: "Type", type: "select", span: 2, options: ["Term Insurance", "Health Insurance", "Car Insurance", "Bike Insurance", "Home Insurance"] },
-        { name: "coverage", label: "Coverage Amount", type: "number", prefix: cur },
-        { name: "annualPremium", label: "Annual Premium", type: "number", prefix: cur },
-        { name: "expiryDate", label: "Expiry Date", type: "date", span: 2, defaultValue: today },
-      ],
-      summary: (ins, c) => ({ title: ins.name, badge: ins.type, value: fmt(ins.coverage, c) }),
+      summary: (ins, c) => ({ title: String(ins.name ?? ""), badge: String(ins.type ?? ""), value: fmt(Number(ins.coverage), c) }),
     },
     {
       key: "goals", label: "Goals", icon: Target,
-      fields: [
-        { name: "name", label: "Goal Name", type: "text", span: 2, defaultValue: "My FIRE Goal" },
-        { name: "type", label: "Goal Type", type: "select", span: 2, options: USER_GOAL_TYPES, optionDescriptions: FIRE_GOAL_DESCRIPTIONS },
-        { name: "targetAmount", label: "Target Amount", type: "number", prefix: cur },
-        { name: "currentSaved", label: "Already Saved", type: "number", prefix: cur },
-        {
-          name: "targetDate",
-          label: "Target Date",
-          type: "date",
-          span: 2,
-          defaultValue: new Date(Date.now() + 10 * 31536000000).toISOString().slice(0, 10),
-        },
-        { name: "priority", label: "Priority", type: "select", span: 2, options: ["High", "Medium", "Low"] },
-      ],
       summary: (goal, c) => ({
-        title: goal.name,
-        badge: goal.type,
-        value: fmt(goal.targetAmount, c),
+        title: String(goal.name ?? ""),
+        badge: String(goal.type ?? ""),
+        value: fmt(Number(goal.targetAmount), c),
       }),
     },
   ];
@@ -202,7 +190,6 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
     { id: "review", label: "Review", icon: PartyPopper },
   ];
 
-  const totalSteps = STEPS.length;
   const [step, setStep] = useState(0);
   const currentStep = STEPS[step];
   const isProfile = currentStep?.id === "profile";
@@ -217,6 +204,9 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
       ...profile,
       retirementAge: Number(profile.retirementAge) || data.profile.retirementAge,
       inflationRate: Number(profile.inflationRate) || 0,
+      familyMembers: profile.familyMembers.filter((member): member is FamilyMember =>
+        Boolean(member.relationship && member.gender && member.name && member.dob && member.occupation),
+      ),
     },
   });
   const [emergencyDraft, setEmergencyDraft] = useState({
@@ -226,6 +216,8 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
       emergencyGoal?.targetDate ??
       new Date(Date.now() + 31536000000).toISOString().slice(0, 10),
   });
+  const [emergencySaved, setEmergencySaved] = useState(() => (emergencyGoal?.targetAmount ?? 0) > 0);
+  const [emergencyErrors, setEmergencyErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
     if (!emergencyGoal) return;
@@ -234,50 +226,110 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
       currentSaved: emergencyGoal.currentSaved,
       targetDate: emergencyGoal.targetDate,
     });
+    setEmergencySaved(emergencyGoal.targetAmount > 0);
   }, [emergencyGoal]);
 
+  const saveProfile = async () => {
+    const result = validateSetupProfile(profile);
+    if ("errors" in result) {
+      setProfileErrors(result.errors);
+      toast.error("Complete required profile fields before saving");
+      return false;
+    }
+    setProfileErrors({});
+    await updateProfile({
+      retirementAge: result.value.retirementAge ?? profile.retirementAge,
+      currency: profile.currency.trim() || "₹",
+      inflationRate: result.value.inflationRate ?? profile.inflationRate,
+      dependents: result.value.dependents ?? profile.dependents,
+      employmentType: result.value.employmentType ?? profile.employmentType,
+      familyMembers: toSavedFamilyMembers(profile.familyMembers),
+    });
+    setProfileSaved(true);
+    toast.success("Profile saved");
+    return true;
+  };
+
   const saveEmergencyFund = async () => {
-    if (!emergencyGoal || emergencyDraft.targetAmount <= 0) {
+    const result = validateEmergencyDraft(emergencyDraft);
+    if ("errors" in result) {
+      setEmergencyErrors(result.errors);
+      toast.error(result.errors.targetAmount ?? "Set an emergency fund target amount before continuing");
+      return false;
+    }
+    if (!emergencyGoal) {
       toast.error("Set an emergency fund target amount before continuing");
       return false;
     }
+    setEmergencyErrors({});
     try {
-      await updateItem("goals", emergencyGoal.id, {
+      const ok = await updateItem("goals", emergencyGoal.id, {
         targetAmount: emergencyDraft.targetAmount,
         currentSaved: emergencyDraft.currentSaved,
         targetDate: emergencyDraft.targetDate,
       });
+      if (!ok) return false;
+      setEmergencySaved(true);
+      toast.success("Emergency fund saved");
       return true;
     } catch {
       return false;
     }
   };
 
-  const goNext = async () => {
-    if (isEmergency && !(await saveEmergencyFund())) return;
-    if (
-      entityStep?.key === "goals" &&
-      !hasValidFireGoal(data.goals)
-    ) {
-      toast.error("Choose and save one FIRE goal before continuing");
-      return;
+  const canLeaveCurrentStep = async () => {
+    if (isProfile) {
+      const result = validateSetupProfile(profile);
+      if ("errors" in result) {
+        setProfileErrors(result.errors);
+        toast.error("Complete required profile fields before continuing");
+        return false;
+      }
+      if (!profileSaved) {
+        toast.error("Save your profile before continuing");
+        return false;
+      }
+      return true;
     }
+    if (isEmergency) {
+      const result = validateEmergencyDraft(emergencyDraft);
+      if ("errors" in result) {
+        setEmergencyErrors(result.errors);
+        toast.error(result.errors.targetAmount ?? "Set an emergency fund target amount before continuing");
+        return false;
+      }
+      if (!emergencySaved) {
+        toast.error("Save the emergency fund before continuing");
+        return false;
+      }
+      return true;
+    }
+    if (entityStep && !entityRef.current?.canProceed()) return false;
+    if (entityStep?.key === "goals" && !hasValidFireGoal(data.goals)) {
+      toast.error("Choose and save one FIRE goal before continuing");
+      return false;
+    }
+    return true;
+  };
+
+  const goToStep = async (index: number) => {
+    if (index === step) return;
+    if (index > step && !(await canLeaveCurrentStep())) return;
+    setStep(index);
+  };
+
+  const goNext = async () => {
+    if (!(await canLeaveCurrentStep())) return;
     setStep((current) => current + 1);
   };
 
   const finish = async () => {
+    if (!(await saveProfile())) return;
     if (!(await saveEmergencyFund())) return;
     if (!hasValidFireGoal(data.goals)) {
       toast.error("Choose Lean FIRE, Fat FIRE, or Coast FIRE before finishing");
       return;
     }
-    await updateProfile({
-      retirementAge: Number(profile.retirementAge) || data.profile.retirementAge,
-      currency: profile.currency.trim() || "₹",
-      inflationRate: Number(profile.inflationRate) || 0,
-      dependents: Number(profile.dependents) || 0,
-      employmentType: profile.employmentType as EmploymentType,
-    });
     toast.success("Setup saved");
     onDone();
   };
@@ -308,6 +360,11 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
     );
   }
 
+  const namedDependents = profile.familyMembers
+    .map((member) => member.name.trim())
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <p className="text-sm text-muted-foreground">
@@ -326,7 +383,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
             <button
               key={item.id}
               type="button"
-              onClick={() => setStep(index)}
+              onClick={() => void goToStep(index)}
               className={cn(
                 "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                 current && "border-primary bg-primary text-primary-foreground",
@@ -365,7 +422,12 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
         {isProfile && (
           <ProfileForm
             profile={{ ...profile, name: accountName, age: accountAge }}
-            setProfile={setProfile}
+            errors={profileErrors}
+            setProfile={(next) => {
+              setProfile(next);
+              setProfileSaved(false);
+            }}
+            onSave={() => void saveProfile()}
           />
         )}
 
@@ -373,7 +435,12 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
           <EmergencyFundSetup
             value={emergencyDraft}
             currency={cur}
-            onChange={setEmergencyDraft}
+            errors={emergencyErrors}
+            onChange={(next) => {
+              setEmergencyDraft(next);
+              setEmergencySaved(false);
+            }}
+            onSave={() => void saveEmergencyFund()}
           />
         )}
 
@@ -397,22 +464,79 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
                 })}
               </div>
             )}
-            <EntitySection
-              key={entityStep.key}
-              stepDef={entityStep}
-              items={data[entityStep.key]}
-              cur={cur}
-              fireTargets={entityStep.key === "goals" ? fireTargets : undefined}
-              onAdd={(v) => void addItem(entityStep.key, { id: newId(), ...v } as FinanceData[typeof entityStep.key][number])}
-              onRemove={(id) => void removeItem(entityStep.key, id)}
-            />
+            <div className="space-y-5" key={entityStep.key}>
+              {entityStep.key === "incomes" && (
+                <IncomeQuickAdd
+                  ref={entityRef}
+                  dualActions
+                  currency={cur}
+                  onAdd={(income) => addItem("incomes", { id: newId(), ...income })}
+                  onUpdate={(id, income) => updateItem("incomes", id, income)}
+                />
+              )}
+              {entityStep.key === "expenses" && (
+                <ExpenseQuickAdd
+                  ref={entityRef}
+                  dualActions
+                  currency={cur}
+                  onAdd={(expense) => addItem("expenses", { id: newId(), ...expense })}
+                  onUpdate={(id, expense) => updateItem("expenses", id, expense)}
+                />
+              )}
+              {entityStep.key === "loans" && (
+                <LoanQuickAdd
+                  ref={entityRef}
+                  dualActions
+                  currency={cur}
+                  onAdd={(loan) => addItem("loans", { id: newId(), ...loan })}
+                  onUpdate={(id, loan) => updateItem("loans", id, loan)}
+                />
+              )}
+              {entityStep.key === "investments" && (
+                <InvestmentQuickAdd
+                  ref={entityRef}
+                  dualActions
+                  currency={cur}
+                  onAdd={(investment) => addItem("investments", { id: newId(), ...investment })}
+                  onUpdate={(id, investment) => updateItem("investments", id, investment)}
+                />
+              )}
+              {entityStep.key === "insurances" && (
+                <InsuranceQuickAdd
+                  ref={entityRef}
+                  dualActions
+                  currency={cur}
+                  onAdd={(insurance) => addItem("insurances", { id: newId(), ...insurance })}
+                  onUpdate={(id, insurance) => updateItem("insurances", id, insurance)}
+                />
+              )}
+              {entityStep.key === "goals" && (
+                <GoalQuickAdd
+                  ref={entityRef}
+                  dualActions
+                  currency={cur}
+                  fireTargets={fireTargets}
+                  onAdd={(goal) => addItem("goals", { id: newId(), ...goal })}
+                  onUpdate={(id, goal) => updateItem("goals", id, goal)}
+                />
+              )}
+              <EntityList
+                stepDef={entityStep}
+                items={data[entityStep.key]}
+                cur={cur}
+                onRemove={(id) => void removeItem(entityStep.key, id)}
+              />
+            </div>
           </>
         )}
 
         {isReview && (
           <div className="space-y-3">
             <ReviewRow label="Profile" value={`${accountName}, age ${accountAge} · retire at ${profile.retirementAge} · ${profile.employmentType}`} />
-            <ReviewRow label="Dependents" value={String(profile.dependents)} />
+            <ReviewRow
+              label="Dependents"
+              value={namedDependents ? `${profile.dependents} (${namedDependents})` : String(profile.dependents)}
+            />
             <ReviewRow label="Inflation" value={`${profile.inflationRate}%`} />
             <ReviewRow
               label="Emergency Fund"
@@ -464,21 +588,30 @@ type EmergencyFundDraft = {
   targetDate: string;
 };
 
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs font-medium text-danger">{message}</p>;
+}
+
 function EmergencyFundSetup({
   value,
   currency,
+  errors,
   onChange,
+  onSave,
 }: {
   value: EmergencyFundDraft;
   currency: string;
+  errors: FieldErrors;
   onChange: (value: EmergencyFundDraft) => void;
+  onSave: () => void;
 }) {
   const set = (key: keyof EmergencyFundDraft, next: number | string) =>
     onChange({ ...value, [key]: next });
 
   return (
     <div className="grid grid-cols-2 gap-4 rounded-xl border border-dashed border-border p-4">
-      <Field label="Target Amount">
+      <Field label="Target Amount" error={errors.targetAmount}>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
             {currency}
@@ -489,10 +622,11 @@ function EmergencyFundSetup({
             className="pl-7"
             value={value.targetAmount}
             onChange={(event) => set("targetAmount", Number(event.target.value))}
+            aria-invalid={Boolean(errors.targetAmount)}
           />
         </div>
       </Field>
-      <Field label="Already Saved">
+      <Field label="Already Saved" error={errors.currentSaved}>
         <div className="relative">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
             {currency}
@@ -503,20 +637,27 @@ function EmergencyFundSetup({
             className="pl-7"
             value={value.currentSaved}
             onChange={(event) => set("currentSaved", Number(event.target.value))}
+            aria-invalid={Boolean(errors.currentSaved)}
           />
         </div>
       </Field>
-      <Field label="Target Date" span={2}>
+      <Field label="Target Date" span={2} error={errors.targetDate}>
         <Input
           type="date"
           value={value.targetDate}
           onChange={(event) => set("targetDate", event.target.value)}
+          aria-invalid={Boolean(errors.targetDate)}
         />
       </Field>
       <p className="col-span-2 text-sm text-muted-foreground">
         Keep this fund liquid. The planner uses this goal before debt and
         investment recommendations.
       </p>
+      <div className="col-span-2">
+        <Button className={SAVE_BTN} onClick={onSave}>
+          <Save className="h-4 w-4" /> Save emergency fund
+        </Button>
+      </div>
     </div>
   );
 }
@@ -530,8 +671,41 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ProfileForm({ profile, setProfile }: { profile: any; setProfile: (p: any) => void }) {
-  const set = (k: string, v: any) => setProfile((p: any) => ({ ...p, [k]: v }));
+function ProfileForm({
+  profile,
+  errors,
+  setProfile,
+  onSave,
+}: {
+  profile: ProfileDraft & { name: string; age: number };
+  errors: FieldErrors;
+  setProfile: (profile: ProfileDraft) => void;
+  onSave: () => void;
+}) {
+  const set = <K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) => {
+    if (key === "dependents") {
+      const count = Number(value) || 0;
+      setProfile({
+        retirementAge: profile.retirementAge,
+        currency: profile.currency,
+        inflationRate: profile.inflationRate,
+        employmentType: profile.employmentType,
+        dependents: count,
+        familyMembers: resizeFamilyMembers(profile.familyMembers, count),
+      });
+      return;
+    }
+    setProfile({
+      retirementAge: profile.retirementAge,
+      currency: profile.currency,
+      inflationRate: profile.inflationRate,
+      dependents: profile.dependents,
+      employmentType: profile.employmentType,
+      familyMembers: profile.familyMembers,
+      [key]: value,
+    });
+  };
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <Field label="Full Name" span={2}>
@@ -540,11 +714,17 @@ function ProfileForm({ profile, setProfile }: { profile: any; setProfile: (p: an
       <Field label="Age">
         <Input type="number" value={profile.age} disabled />
       </Field>
-      <Field label="Retirement Age">
-        <Input type="number" value={profile.retirementAge} onChange={(e) => set("retirementAge", Number(e.target.value))} />
+      <Field label="Retirement Age" htmlFor="setup-retirement-age" error={errors.retirementAge}>
+        <Input
+          id="setup-retirement-age"
+          type="number"
+          value={profile.retirementAge}
+          onChange={(e) => set("retirementAge", Number(e.target.value))}
+          aria-invalid={Boolean(errors.retirementAge)}
+        />
       </Field>
-      <Field label="Employment Type" span={2}>
-        <Select value={profile.employmentType} onValueChange={(v) => set("employmentType", v)}>
+      <Field label="Employment Type" span={2} error={errors.employmentType}>
+        <Select value={profile.employmentType} onValueChange={(v) => set("employmentType", v as EmploymentType)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {["Salaried", "Business Owner", "Freelancer", "Retired"].map((o) => (
@@ -553,134 +733,70 @@ function ProfileForm({ profile, setProfile }: { profile: any; setProfile: (p: an
           </SelectContent>
         </Select>
       </Field>
-      <Field label="Dependents">
-        <Input type="number" value={profile.dependents} onChange={(e) => set("dependents", Number(e.target.value))} />
+      <Field label="Dependents" htmlFor="setup-dependents" error={errors.dependents ?? errors.familyMembers}>
+        <Input
+          id="setup-dependents"
+          type="number"
+          min={0}
+          max={20}
+          value={profile.dependents}
+          onChange={(e) => set("dependents", Number(e.target.value))}
+          aria-invalid={Boolean(errors.dependents ?? errors.familyMembers)}
+        />
       </Field>
-      <Field label="Inflation Rate (%)">
-        <Input type="number" value={profile.inflationRate} onChange={(e) => set("inflationRate", Number(e.target.value))} />
+      <Field label="Inflation Rate (%)" htmlFor="setup-inflation" error={errors.inflationRate}>
+        <Input
+          id="setup-inflation"
+          type="number"
+          value={profile.inflationRate}
+          onChange={(e) => set("inflationRate", Number(e.target.value))}
+          aria-invalid={Boolean(errors.inflationRate)}
+        />
       </Field>
+      <FamilyMemberFields
+        members={profile.familyMembers}
+        errors={errors}
+        onChange={(index, patch) => {
+          const familyMembers = profile.familyMembers.map((member, i) =>
+            i === index ? { ...member, ...patch } : member,
+          );
+          setProfile({
+            retirementAge: profile.retirementAge,
+            currency: profile.currency,
+            inflationRate: profile.inflationRate,
+            dependents: profile.dependents,
+            employmentType: profile.employmentType,
+            familyMembers,
+          });
+        }}
+      />
+      <div className="col-span-2">
+        <Button className={SAVE_BTN} onClick={onSave}>
+          <Save className="h-4 w-4" /> Save profile
+        </Button>
+      </div>
     </div>
   );
 }
 
-function Field({ label, span, children }: { label: string; span?: 1 | 2; children: React.ReactNode }) {
+function Field({
+  label,
+  span,
+  error,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  span?: 1 | 2;
+  error?: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className={span === 2 ? "col-span-2 space-y-2" : "space-y-2"}>
-      <Label>{label}</Label>
+      <Label htmlFor={htmlFor} className={error ? "text-danger" : undefined}>{label}</Label>
       {children}
-    </div>
-  );
-}
-
-function EntitySection({
-  stepDef, items, cur, onAdd, onRemove, fireTargets,
-}: {
-  stepDef: EntityStep;
-  items: any[];
-  cur: string;
-  onAdd: (v: any) => void;
-  onRemove: (id: string) => void;
-  fireTargets?: Record<FireGoalType, number>;
-}) {
-  const init = () => {
-    const v: Record<string, any> = {};
-    stepDef.fields.forEach((f) => {
-      v[f.name] = f.defaultValue ?? (f.type === "number" ? 0 : f.type === "switch" ? true : f.type === "select" ? f.options?.[0] : "");
-    });
-    const suggested = fireTargets?.[v.type as FireGoalType];
-    if (suggested && suggested > 0 && (Number(v.targetAmount) || 0) === 0) {
-      v.targetAmount = Math.round(suggested);
-    }
-    return v;
-  };
-  const [values, setValues] = useState<Record<string, any>>(init);
-  const set = (n: string, val: any) => setValues((v) => ({ ...v, [n]: val }));
-
-  const applyFireType = (type: string) => {
-    setValues((current) => {
-      const suggested = fireTargets?.[type as FireGoalType];
-      const shouldPrefill =
-        suggested != null &&
-        suggested > 0 &&
-        (Number(current.targetAmount) || 0) === 0;
-      return {
-        ...current,
-        type,
-        ...(shouldPrefill ? { targetAmount: Math.round(suggested) } : {}),
-      };
-    });
-  };
-
-  const handleAdd = () => {
-    if (!values.name || String(values.name).trim() === "") {
-      toast.error("Please enter a name first");
-      return;
-    }
-    if (stepDef.key === "goals" && Number(values.targetAmount) <= 0) {
-      toast.error("Set a goal target amount greater than zero");
-      return;
-    }
-    onAdd(values);
-    setValues(init());
-  };
-
-  if (stepDef.key === "expenses") {
-    return (
-      <div className="space-y-5">
-        <ExpenseQuickAdd currency={cur} onAdd={onAdd} />
-        <EntityList stepDef={stepDef} items={items} cur={cur} onRemove={onRemove} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4 rounded-xl border border-dashed border-border p-4">
-        {stepDef.fields.map((f) => (
-          <div key={f.name} className={f.span === 2 || f.type === "switch" ? "col-span-2 space-y-2" : "space-y-2"}>
-            <Label htmlFor={`w-${f.name}`}>{f.label}</Label>
-            {f.type === "select" ? (
-              <>
-                <Select
-                  value={String(values[f.name])}
-                  onValueChange={(val) => (f.name === "type" && fireTargets ? applyFireType(val) : set(f.name, val))}
-                >
-                  <SelectTrigger id={`w-${f.name}`}><SelectValue /></SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {f.options?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                {f.optionDescriptions?.[String(values[f.name])] && (
-                  <p className="text-xs text-muted-foreground">{f.optionDescriptions[String(values[f.name])]}</p>
-                )}
-              </>
-            ) : f.type === "switch" ? (
-              <div className="flex items-center gap-3 rounded-xl border border-border p-3">
-                <Switch id={`w-${f.name}`} checked={!!values[f.name]} onCheckedChange={(c) => set(f.name, c)} />
-                <span className="text-sm text-muted-foreground">{values[f.name] ? "Yes" : "No"}</span>
-              </div>
-            ) : (
-              <div className="relative">
-                {f.prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{f.prefix}</span>}
-                <Input
-                  id={`w-${f.name}`}
-                  type={f.type}
-                  value={values[f.name]}
-                  className={f.prefix ? "pl-7" : ""}
-                  onChange={(e) => set(f.name, f.type === "number" ? Number(e.target.value) : e.target.value)}
-                />
-              </div>
-            )}
-          </div>
-        ))}
-        <div className="col-span-2">
-          <Button variant="outline" className="w-full gap-2 rounded-xl" onClick={handleAdd}>
-            <Plus className="h-4 w-4" /> Add {stepDef.label}
-          </Button>
-        </div>
-      </div>
-
-      <EntityList stepDef={stepDef} items={items} cur={cur} onRemove={onRemove} />
+      <FieldError message={error} />
     </div>
   );
 }

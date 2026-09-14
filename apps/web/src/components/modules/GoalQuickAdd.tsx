@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import {
   FIRE_GOAL_DESCRIPTIONS,
   FireGoalType,
@@ -14,7 +14,9 @@ import {
   Heart, Palmtree, Plane, Briefcase, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { QuickTypePicker, QuickTypeTile } from "./QuickTypePicker";
+import { type SetupDraftHandle } from "@/lib/finance/setup-validation";
+import { useSetupQuickAdd, type SetupQuickAddProps } from "@/lib/finance/use-setup-quick-add";
+import { QuickTypePicker, QuickTypeTile, WizardSaveButton } from "./QuickTypePicker";
 import { cn } from "@/lib/utils";
 
 export type NewGoal = Omit<Goal, "id">;
@@ -47,7 +49,14 @@ function parsePositive(raw: string): number | null {
   return value;
 }
 
-export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (goal: NewGoal) => void }) {
+type GoalQuickAddProps = SetupQuickAddProps<NewGoal> & {
+  fireTargets?: Record<FireGoalType, number>;
+};
+
+export const GoalQuickAdd = forwardRef<SetupDraftHandle, GoalQuickAddProps>(function GoalQuickAdd(
+  { currency, onAdd, onUpdate, dualActions = false, fireTargets },
+  ref,
+) {
   const [type, setType] = useState<GoalType | null>(null);
   const [targetAmount, setTargetAmount] = useState("");
   const [currentSaved, setCurrentSaved] = useState("");
@@ -56,13 +65,7 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
   const [priority, setPriority] = useState<Priority>("High");
   const [showDetails, setShowDetails] = useState(false);
 
-  const select = (next: GoalType) => {
-    setType(next);
-    setName("");
-    setShowDetails(false);
-  };
-
-  const reset = () => {
+  const resetFields = () => {
     setType(null);
     setTargetAmount("");
     setCurrentSaved("");
@@ -72,26 +75,71 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
     setShowDetails(false);
   };
 
-  const add = () => {
-    if (!type) return;
-    const target = parsePositive(targetAmount);
-    if (target === null) {
-      toast.error("Enter a target amount greater than zero");
-      return;
+  const { errors, markDirty, saveItem, clearDraft } = useSetupQuickAdd<NewGoal>(ref, {
+    dualActions,
+    key: "goals",
+    getValues: () => ({
+      name: name.trim() || type || "",
+      type: type ?? "",
+      targetAmount: Number(targetAmount),
+      currentSaved: Number(currentSaved) || 0,
+      targetDate: targetDate || defaultTargetDate(),
+      priority,
+    }),
+    reset: resetFields,
+  });
+
+  const select = (next: GoalType) => {
+    setType(next);
+    setName("");
+    setShowDetails(false);
+    const suggested = fireTargets?.[next as FireGoalType];
+    if (suggested && suggested > 0) {
+      setTargetAmount(String(Math.round(suggested)));
+    } else {
+      setTargetAmount("");
     }
+    markDirty();
+  };
+
+  const payload = (): NewGoal | null => {
+    if (!type) return null;
+    const target = parsePositive(targetAmount);
+    if (target === null) return null;
     const saved = Number(currentSaved);
-    onAdd({
+    return {
       name: name.trim() || type,
       type,
       targetAmount: target,
       currentSaved: Number.isFinite(saved) && saved > 0 ? saved : 0,
       targetDate: targetDate || defaultTargetDate(),
       priority,
-    });
+    };
+  };
+
+  const add = () => {
+    const item = payload();
+    if (!item) {
+      toast.error("Enter a target amount greater than zero");
+      return;
+    }
+    void onAdd(item);
     setTargetAmount("");
     setCurrentSaved("");
     setName("");
     setShowDetails(false);
+  };
+
+  const saveDraft = async () => {
+    const item = payload() ?? {
+      name: name.trim() || type || "",
+      type: type ?? "Dream Home",
+      targetAmount: Number(targetAmount) || 0,
+      currentSaved: Number(currentSaved) || 0,
+      targetDate: targetDate || defaultTargetDate(),
+      priority,
+    };
+    await saveItem(item, onAdd, onUpdate);
   };
 
   const SelectedIcon = type ? (ALL_TILES.find((t) => t.value === type)?.icon ?? Plus) : Plus;
@@ -117,7 +165,7 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
               </span>
               <span className="font-semibold">{type}</span>
             </div>
-            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={reset}>
+            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={clearDraft}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -126,7 +174,9 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="quick-goal-target">Target amount</Label>
+              <Label htmlFor="quick-goal-target" className={errors.targetAmount ? "text-danger" : undefined}>
+                Target amount
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{currency}</span>
                 <Input
@@ -138,19 +188,28 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
                   className="pl-7"
                   value={targetAmount}
                   autoFocus
-                  onChange={(e) => setTargetAmount(e.target.value)}
+                  aria-invalid={Boolean(errors.targetAmount)}
+                  onChange={(e) => {
+                    setTargetAmount(e.target.value);
+                    markDirty();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      add();
+                      void (dualActions ? saveDraft() : add());
                     }
                   }}
                 />
               </div>
+              {errors.targetAmount && <p className="text-xs font-medium text-danger">{errors.targetAmount}</p>}
             </div>
-            <Button className="gap-2 rounded-xl sm:w-40" onClick={add}>
-              <Plus className="h-4 w-4" /> Add Goal
-            </Button>
+            {dualActions ? (
+              <WizardSaveButton onSave={() => void saveDraft()} saveLabel="Save" />
+            ) : (
+              <Button className="gap-2 rounded-xl sm:w-40" onClick={add}>
+                <Plus className="h-4 w-4" /> Add Goal
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -171,7 +230,15 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="quick-goal-name">Name (optional)</Label>
-                <Input id="quick-goal-name" placeholder={type} value={name} onChange={(e) => setName(e.target.value)} />
+                <Input
+                  id="quick-goal-name"
+                  placeholder={type}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="quick-goal-saved">Already saved</Label>
@@ -185,13 +252,24 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
                     placeholder="0"
                     className="pl-7"
                     value={currentSaved}
-                    onChange={(e) => setCurrentSaved(e.target.value)}
+                    onChange={(e) => {
+                      setCurrentSaved(e.target.value);
+                      markDirty();
+                    }}
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="quick-goal-date">Target date</Label>
-                <Input id="quick-goal-date" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+                <Input
+                  id="quick-goal-date"
+                  type="date"
+                  value={targetDate}
+                  onChange={(e) => {
+                    setTargetDate(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>Priority</Label>
@@ -200,7 +278,10 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
                     <button
                       key={p}
                       type="button"
-                      onClick={() => setPriority(p)}
+                      onClick={() => {
+                        setPriority(p);
+                        markDirty();
+                      }}
                       className={cn(
                         "rounded-xl border px-3 py-1.5 text-xs font-medium transition",
                         priority === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50",
@@ -217,4 +298,4 @@ export function GoalQuickAdd({ currency, onAdd }: { currency: string; onAdd: (go
       )}
     </div>
   );
-}
+});

@@ -16,4 +16,10 @@ describe("Input password visibility", () => {
     fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
     expect(field).toHaveAttribute("type", "password");
   });
+
+  it("marks an invalid field with a danger class", () => {
+    render(<Input aria-label="Amount" aria-invalid />);
+    expect(screen.getByLabelText("Amount").className).toContain("aria-invalid:border-danger");
+    expect(screen.getByLabelText("Amount").className).toContain("aria-invalid:text-danger");
+  });
 });

@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import type { Express } from "express";
 import express from "express";
 import { advisorRouter } from "../modules/personal-finance/advisor/advisor.route";
+import { advisorChatRouter } from "../modules/personal-finance/advisor-chat/advisor-chat.route";
 import { budgetRouter } from "../modules/personal-finance/budget/budget.route";
 import { calculatorRouter } from "../modules/personal-finance/calculator/calculator.route";
 import { financialProfileRouter } from "../modules/personal-finance/financial-profile/financial-profile.route";
@@ -59,6 +60,7 @@ export class Route {
     app.use("/api/financial-profile", financialProfileRouter);
     app.use("/api/planner", plannerRouter);
     app.use("/api/advisor", advisorRouter);
+    app.use("/api/advisor", advisorChatRouter);
     app.use("/api/statements", statementRouter);
     app.use("/api/tax", taxRouter);
     app.use("/api/crm", crmRouter);

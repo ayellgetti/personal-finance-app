@@ -256,6 +256,122 @@
         nav.toc { display: none; }
         .hero { padding: 24px 18px; }
       }
+
+      /* ── Quiz & completion ─────────────────────────── */
+      .status-btn {
+        background: linear-gradient(135deg, #1c9b6a, #2bb57e);
+        color: #fff; border: 0; border-radius: 999px;
+        font-size: 12px; font-weight: 700; padding: 5px 13px;
+        cursor: pointer; white-space: nowrap; line-height: 1.4;
+        transition: opacity 0.15s;
+      }
+      .status-btn:hover { opacity: 0.82; }
+      .status-done {
+        display: inline-flex; align-items: center; gap: 5px;
+        border: 1.5px solid var(--ok); color: var(--ok);
+        border-radius: 999px; font-size: 12px; font-weight: 700;
+        padding: 4px 11px; white-space: nowrap; background: transparent;
+      }
+      td.status-cell { white-space: nowrap; padding-right: 12px; }
+      .mod-progress-wrap {
+        padding: 0 16px 8px;
+        display: flex; align-items: center; gap: 10px;
+      }
+      .mod-progress-bar {
+        flex: 1; height: 5px; border-radius: 5px;
+        background: var(--line); overflow: hidden;
+      }
+      .mod-progress-fill {
+        height: 100%; border-radius: 5px;
+        background: linear-gradient(90deg, #1c9b6a, #2bb57e);
+        transition: width 0.45s ease;
+        width: 0%;
+      }
+      .mod-progress-label {
+        font-size: 12px; font-weight: 700; color: var(--primary-2);
+        white-space: nowrap;
+      }
+
+      /* ── Quiz modal ─────────────────────────────────── */
+      #quiz-modal {
+        display: none; position: fixed; inset: 0; z-index: 200;
+        background: rgba(10, 20, 28, 0.72);
+        backdrop-filter: blur(8px);
+        align-items: center; justify-content: center;
+        padding: 16px;
+      }
+      #quiz-modal.open { display: flex; }
+      .quiz-card {
+        background: var(--card); border: 1px solid var(--line);
+        border-radius: 24px; padding: 28px 28px 22px;
+        width: min(580px, 100%); max-height: 90vh; overflow-y: auto;
+        box-shadow: 0 28px 72px -16px rgba(8, 20, 28, 0.45);
+        position: relative;
+      }
+      .quiz-top {
+        display: flex; justify-content: space-between;
+        align-items: flex-start; gap: 12px; margin-bottom: 14px;
+      }
+      .quiz-lesson-title {
+        font-size: 12px; font-weight: 700; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 0.08em; margin: 0;
+      }
+      .quiz-close-btn {
+        flex-shrink: 0; width: 32px; height: 32px; border-radius: 10px;
+        border: 1px solid var(--line); background: var(--card);
+        color: var(--muted); cursor: pointer; font-size: 16px;
+        display: grid; place-items: center; line-height: 1;
+      }
+      .quiz-close-btn:hover { color: var(--text); background: var(--toc-hover); }
+      .quiz-counter {
+        font-size: 14px; font-weight: 600; color: var(--muted); margin: 0 0 8px;
+      }
+      .quiz-track {
+        height: 6px; border-radius: 6px; background: var(--line);
+        margin-bottom: 20px; overflow: hidden;
+      }
+      .quiz-track-fill {
+        height: 100%; border-radius: 6px;
+        background: linear-gradient(90deg, #1c9b6a, #2bb57e);
+        transition: width 0.3s ease;
+      }
+      .quiz-question {
+        font-size: 16px; font-weight: 600; line-height: 1.55;
+        color: var(--text); margin: 0 0 20px;
+      }
+      .quiz-choices { display: grid; gap: 10px; margin-bottom: 22px; }
+      .quiz-choice {
+        text-align: left; padding: 12px 16px;
+        border: 1.5px solid var(--line); border-radius: 14px;
+        background: var(--card); color: var(--text);
+        font-size: 14px; cursor: pointer;
+        transition: border-color 0.14s, background 0.14s;
+        font-family: inherit; line-height: 1.45;
+      }
+      .quiz-choice:hover:not(:disabled) { border-color: var(--primary); background: var(--toc-hover); }
+      .quiz-choice.selected { border-color: var(--primary); background: var(--n-bg); font-weight: 600; }
+      .quiz-choice.correct { border-color: var(--ok) !important; background: var(--note-bg) !important; color: var(--ok) !important; font-weight: 700; }
+      .quiz-choice.wrong { border-color: #d94f4f !important; }
+      html.dark .quiz-choice.wrong { border-color: #c04040 !important; color: #f08080 !important; background: #2a1010 !important; }
+      html:not(.dark) .quiz-choice.wrong { color: #b03030 !important; background: #fff0f0 !important; }
+      .quiz-choice:disabled { cursor: default; }
+      .quiz-actions { display: flex; justify-content: flex-end; }
+      #quiz-submit-btn { /* extends .btn */ }
+      #quiz-submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+      /* Result screen */
+      #quiz-result-screen { text-align: center; padding: 8px 0 4px; }
+      .quiz-score-big {
+        font-family: Sora, sans-serif; font-size: 60px; font-weight: 800;
+        line-height: 1; margin: 0 0 6px;
+      }
+      .quiz-score-big.pass { color: var(--ok); }
+      .quiz-score-big.fail { color: var(--warn); }
+      .quiz-result-subtitle {
+        font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 6px;
+      }
+      .quiz-result-msg { font-size: 14px; color: var(--muted); margin: 0 0 26px; max-width: 46ch; margin-left: auto; margin-right: auto; }
+      .quiz-result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     </style>
   </head>
   <body>

@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ChevronUp, MoreHorizontal, Plus } from "lucide-react";
+import { ChevronUp, MoreHorizontal, Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +17,24 @@ export type QuickTypeTile<T extends string> = {
   label: string;
   icon: LucideIcon;
 };
+
+export function WizardSaveButton({
+  onSave,
+  saveLabel,
+}: {
+  onSave: () => void;
+  saveLabel: string;
+}) {
+  return (
+    <Button
+      type="button"
+      className="w-full gap-2 rounded-xl ring-2 ring-primary ring-offset-2 sm:w-40"
+      onClick={onSave}
+    >
+      <Save className="h-4 w-4" /> {saveLabel}
+    </Button>
+  );
+}
 
 export function QuickAddDialog({
   title,

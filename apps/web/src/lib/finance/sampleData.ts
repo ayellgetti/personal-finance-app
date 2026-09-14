@@ -25,6 +25,10 @@ export const sampleData: FinanceData = {
     inflationRate: 6,
     emergencyFund: 480000,
     dependents: 2,
+    familyMembers: [
+      { name: "Priya Mehta", relationship: "Spouse", dob: "1994-03-12", gender: "female", occupation: "Teacher" },
+      { name: "Aarav Mehta", relationship: "Child", dob: "2018-07-01", gender: "male", occupation: "Student" },
+    ],
     employmentType: "Salaried",
     monthlyEssentialExpenses: 0,
     liquidAssets: 150000,

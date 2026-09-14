@@ -4,10 +4,11 @@ import type { UpsertFinancialProfileBody } from "./financial-profile.request";
 const DEFAULTS = {
   retirementAge: 60,
   dependents: 0,
+  familyMembers: [] as [],
   inflationRate: 6,
   employmentType: "Salaried",
   currency: "₹",
-} as const;
+};
 
 export class FinancialProfileService {
   constructor(private readonly model: FinancialProfileModel = financialProfileModel) {}

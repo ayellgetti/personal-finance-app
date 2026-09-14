@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Loan, LoanType } from "@/types/finance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Plus, X, ChevronDown, ChevronUp, Home, User, Briefcase, Car, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
-import { QuickTypePicker, QuickTypeTile } from "./QuickTypePicker";
+import { type SetupDraftHandle } from "@/lib/finance/setup-validation";
+import { useSetupQuickAdd, type SetupQuickAddProps } from "@/lib/finance/use-setup-quick-add";
+import { QuickTypePicker, QuickTypeTile, WizardSaveButton } from "./QuickTypePicker";
 
 export type NewLoan = Omit<Loan, "id">;
 
@@ -40,7 +42,10 @@ function parsePositive(raw: string): number | null {
   return value;
 }
 
-export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (loan: NewLoan) => void }) {
+export const LoanQuickAdd = forwardRef<SetupDraftHandle, SetupQuickAddProps<NewLoan>>(function LoanQuickAdd(
+  { currency, onAdd, onUpdate, dualActions = false },
+  ref,
+) {
   const [type, setType] = useState<LoanType | null>(null);
   const [outstanding, setOutstanding] = useState("");
   const [emi, setEmi] = useState("");
@@ -51,15 +56,7 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
   const [prepaymentAllowed, setPrepaymentAllowed] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
 
-  const select = (next: LoanType) => {
-    setType(next);
-    setName("");
-    setInterestRate(String(RATE_DEFAULT[next]));
-    setRemainingTenure(String(TENURE_DEFAULT[next]));
-    setShowDetails(false);
-  };
-
-  const reset = () => {
+  const resetFields = () => {
     setType(null);
     setOutstanding("");
     setEmi("");
@@ -71,18 +68,40 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
     setShowDetails(false);
   };
 
-  const add = () => {
-    if (!type) return;
+  const { errors, markDirty, saveItem, clearDraft } = useSetupQuickAdd<NewLoan>(ref, {
+    dualActions,
+    key: "loans",
+    getValues: () => ({
+      name: name.trim() || type || "",
+      type: type ?? "",
+      outstanding: Number(outstanding),
+      emi: Number(emi),
+      interestRate: Number(interestRate) || (type ? RATE_DEFAULT[type] : 0),
+      remainingTenure: Number(remainingTenure) || (type ? TENURE_DEFAULT[type] : 0),
+      emiDay: Number(emiDay) || 5,
+      prepaymentAllowed,
+    }),
+    reset: resetFields,
+  });
+
+  const select = (next: LoanType) => {
+    setType(next);
+    setName("");
+    setInterestRate(String(RATE_DEFAULT[next]));
+    setRemainingTenure(String(TENURE_DEFAULT[next]));
+    setShowDetails(false);
+    markDirty();
+  };
+
+  const payload = (): NewLoan | null => {
+    if (!type) return null;
     const outstandingValue = parsePositive(outstanding);
     const emiValue = parsePositive(emi);
-    if (outstandingValue === null || emiValue === null) {
-      toast.error("Enter outstanding and EMI greater than zero");
-      return;
-    }
+    if (outstandingValue === null || emiValue === null) return null;
     const rate = Number(interestRate);
     const tenure = Number(remainingTenure);
     const day = Number(emiDay);
-    onAdd({
+    return {
       name: name.trim() || type,
       type,
       outstanding: outstandingValue,
@@ -91,11 +110,34 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
       remainingTenure: Number.isFinite(tenure) && tenure > 0 ? tenure : TENURE_DEFAULT[type],
       emiDay: Number.isFinite(day) && day >= 1 && day <= 31 ? day : 5,
       prepaymentAllowed,
-    });
+    };
+  };
+
+  const add = () => {
+    const item = payload();
+    if (!item) {
+      toast.error("Enter outstanding and EMI greater than zero");
+      return;
+    }
+    void onAdd(item);
     setOutstanding("");
     setEmi("");
     setName("");
     setShowDetails(false);
+  };
+
+  const saveDraft = async () => {
+    const item = payload() ?? {
+      name: name.trim() || type || "",
+      type: type ?? "Home Loan",
+      outstanding: Number(outstanding) || 0,
+      emi: Number(emi) || 0,
+      interestRate: Number(interestRate) || 0,
+      remainingTenure: Number(remainingTenure) || 0,
+      emiDay: Number(emiDay) || 5,
+      prepaymentAllowed,
+    };
+    await saveItem(item, onAdd, onUpdate);
   };
 
   const SelectedIcon = type ? (LOAN_TILES.find((t) => t.value === type)?.icon ?? Plus) : Plus;
@@ -119,14 +161,16 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
               </span>
               <span className="font-semibold">{type}</span>
             </div>
-            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={reset}>
+            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={clearDraft}>
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="quick-loan-outstanding">Outstanding</Label>
+              <Label htmlFor="quick-loan-outstanding" className={errors.outstanding ? "text-danger" : undefined}>
+                Outstanding
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{currency}</span>
                 <Input
@@ -138,18 +182,23 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
                   className="pl-7"
                   value={outstanding}
                   autoFocus
-                  onChange={(e) => setOutstanding(e.target.value)}
+                  aria-invalid={Boolean(errors.outstanding)}
+                  onChange={(e) => {
+                    setOutstanding(e.target.value);
+                    markDirty();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      add();
+                      void (dualActions ? saveDraft() : add());
                     }
                   }}
                 />
               </div>
+              {errors.outstanding && <p className="text-xs font-medium text-danger">{errors.outstanding}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="quick-loan-emi">Monthly EMI</Label>
+              <Label htmlFor="quick-loan-emi" className={errors.emi ? "text-danger" : undefined}>Monthly EMI</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{currency}</span>
                 <Input
@@ -160,15 +209,20 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
                   placeholder="0"
                   className="pl-7"
                   value={emi}
-                  onChange={(e) => setEmi(e.target.value)}
+                  aria-invalid={Boolean(errors.emi)}
+                  onChange={(e) => {
+                    setEmi(e.target.value);
+                    markDirty();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      add();
+                      void (dualActions ? saveDraft() : add());
                     }
                   }}
                 />
               </div>
+              {errors.emi && <p className="text-xs font-medium text-danger">{errors.emi}</p>}
             </div>
           </div>
 
@@ -190,22 +244,68 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="quick-loan-name">Name (optional)</Label>
-                <Input id="quick-loan-name" placeholder={type} value={name} onChange={(e) => setName(e.target.value)} />
+                <Input
+                  id="quick-loan-name"
+                  placeholder={type}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="quick-loan-rate">Interest rate (%)</Label>
-                <Input id="quick-loan-rate" type="number" inputMode="decimal" min={0} value={interestRate} onChange={(e) => setInterestRate(e.target.value)} />
+                <Input
+                  id="quick-loan-rate"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  value={interestRate}
+                  onChange={(e) => {
+                    setInterestRate(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="quick-loan-tenure">Remaining tenure (months)</Label>
-                <Input id="quick-loan-tenure" type="number" inputMode="numeric" min={1} value={remainingTenure} onChange={(e) => setRemainingTenure(e.target.value)} />
+                <Input
+                  id="quick-loan-tenure"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={remainingTenure}
+                  onChange={(e) => {
+                    setRemainingTenure(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="quick-loan-day">EMI day of month</Label>
-                <Input id="quick-loan-day" type="number" inputMode="numeric" min={1} max={31} value={emiDay} onChange={(e) => setEmiDay(e.target.value)} />
+                <Input
+                  id="quick-loan-day"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={31}
+                  value={emiDay}
+                  onChange={(e) => {
+                    setEmiDay(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
               <div className="flex items-center gap-3">
-                <Switch id="quick-loan-prepay" checked={prepaymentAllowed} onCheckedChange={setPrepaymentAllowed} />
+                <Switch
+                  id="quick-loan-prepay"
+                  checked={prepaymentAllowed}
+                  onCheckedChange={(checked) => {
+                    setPrepaymentAllowed(checked);
+                    markDirty();
+                  }}
+                />
                 <Label htmlFor="quick-loan-prepay" className="text-sm font-normal text-muted-foreground">
                   Prepayment allowed
                 </Label>
@@ -213,11 +313,15 @@ export function LoanQuickAdd({ currency, onAdd }: { currency: string; onAdd: (lo
             </div>
           )}
 
-          <Button className="gap-2 rounded-xl" onClick={add}>
-            <Plus className="h-4 w-4" /> Add Loan
-          </Button>
+          {dualActions ? (
+            <WizardSaveButton onSave={() => void saveDraft()} saveLabel="Save" />
+          ) : (
+            <Button className="gap-2 rounded-xl" onClick={add}>
+              <Plus className="h-4 w-4" /> Add Loan
+            </Button>
+          )}
         </div>
       )}
     </div>
   );
-}
+});

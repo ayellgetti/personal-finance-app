@@ -200,6 +200,28 @@ export interface Goal {
 
 export type EmploymentType = "Salaried" | "Business Owner" | "Freelancer" | "Retired";
 
+export const FAMILY_RELATIONSHIPS = ["Spouse", "Child", "Parent", "Sibling", "Other"] as const;
+export type FamilyRelationship = (typeof FAMILY_RELATIONSHIPS)[number];
+
+export const FAMILY_GENDERS = ["female", "male", "other"] as const;
+export type FamilyGender = (typeof FAMILY_GENDERS)[number];
+
+export interface FamilyMember {
+  name: string;
+  relationship: FamilyRelationship;
+  dob: string;
+  gender: FamilyGender;
+  occupation: string;
+}
+
+export type FamilyMemberDraft = {
+  name: string;
+  relationship: FamilyRelationship | "";
+  dob: string;
+  gender: FamilyGender | "";
+  occupation: string;
+};
+
 export interface Profile {
   name: string;
   age: number;
@@ -208,6 +230,7 @@ export interface Profile {
   inflationRate: number; // %
   emergencyFund: number;
   dependents: number;
+  familyMembers: FamilyMember[];
   employmentType: EmploymentType;
   monthlyEssentialExpenses: number; // 0 = auto-derive from expenses
   liquidAssets: number; // FD, liquid funds available for emergencies

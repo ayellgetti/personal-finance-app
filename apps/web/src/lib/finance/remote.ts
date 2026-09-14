@@ -5,6 +5,9 @@ import {
   EmploymentType,
   Expense,
   ExpenseCategory,
+  FamilyGender,
+  FamilyMember,
+  FamilyRelationship,
   Goal,
   GoalType,
   Income,
@@ -173,6 +176,7 @@ const INVESTMENT_SUBCATEGORIES: Record<InvestmentType, string> = {
 export type RemoteFinancialProfile = {
   retirementAge: number;
   dependents: number;
+  familyMembers: FamilyMember[];
   inflationRate: number;
   employmentType: EmploymentType;
   currency: string;
@@ -281,9 +285,37 @@ function asEmploymentType(value: string | undefined): EmploymentType {
     : "Salaried";
 }
 
+function asFamilyRelationship(value: unknown): FamilyRelationship | null {
+  return value === "Spouse" || value === "Child" || value === "Parent" || value === "Sibling" || value === "Other"
+    ? value
+    : null;
+}
+
+function asFamilyGender(value: unknown): FamilyGender | null {
+  return value === "female" || value === "male" || value === "other" ? value : null;
+}
+
+function mapFamilyMembers(value: unknown): FamilyMember[] {
+  if (!Array.isArray(value)) return [];
+  const members: FamilyMember[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const relationship = asFamilyRelationship(record.relationship);
+    const gender = asFamilyGender(record.gender);
+    const name = typeof record.name === "string" ? record.name.trim() : "";
+    const dob = typeof record.dob === "string" ? record.dob.trim() : "";
+    const occupation = typeof record.occupation === "string" ? record.occupation.trim() : "";
+    if (!name || !relationship || !gender || !dob || !occupation) continue;
+    members.push({ name, relationship, dob, gender, occupation });
+  }
+  return members;
+}
+
 export function mapFinancialProfile(input: {
   retirementAge: number;
   dependents: number;
+  familyMembers?: unknown;
   inflationRate: number;
   employmentType: string;
   currency: string;
@@ -291,6 +323,7 @@ export function mapFinancialProfile(input: {
   return {
     retirementAge: input.retirementAge,
     dependents: input.dependents,
+    familyMembers: mapFamilyMembers(input.familyMembers),
     inflationRate: input.inflationRate,
     employmentType: asEmploymentType(input.employmentType),
     currency: input.currency || "₹",

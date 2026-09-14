@@ -12,7 +12,9 @@ import { InsuranceModule } from "@/components/modules/InsuranceModule";
 import { GoalsModule } from "@/components/modules/GoalsModule";
 import { FreedomCalculator } from "@/components/modules/FreedomCalculator";
 import { AIAdvisor } from "@/components/modules/AIAdvisor";
+import { AdvisorChat } from "@/components/modules/AdvisorChat";
 import { LearningHubModule } from "@/components/modules/LearningHubModule";
+import { CourseModule } from "@/components/modules/CourseModule";
 import { ReportModule } from "@/components/modules/ReportModule";
 import { StatementAnalyzerModule } from "@/components/modules/StatementAnalyzerModule";
 import { TaxPlannerModule } from "@/components/modules/TaxPlannerModule";
@@ -29,7 +31,7 @@ const META: Record<ViewId, { title: string; description: string }> = {
   income: { title: "Income Management", description: "Track every source of money coming in" },
   expenses: { title: "Expense Management", description: "Understand where your money goes" },
   daily: { title: "Budget Tracker", description: "Log spending and stay on budget every day" },
-  loans: { title: "Loan Management", description: "Debt overview, ratios and payoff strategy" },
+  loans: { title: "Loan Management", description: "Debt overview, payoff timeline, ratios and strategy" },
   creditCards: { title: "Credit Card", description: "Limits, outstanding balances and utilization" },
   investments: { title: "Investment Management", description: "Portfolio, allocation and growth projections" },
   insurance: { title: "Insurance Management", description: "Coverage adequacy and protection gaps" },
@@ -39,7 +41,9 @@ const META: Record<ViewId, { title: string; description: string }> = {
   calculators: { title: "Financial Calculators", description: "Run, save and revisit financial what-if scenarios" },
   freedom: { title: "Financial Freedom Calculator", description: "When can you retire and live free?" },
   advisor: { title: "AI Financial Advisor", description: "Personalised, actionable recommendations" },
+  chat: { title: "AI Financial Chat", description: "Ask your advisor anything — powered by your live data" },
   learn: { title: "Financial Learning Hub", description: "Learn concepts, then apply them to your money" },
+  course: { title: "Financial Freedom Journey", description: "30 lessons across 3 levels — quiz-gated progress tracking" },
   report: { title: "Summary Report", description: "AI summary and a downloadable executive report" },
 };
 
@@ -109,7 +113,9 @@ const Index = () => {
         )}
         {visibleView === "freedom" && <FreedomCalculator />}
         {visibleView === "advisor" && <AIAdvisor />}
+        {visibleView === "chat" && <AdvisorChat />}
         {visibleView === "learn" && <LearningHubModule />}
+        {visibleView === "course" && <CourseModule />}
         {visibleView === "report" && <ReportModule />}
       </div>
     </AppLayout>

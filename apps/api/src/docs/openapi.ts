@@ -20,7 +20,7 @@ export const openApiDocument = {
     { name: "OTP", description: "Generate, resend, and verify one-time passwords" },
     { name: "Devices", description: "Register and remove authenticated user devices" },
     { name: "Users", description: "Authenticated user profile" },
-    { name: "FinancialProfile", description: "Retirement age, dependents, inflation, and employment" },
+    { name: "FinancialProfile", description: "Retirement age, dependents, family members, inflation, and employment" },
     { name: "Budgets", description: "Authenticated user budgets" },
     { name: "Loans", description: "Authenticated user loans" },
     { name: "Investments", description: "Authenticated user investments" },
@@ -230,12 +230,32 @@ export const openApiDocument = {
           newPassword: { type: "string", minLength: 8, maxLength: 72 },
         },
       },
+      FamilyMember: {
+        type: "object",
+        required: ["name", "relationship", "dob", "gender", "occupation"],
+        properties: {
+          name: { type: "string", minLength: 1, maxLength: 80, example: "Priya Mehta" },
+          relationship: {
+            type: "string",
+            enum: ["Spouse", "Child", "Parent", "Sibling", "Other"],
+          },
+          dob: { type: "string", format: "date", example: "1994-03-12" },
+          gender: { type: "string", enum: ["female", "male", "other"] },
+          occupation: { type: "string", minLength: 1, maxLength: 80, example: "Teacher" },
+        },
+      },
       FinancialProfileRequest: {
         type: "object",
         required: ["retirementAge", "dependents", "inflationRate", "employmentType", "currency"],
         properties: {
           retirementAge: { type: "integer", minimum: 30, maximum: 90, example: 60 },
           dependents: { type: "integer", minimum: 0, maximum: 20, example: 2 },
+          familyMembers: {
+            type: "array",
+            maxItems: 20,
+            items: { $ref: "#/components/schemas/FamilyMember" },
+            description: "One completed member object per dependent. Empty when dependents is 0.",
+          },
           inflationRate: { type: "number", minimum: 0, maximum: 30, example: 6 },
           employmentType: {
             type: "string",
@@ -2582,6 +2602,90 @@ export const openApiDocument = {
               },
             },
           },
+          "502": { $ref: "#/components/responses/EnvelopeError" },
+          "503": { $ref: "#/components/responses/EnvelopeError" },
+          "504": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/advisor/chat": {
+      post: {
+        tags: ["Advisor"],
+        summary: "Send a message to the AI financial advisor chat",
+        description:
+          "Conversational endpoint for paid subscribers. The client sends the current message plus recent history; the server grounds the response in the user's live financial data (planner context). Conversation state is maintained client-side — the server is stateless per request. Returns 402 when the authenticated user does not have `isPaid = true`.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["message"],
+                properties: {
+                  message: {
+                    type: "string",
+                    minLength: 1,
+                    maxLength: 2000,
+                    description: "The user's current message.",
+                  },
+                  history: {
+                    type: "array",
+                    maxItems: 20,
+                    description: "Recent conversation turns for context continuity (client-managed).",
+                    items: {
+                      type: "object",
+                      required: ["role", "content"],
+                      properties: {
+                        role: { type: "string", enum: ["user", "assistant"] },
+                        content: { type: "string", minLength: 1, maxLength: 4000 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "AI advisor reply.",
+            content: {
+              "application/json": {
+                schema: {
+                  allOf: [
+                    { $ref: "#/components/schemas/Envelope" },
+                    {
+                      type: "object",
+                      properties: {
+                        data: {
+                          type: "object",
+                          required: ["message"],
+                          properties: {
+                            message: {
+                              type: "string",
+                              description: "The assistant's reply.",
+                            },
+                          },
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "402": {
+            description:
+              "The authenticated user does not have a paid subscription. `data.code` is `CHAT_REQUIRES_PAID_PLAN`.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "422": { $ref: "#/components/responses/ValidationError" },
           "502": { $ref: "#/components/responses/EnvelopeError" },
           "503": { $ref: "#/components/responses/EnvelopeError" },
           "504": { $ref: "#/components/responses/EnvelopeError" },

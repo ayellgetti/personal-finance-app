@@ -4,7 +4,14 @@ import {
   goalProjectionSchedule,
   investmentProjectionSchedule,
   loanBalanceAfterMonths,
+  loanBalanceChartData,
+  loanPayoffBars,
   loanPayoffMonths,
+  loanRemainingMonths,
+  formatMonthYear,
+  formatTenureMonths,
+  extraEmiInterestSaving,
+  emiIncreaseInterestSaving,
   creditUtilization,
   totalLiabilities,
 } from "./calculations";
@@ -59,6 +66,67 @@ describe("loanBalanceAfterMonths", () => {
 
   it("subtracts EMIs linearly on an interest-free loan", () => {
     expect(loanBalanceAfterMonths(100_000, 0, 10_000, 4)).toBe(60_000);
+  });
+});
+
+describe("loan payoff timeline", () => {
+  const from = new Date(2026, 8, 1);
+
+  it("labels the calendar month a loan reaches zero", () => {
+    const months = loanRemainingMonths(personal);
+    expect(months).toBe(loanPayoffMonths(personal.outstanding, personal.interestRate, personal.emi));
+    expect(formatTenureMonths(months)).toMatch(/m$/);
+    expect(formatMonthYear(from)).toBe("Sep 2026");
+  });
+
+  it("orders bars by the loan that ends first", () => {
+    const bars = loanPayoffBars([housing, personal], from);
+    expect(bars[0]?.name).toBe("Personal");
+    expect(bars[1]?.name).toBe("Housing");
+    expect(bars[0]?.endLabel).toMatch(/^\w{3} \d{4}$/);
+    expect(bars[0]?.months).toBeLessThan(bars[1]?.months ?? 0);
+  });
+
+  it("drops outstanding to zero on the payoff month in the line chart", () => {
+    const points = loanBalanceChartData([personal], from);
+    const payoff = loanRemainingMonths(personal);
+    expect(points[0]?.Personal).toBe(personal.outstanding);
+    const last = points.find((point) => point.month === payoff);
+    expect(last?.Personal).toBe(0);
+    expect(last?.label).not.toBe("Now");
+  });
+
+  it("marks loans whose EMI never covers interest", () => {
+    const stuck: Loan = { ...personal, id: "stuck", emi: 100, remainingTenure: 0 };
+    const bars = loanPayoffBars([stuck], from);
+    expect(bars[0]?.neverEnds).toBe(true);
+    expect(bars[0]?.endLabel).toBe("Never");
+  });
+});
+
+describe("loan prepayment what-ifs", () => {
+  it("saves interest and months when one extra EMI is paid now", () => {
+    const saving = extraEmiInterestSaving(personal);
+    expect(saving).not.toBeNull();
+    expect(saving?.extraNow).toBe(personal.emi);
+    expect(saving?.interestSaved).toBeGreaterThan(0);
+    expect(saving?.monthsSaved).toBeGreaterThan(0);
+    expect(saving?.newMonths).toBeLessThan(saving?.originalMonths ?? 0);
+  });
+
+  it("saves more interest at a 10% EMI increase than at 5%", () => {
+    const plusFive = emiIncreaseInterestSaving(personal, 5);
+    const plusTen = emiIncreaseInterestSaving(personal, 10);
+    expect(plusFive?.extraMonthly).toBeGreaterThan(0);
+    expect(plusTen?.interestSaved).toBeGreaterThan(plusFive?.interestSaved ?? 0);
+    expect(plusTen?.monthsSaved).toBeGreaterThanOrEqual(plusFive?.monthsSaved ?? 0);
+  });
+
+  it("does not invent savings on an interest-free extra EMI beyond time", () => {
+    const zeroRate: Loan = { ...personal, interestRate: 0, outstanding: 120_000, emi: 10_000 };
+    const saving = extraEmiInterestSaving(zeroRate);
+    expect(saving?.interestSaved).toBe(0);
+    expect(saving?.monthsSaved).toBe(1);
   });
 });
 

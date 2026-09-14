@@ -13,7 +13,22 @@ export interface AiJsonProvider {
   generateJson(request: AiJsonRequest): Promise<unknown>;
 }
 
-export class OpenAiProvider implements AiJsonProvider {
+export type AiChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AiTextRequest = {
+  system: string;
+  messages: AiChatMessage[];
+  requestId?: string;
+};
+
+export interface AiTextProvider {
+  generateText(request: AiTextRequest): Promise<string>;
+}
+
+export class OpenAiProvider implements AiJsonProvider, AiTextProvider {
   private readonly client?: OpenAI;
 
   constructor() {
@@ -82,6 +97,70 @@ export class OpenAiProvider implements AiJsonProvider {
             : 502;
 
       logger.error("OpenAI request failed", {
+        requestId: request.requestId,
+        status:
+          error instanceof OpenAI.APIError ? error.status : undefined,
+        code: error instanceof OpenAI.APIError ? error.code : undefined,
+        errorType: error instanceof Error ? error.name : "UnknownError",
+        message:
+          error instanceof Error ? error.message.slice(0, 240) : undefined,
+      });
+
+      throw new HttpError(status, "Unable to generate AI financial advice", {
+        provider: "openai",
+      });
+    }
+  }
+
+  async generateText(request: AiTextRequest): Promise<string> {
+    if (!this.client) {
+      throw new HttpError(503, "AI financial advisor is not configured", {
+        provider: "openai",
+      });
+    }
+
+    try {
+      const model = setting.openai.model;
+      const completion = await this.client.chat.completions.create(
+        {
+          model,
+          max_completion_tokens: 1200,
+          ...(model.startsWith("gpt-5")
+            ? { reasoning_effort: "low" as const }
+            : {}),
+          messages: [
+            { role: "system", content: request.system },
+            ...request.messages,
+          ],
+        },
+        {
+          timeout: setting.openai.timeoutMs,
+          maxRetries: 0,
+          ...(request.requestId
+            ? { headers: { "x-request-id": request.requestId } }
+            : {}),
+        },
+      );
+
+      const content = completion.choices[0]?.message.content;
+      if (!content) {
+        throw new HttpError(502, "OpenAI returned an empty response");
+      }
+
+      return content;
+    } catch (error) {
+      if (error instanceof HttpError) {
+        throw error;
+      }
+
+      const status =
+        error instanceof OpenAI.APIError && error.status === 429
+          ? 503
+          : error instanceof OpenAI.APIConnectionTimeoutError
+            ? 504
+            : 502;
+
+      logger.error("OpenAI chat request failed", {
         requestId: request.requestId,
         status:
           error instanceof OpenAI.APIError ? error.status : undefined,

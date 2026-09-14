@@ -1,7 +1,8 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import {
   formatCurrency, formatPercent, totalLiabilities, monthlyEMI,
-  debtToIncome, loanPayoffMonths, prepaymentStrategy,
+  debtToIncome, emiIncreaseInterestSaving, extraEmiInterestSaving, formatTenureMonths,
+  loanPayoffMonths, prepaymentStrategy,
 } from "@/lib/finance/calculations";
 import { Loan, LoanType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
@@ -11,15 +12,9 @@ import { CalendarClock, Landmark, Percent, TrendingDown } from "lucide-react";
 import { QuickAddDialog } from "./QuickTypePicker";
 import { LoanQuickAdd } from "./LoanQuickAdd";
 import { LoanAmortizationDialog } from "./LoanAmortizationDialog";
+import { LoanPayoffChart } from "./LoanPayoffChart";
 
 const TYPES: LoanType[] = ["Home Loan", "Personal Loan", "Business Loan", "Vehicle Loan", "Education Loan"];
-
-function months(m: number) {
-  if (!isFinite(m)) return "Never";
-  const y = Math.floor(m / 12);
-  const mm = m % 12;
-  return `${y ? `${y}y ` : ""}${mm}m`;
-}
 
 function loanFields(loan?: Loan, currency?: string): FieldDef[] {
   return [
@@ -58,6 +53,8 @@ export function LoanModule() {
         <StatCard label="Loans Active" value={String(data.loans.length)} icon={CalendarClock} accent="gold" />
       </div>
 
+      <LoanPayoffChart loans={data.loans} currency={cur} />
+
       <Panel title="Loan Portfolio" action={addLoan}>
         <div className="space-y-3">
           {loading ? (
@@ -72,7 +69,7 @@ export function LoanModule() {
                 badge={<Badge tone="danger">{formatPercent(l.interestRate)}</Badge>}
                 values={[
                   { label: "EMI", value: formatCurrency(l.emi, cur) },
-                  { label: "Payoff", value: months(payoff) },
+                  { label: "Payoff", value: formatTenureMonths(payoff) },
                   { label: "Outstanding", value: formatCurrency(l.outstanding, cur, true), emphasis: true },
                 ]}
                 actions={
@@ -112,8 +109,78 @@ export function LoanModule() {
               </div>
             ))}
           </div>
+          <AvalancheWhatIf loan={strategy[0]} currency={cur} />
         </Panel>
       )}
+    </div>
+  );
+}
+
+function savingCopy(
+  saving: ReturnType<typeof extraEmiInterestSaving>,
+  currency: string,
+): string | null {
+  if (!saving) return null;
+  const sooner = saving.monthsSaved > 0 ? ` and finish ${formatTenureMonths(saving.monthsSaved)} sooner` : "";
+  if (saving.makesClosable) {
+    return `This would let the loan close in ${formatTenureMonths(saving.newMonths)}, with ${formatCurrency(saving.newInterest, currency, true)} interest remaining.`;
+  }
+  if (saving.interestSaved > 0) {
+    return `Save ${formatCurrency(saving.interestSaved, currency, true)} in interest over the remaining ${formatTenureMonths(saving.originalMonths)}${sooner}.`;
+  }
+  if (saving.monthsSaved > 0) {
+    return `Finish ${formatTenureMonths(saving.monthsSaved)} sooner.`;
+  }
+  return null;
+}
+
+function AvalancheWhatIf({ loan, currency }: { loan: Loan | undefined; currency: string }) {
+  if (!loan) return null;
+  const extraEmi = loan.prepaymentAllowed ? extraEmiInterestSaving(loan) : null;
+  const plusFive = emiIncreaseInterestSaving(loan, 5);
+  const plusTen = emiIncreaseInterestSaving(loan, 10);
+  const extraCopy = savingCopy(extraEmi, currency);
+  const fiveCopy = savingCopy(plusFive, currency);
+  const tenCopy = savingCopy(plusTen, currency);
+  if (!extraCopy && !fiveCopy && !tenCopy) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-background/40 p-4">
+      <p className="font-semibold">What extra payments save on {loan.name}</p>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Put extra rupees on this highest-rate loan first. These estimates use the current EMI and do not change your saved loan.
+      </p>
+      <ul className="mt-3 space-y-3 text-sm">
+        {extraEmi && extraCopy && (
+          <li>
+            <p className="font-medium">Pay one extra EMI of {formatCurrency(extraEmi.extraNow, currency)} now</p>
+            <p className="text-muted-foreground">{extraCopy}</p>
+          </li>
+        )}
+        {!loan.prepaymentAllowed && (
+          <li className="text-muted-foreground">
+            This loan is marked as not allowing prepayment, so a one-off extra EMI is not shown.
+          </li>
+        )}
+        {plusFive && fiveCopy && (
+          <li>
+            <p className="font-medium">
+              Raise EMI by 5% to {formatCurrency(plusFive.newEmi, currency)}
+              {plusFive.extraMonthly > 0 ? ` (+${formatCurrency(plusFive.extraMonthly, currency)} / month)` : ""}
+            </p>
+            <p className="text-muted-foreground">{fiveCopy}</p>
+          </li>
+        )}
+        {plusTen && tenCopy && (
+          <li>
+            <p className="font-medium">
+              Raise EMI by 10% to {formatCurrency(plusTen.newEmi, currency)}
+              {plusTen.extraMonthly > 0 ? ` (+${formatCurrency(plusTen.extraMonthly, currency)} / month)` : ""}
+            </p>
+            <p className="text-muted-foreground">{tenCopy}</p>
+          </li>
+        )}
+      </ul>
     </div>
   );
 }

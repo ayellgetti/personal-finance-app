@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { Income, IncomeType } from "@/types/finance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,9 @@ import {
   Plus, X, ChevronDown, ChevronUp, Wallet, Briefcase, Home, Laptop, PieChart, Landmark, MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
-import { QuickTypePicker, QuickTypeTile } from "./QuickTypePicker";
+import { type SetupDraftHandle } from "@/lib/finance/setup-validation";
+import { useSetupQuickAdd, type SetupQuickAddProps } from "@/lib/finance/use-setup-quick-add";
+import { QuickTypePicker, QuickTypeTile, WizardSaveButton } from "./QuickTypePicker";
 
 export type NewIncome = Omit<Income, "id">;
 
@@ -44,7 +46,10 @@ function parsePositive(raw: string): number | null {
   return value;
 }
 
-export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (income: NewIncome) => void }) {
+export const IncomeQuickAdd = forwardRef<SetupDraftHandle, SetupQuickAddProps<NewIncome>>(function IncomeQuickAdd(
+  { currency, onAdd, onUpdate, dualActions = false },
+  ref,
+) {
   const [type, setType] = useState<IncomeType | null>(null);
   const [monthlyAmount, setMonthlyAmount] = useState("");
   const [name, setName] = useState("");
@@ -52,14 +57,7 @@ export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (
   const [startDate, setStartDate] = useState(today);
   const [showDetails, setShowDetails] = useState(false);
 
-  const select = (next: IncomeType) => {
-    setType(next);
-    setName("");
-    setGrowthRate(String(GROWTH_DEFAULT[next]));
-    setShowDetails(false);
-  };
-
-  const reset = () => {
+  const resetFields = () => {
     setType(null);
     setMonthlyAmount("");
     setName("");
@@ -68,24 +66,62 @@ export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (
     setShowDetails(false);
   };
 
-  const add = () => {
-    if (!type) return;
+  const { errors, markDirty, saveItem, clearDraft } = useSetupQuickAdd<NewIncome>(ref, {
+    dualActions,
+    key: "incomes",
+    getValues: () => ({
+      name: name.trim() || type || "",
+      type: type ?? "",
+      monthlyAmount: Number(monthlyAmount),
+      growthRate: Number(growthRate) || (type ? GROWTH_DEFAULT[type] : 0),
+      startDate: startDate || today(),
+    }),
+    reset: resetFields,
+  });
+
+  const select = (next: IncomeType) => {
+    setType(next);
+    setName("");
+    setGrowthRate(String(GROWTH_DEFAULT[next]));
+    setShowDetails(false);
+    markDirty();
+  };
+
+  const payload = (): NewIncome | null => {
+    if (!type) return null;
     const amount = parsePositive(monthlyAmount);
-    if (amount === null) {
-      toast.error("Enter a monthly amount greater than zero");
-      return;
-    }
+    if (amount === null) return null;
     const growth = Number(growthRate);
-    onAdd({
+    return {
       name: name.trim() || type,
       type,
       monthlyAmount: amount,
       growthRate: Number.isFinite(growth) && growth >= 0 ? growth : GROWTH_DEFAULT[type],
       startDate: startDate || today(),
-    });
+    };
+  };
+
+  const add = () => {
+    const item = payload();
+    if (!item) {
+      toast.error("Enter a monthly amount greater than zero");
+      return;
+    }
+    void onAdd(item);
     setMonthlyAmount("");
     setName("");
     setShowDetails(false);
+  };
+
+  const saveDraft = async () => {
+    const item = payload() ?? {
+      name: name.trim() || type || "",
+      type: type ?? "Salary",
+      monthlyAmount: Number(monthlyAmount) || 0,
+      growthRate: Number(growthRate) || 0,
+      startDate: startDate || today(),
+    };
+    await saveItem(item, onAdd, onUpdate);
   };
 
   const SelectedIcon = type ? (ALL_TILES.find((t) => t.value === type)?.icon ?? Plus) : Plus;
@@ -110,14 +146,16 @@ export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (
               </span>
               <span className="font-semibold">{type}</span>
             </div>
-            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={reset}>
+            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={clearDraft}>
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="quick-income-amount">Monthly amount</Label>
+              <Label htmlFor="quick-income-amount" className={errors.monthlyAmount ? "text-danger" : undefined}>
+                Monthly amount
+              </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{currency}</span>
                 <Input
@@ -129,19 +167,28 @@ export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (
                   className="pl-7"
                   value={monthlyAmount}
                   autoFocus
-                  onChange={(e) => setMonthlyAmount(e.target.value)}
+                  aria-invalid={Boolean(errors.monthlyAmount)}
+                  onChange={(e) => {
+                    setMonthlyAmount(e.target.value);
+                    markDirty();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      add();
+                      void (dualActions ? saveDraft() : add());
                     }
                   }}
                 />
               </div>
+              {errors.monthlyAmount && <p className="text-xs font-medium text-danger">{errors.monthlyAmount}</p>}
             </div>
-            <Button className="gap-2 rounded-xl sm:w-40" onClick={add}>
-              <Plus className="h-4 w-4" /> Add Income
-            </Button>
+            {dualActions ? (
+              <WizardSaveButton onSave={() => void saveDraft()} saveLabel="Save" />
+            ) : (
+              <Button className="gap-2 rounded-xl sm:w-40" onClick={add}>
+                <Plus className="h-4 w-4" /> Add Income
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -162,7 +209,15 @@ export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="quick-income-name">Name (optional)</Label>
-                <Input id="quick-income-name" placeholder={type} value={name} onChange={(e) => setName(e.target.value)} />
+                <Input
+                  id="quick-income-name"
+                  placeholder={type}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="quick-income-growth">Growth rate (%)</Label>
@@ -172,12 +227,23 @@ export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (
                   inputMode="decimal"
                   min={0}
                   value={growthRate}
-                  onChange={(e) => setGrowthRate(e.target.value)}
+                  onChange={(e) => {
+                    setGrowthRate(e.target.value);
+                    markDirty();
+                  }}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="quick-income-start">Start date</Label>
-                <Input id="quick-income-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <Input
+                  id="quick-income-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    markDirty();
+                  }}
+                />
               </div>
             </div>
           )}
@@ -185,4 +251,4 @@ export function IncomeQuickAdd({ currency, onAdd }: { currency: string; onAdd: (
       )}
     </div>
   );
-}
+});

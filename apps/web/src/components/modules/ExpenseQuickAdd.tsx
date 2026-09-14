@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { forwardRef, useState } from "react";
 import { EXPENSE_CATEGORIES, Expense, ExpenseCategory } from "@/types/finance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,9 @@ import {
   Bus, ShieldCheck, GraduationCap, Clapperboard, Utensils, Plane, Stethoscope, MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
+import { type SetupDraftHandle } from "@/lib/finance/setup-validation";
+import { useSetupQuickAdd, type SetupQuickAddProps } from "@/lib/finance/use-setup-quick-add";
+import { WizardSaveButton } from "./QuickTypePicker";
 
 export type NewExpense = Omit<Expense, "id">;
 
@@ -47,7 +50,10 @@ const CAT_SHORT: Partial<Record<ExpenseCategory, string>> = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export function ExpenseQuickAdd({ currency, onAdd }: { currency: string; onAdd: (expense: NewExpense) => void }) {
+export const ExpenseQuickAdd = forwardRef<SetupDraftHandle, SetupQuickAddProps<NewExpense>>(function ExpenseQuickAdd(
+  { currency, onAdd, onUpdate, dualActions = false },
+  ref,
+) {
   const [category, setCategory] = useState<ExpenseCategory | null>(null);
   const [amount, setAmount] = useState("");
   const [recurring, setRecurring] = useState(true);
@@ -58,28 +64,60 @@ export function ExpenseQuickAdd({ currency, onAdd }: { currency: string; onAdd: 
 
   const visible = showAll ? EXPENSE_CATEGORIES : PRIMARY_CATEGORIES;
 
-  const select = (next: ExpenseCategory) => {
-    setCategory(next);
-    setName("");
-    setShowDetails(false);
-  };
-
-  const reset = () => {
+  const resetFields = () => {
     setCategory(null);
     setAmount("");
     setName("");
     setDate(today());
     setShowDetails(false);
+    setRecurring(true);
   };
 
-  const add = () => {
-    if (!category) return;
+  const { errors, markDirty, saveItem, clearDraft } = useSetupQuickAdd<NewExpense>(ref, {
+    dualActions,
+    key: "expenses",
+    getValues: () => ({
+      name: name.trim() || category || "",
+      category: category ?? "",
+      amount: Number(amount),
+      date,
+      recurring,
+    }),
+    reset: resetFields,
+  });
+
+  const select = (next: ExpenseCategory) => {
+    setCategory(next);
+    setName("");
+    setShowDetails(false);
+    markDirty();
+  };
+
+  const payload = (): NewExpense | null => {
+    if (!category) return null;
     const value = Number(amount);
-    if (!Number.isFinite(value) || value <= 0) {
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return { name: name.trim() || category, category, amount: value, recurring, date };
+  };
+
+  const saveDraft = async () => {
+    const item = payload() ?? {
+      name: name.trim() || category || "",
+      category: category ?? "Other",
+      amount: Number(amount) || 0,
+      recurring,
+      date,
+    };
+    await saveItem(item, onAdd, onUpdate);
+  };
+
+  const add = async () => {
+    const item = payload();
+    if (!item) {
       toast.error("Enter an amount greater than zero");
       return;
     }
-    onAdd({ name: name.trim() || category, category, amount: value, recurring, date });
+    await onAdd(item);
     setAmount("");
     setName("");
     setShowDetails(false);
@@ -144,14 +182,14 @@ export function ExpenseQuickAdd({ currency, onAdd }: { currency: string; onAdd: 
               </span>
               <span className="font-semibold">{category}</span>
             </div>
-            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={reset}>
+            <Button variant="ghost" size="icon" aria-label="Clear selection" onClick={clearDraft}>
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-2">
-              <Label htmlFor="quick-expense-amount">Amount</Label>
+              <Label htmlFor="quick-expense-amount" className={errors.amount ? "text-danger" : undefined}>Amount</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">{currency}</span>
                 <Input
@@ -163,24 +201,40 @@ export function ExpenseQuickAdd({ currency, onAdd }: { currency: string; onAdd: 
                   className="pl-7"
                   value={amount}
                   autoFocus
-                  onChange={(e) => setAmount(e.target.value)}
+                  aria-invalid={Boolean(errors.amount)}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    markDirty();
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
-                      add();
+                      void (dualActions ? saveDraft() : add());
                     }
                   }}
                 />
               </div>
+              {errors.amount && <p className="text-xs font-medium text-danger">{errors.amount}</p>}
             </div>
-            <Button className="gap-2 rounded-xl sm:w-40" onClick={add}>
-              <Plus className="h-4 w-4" /> Add Expense
-            </Button>
+            {dualActions ? (
+              <WizardSaveButton onSave={() => void saveDraft()} saveLabel="Save" />
+            ) : (
+              <Button className="gap-2 rounded-xl sm:w-40" onClick={() => void add()}>
+                <Plus className="h-4 w-4" /> Add Expense
+              </Button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <Switch id="quick-expense-recurring" checked={recurring} onCheckedChange={setRecurring} />
+              <Switch
+                id="quick-expense-recurring"
+                checked={recurring}
+                onCheckedChange={(checked) => {
+                  setRecurring(checked);
+                  markDirty();
+                }}
+              />
               <Label htmlFor="quick-expense-recurring" className="text-sm font-normal text-muted-foreground">
                 {recurring ? "Repeats every month" : "One-time expense"}
               </Label>
@@ -203,7 +257,10 @@ export function ExpenseQuickAdd({ currency, onAdd }: { currency: string; onAdd: 
                   id="quick-expense-name"
                   placeholder={category}
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    markDirty();
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -212,7 +269,10 @@ export function ExpenseQuickAdd({ currency, onAdd }: { currency: string; onAdd: 
                   id="quick-expense-date"
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    markDirty();
+                  }}
                 />
               </div>
             </div>
@@ -221,4 +281,4 @@ export function ExpenseQuickAdd({ currency, onAdd }: { currency: string; onAdd: 
       )}
     </div>
   );
-}
+});

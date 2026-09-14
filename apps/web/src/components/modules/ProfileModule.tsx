@@ -3,6 +3,8 @@ import { useAuth } from "@/lib/auth/store";
 import { useFinance } from "@/lib/finance/store";
 import { EmploymentType } from "@/types/finance";
 import { ageFromDob } from "@/lib/finance/profile";
+import { resizeFamilyMembers, toSavedFamilyMembers, validateSetupProfile, type FieldErrors } from "@/lib/finance/setup-validation";
+import { FamilyMemberFields } from "./FamilyMemberFields";
 import { Panel } from "./shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +46,9 @@ export function ProfileModule() {
     inflationRate: data.profile.inflationRate,
     dependents: data.profile.dependents,
     employmentType: data.profile.employmentType,
+    familyMembers: resizeFamilyMembers(data.profile.familyMembers, data.profile.dependents),
   });
+  const [profileErrors, setProfileErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
     if (loading) return;
@@ -53,6 +57,7 @@ export function ProfileModule() {
       inflationRate: data.profile.inflationRate,
       dependents: data.profile.dependents,
       employmentType: data.profile.employmentType,
+      familyMembers: resizeFamilyMembers(data.profile.familyMembers, data.profile.dependents),
     });
   }, [
     loading,
@@ -60,6 +65,7 @@ export function ProfileModule() {
     data.profile.inflationRate,
     data.profile.dependents,
     data.profile.employmentType,
+    data.profile.familyMembers,
   ]);
 
   if (!user) return null;
@@ -101,11 +107,27 @@ export function ProfileModule() {
 
   const saveFinanceProfile = (e: FormEvent) => {
     e.preventDefault();
-    updateProfile({
+    const dependents = Number(profile.dependents) || 0;
+    const next = {
       retirementAge: Number(profile.retirementAge) || data.profile.retirementAge,
       inflationRate: Number(profile.inflationRate) || 0,
-      dependents: Number(profile.dependents) || 0,
+      dependents,
       employmentType: profile.employmentType,
+      familyMembers: resizeFamilyMembers(profile.familyMembers, dependents),
+    };
+    const result = validateSetupProfile(next);
+    if ("errors" in result) {
+      setProfileErrors(result.errors);
+      toast.error("Complete family member details for each dependent");
+      return;
+    }
+    setProfileErrors({});
+    updateProfile({
+      retirementAge: result.value.retirementAge ?? next.retirementAge,
+      inflationRate: result.value.inflationRate ?? next.inflationRate,
+      dependents: result.value.dependents ?? next.dependents,
+      employmentType: result.value.employmentType ?? next.employmentType,
+      familyMembers: toSavedFamilyMembers(next.familyMembers),
     });
     toast.success("Financial profile saved");
   };
@@ -242,14 +264,26 @@ export function ProfileModule() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="profile-dependents">Dependents</Label>
+            <Label htmlFor="profile-dependents" className={profileErrors.dependents || profileErrors.familyMembers ? "text-danger" : undefined}>Dependents</Label>
             <Input
               id="profile-dependents"
               type="number"
+              min={0}
+              max={20}
               className="rounded-xl"
               value={profile.dependents}
-              onChange={(e) => setProfile((p) => ({ ...p, dependents: Number(e.target.value) }))}
+              aria-invalid={Boolean(profileErrors.dependents ?? profileErrors.familyMembers)}
+              onChange={(e) => {
+                const dependents = Number(e.target.value);
+                setProfile((p) => ({
+                  ...p,
+                  dependents,
+                  familyMembers: resizeFamilyMembers(p.familyMembers, dependents),
+                }));
+              }}
             />
+            {profileErrors.dependents && <p className="text-xs font-medium text-danger">{profileErrors.dependents}</p>}
+            {profileErrors.familyMembers && <p className="text-xs font-medium text-danger">{profileErrors.familyMembers}</p>}
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>Employment</Label>
@@ -266,6 +300,20 @@ export function ProfileModule() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <FamilyMemberFields
+              members={profile.familyMembers}
+              errors={profileErrors}
+              onChange={(index, patch) => {
+                setProfile((current) => ({
+                  ...current,
+                  familyMembers: current.familyMembers.map((member, i) =>
+                    i === index ? { ...member, ...patch } : member,
+                  ),
+                }));
+              }}
+            />
           </div>
           <div className="sm:col-span-2">
             <Button type="submit" className="rounded-xl" disabled={loading}>Save financial profile</Button>
