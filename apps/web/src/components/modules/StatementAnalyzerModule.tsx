@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Landmark, Smartphone, Upload, FileSpreadsheet } from "lucide-react";
+import { Landmark, Smartphone, Upload, FileSpreadsheet, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import {
   type StatementLine,
   type StatementSourceType,
 } from "@/lib/finance/statement-remote";
-import { Panel, EmptyState } from "./shared";
+import { Panel, EmptyState, ActionTooltip } from "./shared";
 
 const CATEGORIES = Object.keys(STATEMENT_CATEGORY_LABELS) as StatementCategory[];
 
@@ -252,9 +252,17 @@ export function StatementAnalyzerModule() {
           className="lg:col-span-2"
           action={
             selected ? (
-              <Button variant="ghost" className="text-danger" onClick={() => void remove(selected.id)}>
-                Delete
-              </Button>
+              <ActionTooltip label="Delete">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Delete"
+                  className="text-danger"
+                  onClick={() => void remove(selected.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </ActionTooltip>
             ) : null
           }
         >

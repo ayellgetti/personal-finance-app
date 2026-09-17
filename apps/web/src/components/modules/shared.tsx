@@ -1,6 +1,7 @@
 import { forwardRef, ComponentPropsWithoutRef, ReactNode } from "react";
 import { Trash2, Inbox, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export const CHART_COLORS = [
   "hsl(var(--chart-1))",
@@ -24,6 +25,23 @@ export const tooltipStyle = {
   boxShadow: "var(--shadow-card)",
   fontSize: "0.8rem",
 };
+
+export function ActionTooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent side="top">{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 export function Panel({ title, action, children, className = "" }: { title?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
@@ -73,14 +91,17 @@ export function ItemRow({
         <div className="flex items-center">
           {actions}
           {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground opacity-60 transition hover:text-danger hover:opacity-100"
-              onClick={onDelete}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <ActionTooltip label="Delete">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Delete"
+                className="text-muted-foreground opacity-60 transition hover:text-danger hover:opacity-100"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </ActionTooltip>
           )}
         </div>
       </div>

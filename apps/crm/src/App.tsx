@@ -18,7 +18,7 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="crm-theme">
     <AuthProvider>
       <CrmProvider>
-        <TooltipProvider>
+        <TooltipProvider delayDuration={200}>
           <Sonner />
           <BrowserRouter>
             <Routes>

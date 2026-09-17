@@ -133,7 +133,7 @@ export function AppLayout({
           <div className="flex shrink-0 items-center gap-2">
             {actions}
             <ThemeToggle />
-            <UserMenu />
+            <UserMenu onProfile={() => onSelect("profile")} />
           </div>
         </header>
 

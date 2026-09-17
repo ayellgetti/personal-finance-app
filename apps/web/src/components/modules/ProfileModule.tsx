@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth/store";
 import { useFinance } from "@/lib/finance/store";
 import { EmploymentType } from "@/types/finance";
@@ -13,6 +14,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 const EMPLOYMENT: EmploymentType[] = ["Salaried", "Business Owner", "Freelancer", "Retired"];
@@ -24,6 +26,17 @@ function initials(name: string) {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("") || "?";
+}
+
+// Compact breadcrumb for the web app
+function WebPageHeader({ crumb }: { crumb: string }) {
+  return (
+    <nav className="flex items-center gap-1 text-sm" aria-label="Breadcrumb">
+      <span className="text-muted-foreground">Freedom Planner</span>
+      <span className="text-muted-foreground mx-0.5">/</span>
+      <span className="font-semibold">{crumb}</span>
+    </nav>
+  );
 }
 
 export function ProfileModule() {
@@ -134,6 +147,8 @@ export function ProfileModule() {
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
+      <WebPageHeader crumb="Profile" />
+
       <Panel>
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 border border-border">
@@ -144,13 +159,20 @@ export function ProfileModule() {
           <div>
             <h2 className="font-display text-xl font-bold">{user.name}</h2>
             <p className="text-sm text-muted-foreground">{user.email}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Member since {new Date(user.createdAt).toLocaleDateString("en-IN", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })}
-            </p>
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <ShieldCheck className="h-3 w-3" />
+                {data.profile.employmentType ?? "Member"}
+              </Badge>
+              <p className="text-xs text-muted-foreground">
+                Member since{" "}
+                {new Date(user.createdAt).toLocaleDateString("en-IN", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </p>
+            </div>
           </div>
         </div>
       </Panel>

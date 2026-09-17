@@ -46,6 +46,7 @@ interface AuthContextValue {
   verifyForgotPasswordOtp: (mobileNo: string, otp: string) => Promise<AuthResult>;
   resetPassword: (mobileNo: string, otp: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
+  updateAccount: (patch: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string }) => Promise<AuthResult>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -177,6 +178,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateAccount = useCallback(
+    async (patch: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string }): Promise<AuthResult> => {
+      try {
+        const updated = await api<ApiUser>("/api/user/account", { method: "PATCH", body: patch });
+        setUser(toPublic(updated));
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: errorMessage(error, "Unable to update account") };
+      }
+    },
+    [],
+  );
+
   const value = useMemo(
     () => ({
       user,
@@ -186,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyForgotPasswordOtp,
       resetPassword,
       logout,
+      updateAccount,
     }),
     [
       user,
@@ -195,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyForgotPasswordOtp,
       resetPassword,
       logout,
+      updateAccount,
     ],
   );
 

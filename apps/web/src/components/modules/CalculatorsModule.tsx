@@ -40,7 +40,7 @@ import {
   amountToIndianRupeeWords,
   numberToIndianWords,
 } from "@/lib/finance/number-words";
-import { Panel, tooltipStyle } from "./shared";
+import { Panel, tooltipStyle, ActionTooltip } from "./shared";
 import {
   calculatorApiError,
   listCalculatorScenarios,
@@ -707,15 +707,17 @@ export function CalculatorsModule({
                           )}
                         </p>
                       </button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Remove ${scenario.title}`}
-                        onClick={() => void removeScenario(scenario.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <ActionTooltip label="Delete">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Delete ${scenario.title}`}
+                          onClick={() => void removeScenario(scenario.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </ActionTooltip>
                     </div>
                   ))}
                 </div>

@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
+import { Mail, Phone, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +14,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import {
   ConfirmRemoveDialog,
+  EditAction,
   Field,
+  ModulePage,
   ModuleStatus,
   NativeSelect,
+  RemoveAction,
   RowActions,
+  StatusBadge,
 } from "@/components/modules/shared";
 import {
   CONTACT_TYPE_LABELS,
@@ -25,6 +31,8 @@ import {
 } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
 import { CRM_PERMISSIONS, type CreateContactInput, type CrmContact, type CrmContactType } from "@/types/crm";
+
+type ViewMode = "table" | "card";
 
 type FormState = {
   name: string;
@@ -64,10 +72,126 @@ function toInput(form: FormState): CreateContactInput {
   };
 }
 
+function ContactTable({
+  items,
+  highlightId,
+  canEdit,
+  canDelete,
+  onEdit,
+  onRemove,
+}: {
+  items: CrmContact[];
+  highlightId?: string | null;
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: (c: CrmContact) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Name</TableHead>
+          <TableHead>Mobile</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Company</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((contact) => (
+          <TableRow
+            key={contact.id}
+            data-highlighted={highlightId === contact.id ? "true" : undefined}
+            className="hover:bg-muted/40"
+          >
+            <TableCell className="font-medium">{contact.name}</TableCell>
+            <TableCell className="text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" aria-hidden />
+                {contact.mobile}
+              </span>
+            </TableCell>
+            <TableCell>
+              <StatusBadge status={contact.type} label={CONTACT_TYPE_LABELS[contact.type]} />
+            </TableCell>
+            <TableCell className="text-muted-foreground">{contact.email ?? "—"}</TableCell>
+            <TableCell className="text-muted-foreground">{contact.companyName ?? "—"}</TableCell>
+            <TableCell>
+              <RowActions>
+                {canEdit ? <EditAction onClick={() => onEdit(contact)} /> : null}
+                {canDelete ? <RemoveAction onClick={() => onRemove(contact.id)} /> : null}
+              </RowActions>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function ContactCards({
+  items,
+  canEdit,
+  canDelete,
+  onEdit,
+  onRemove,
+}: {
+  items: CrmContact[];
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: (c: CrmContact) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((contact) => (
+        <Card key={contact.id} className="rounded-2xl shadow-[var(--shadow-card)] transition-shadow hover:shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <CardTitle className="truncate text-base">{contact.name}</CardTitle>
+                {contact.companyName ? (
+                  <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted-foreground">
+                    <Building2 className="h-3 w-3 shrink-0" />
+                    {contact.companyName}
+                  </p>
+                ) : null}
+              </div>
+              <StatusBadge status={contact.type} label={CONTACT_TYPE_LABELS[contact.type]} />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="flex items-center gap-1.5 text-sm">
+              <Phone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span>{contact.mobile}</span>
+            </p>
+            {contact.email ? (
+              <p className="flex items-center gap-1.5 text-sm">
+                <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">{contact.email}</span>
+              </p>
+            ) : null}
+            {contact.notes ? (
+              <p className="line-clamp-2 text-xs text-muted-foreground">{contact.notes}</p>
+            ) : null}
+            <div className="flex justify-end gap-1 pt-1">
+              {canEdit ? <EditAction onClick={() => onEdit(contact)} /> : null}
+              {canDelete ? <RemoveAction onClick={() => onRemove(contact.id)} /> : null}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export function ContactsModule({ highlightId }: { highlightId?: string | null }) {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.contactsRead);
+  const [view, setView] = useState<ViewMode>("table");
   const [type, setType] = useState<string>("");
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -128,42 +252,49 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
     }
   };
 
+  const toolbar = (
+    <form
+      className="flex flex-1 flex-wrap items-end gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setAppliedSearch(search.trim());
+      }}
+    >
+      <Field id="contact-search" label="Search">
+        <Input
+          id="contact-search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Name or mobile"
+          className="rounded-xl"
+        />
+      </Field>
+      <Field id="contact-type-filter" label="Type">
+        <NativeSelect id="contact-type-filter" aria-label="Type" value={type} onChange={setType}>
+          <option value="">All types</option>
+          {contactTypeOptions()}
+        </NativeSelect>
+      </Field>
+      <Button type="submit" variant="outline" className="rounded-xl">
+        Search
+      </Button>
+    </form>
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <form
-          className="flex flex-1 flex-col gap-3 sm:flex-row"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setAppliedSearch(search.trim());
-          }}
-        >
-          <Field id="contact-search" label="Search">
-            <Input
-              id="contact-search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Name or mobile"
-              className="rounded-xl"
-            />
-          </Field>
-          <Field id="contact-type-filter" label="Type">
-            <NativeSelect id="contact-type-filter" aria-label="Type" value={type} onChange={setType}>
-              <option value="">All types</option>
-              {contactTypeOptions()}
-            </NativeSelect>
-          </Field>
-          <Button type="submit" variant="outline" className="rounded-xl">
-            Search
-          </Button>
-        </form>
-        {crm.hasPermission(CRM_PERMISSIONS.contactsCreate) ? (
+    <ModulePage
+      crumb="Contacts"
+      view={view}
+      onViewChange={(v) => setView(v as ViewMode)}
+      toolbar={toolbar}
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.contactsCreate) ? (
           <Button type="button" className="rounded-xl" onClick={openCreate}>
             Add contact
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       <ModuleStatus
         sessionReady={sessionReady}
         allowed={allowed}
@@ -173,49 +304,24 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
         emptyLabel="No contacts yet"
         onRetry={reload}
       >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Mobile</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {crm.contacts.items.map((contact) => (
-              <TableRow key={contact.id} data-highlighted={highlightId === contact.id ? "true" : undefined}>
-                <TableCell className="font-medium">{contact.name}</TableCell>
-                <TableCell>{contact.mobile}</TableCell>
-                <TableCell>{CONTACT_TYPE_LABELS[contact.type]}</TableCell>
-                <TableCell>{contact.email ?? "—"}</TableCell>
-                <TableCell>{contact.companyName ?? "—"}</TableCell>
-                <TableCell>
-                  <RowActions>
-                    {crm.hasPermission(CRM_PERMISSIONS.contactsUpdate) ? (
-                      <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => openEdit(contact)}>
-                        Edit
-                      </Button>
-                    ) : null}
-                    {crm.hasPermission(CRM_PERMISSIONS.contactsDelete) ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        className="rounded-xl"
-                        onClick={() => setRemoveId(contact.id)}
-                      >
-                        Remove
-                      </Button>
-                    ) : null}
-                  </RowActions>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {view === "card" ? (
+          <ContactCards
+            items={crm.contacts.items}
+            canEdit={crm.hasPermission(CRM_PERMISSIONS.contactsUpdate)}
+            canDelete={crm.hasPermission(CRM_PERMISSIONS.contactsDelete)}
+            onEdit={openEdit}
+            onRemove={setRemoveId}
+          />
+        ) : (
+          <ContactTable
+            items={crm.contacts.items}
+            highlightId={highlightId}
+            canEdit={crm.hasPermission(CRM_PERMISSIONS.contactsUpdate)}
+            canDelete={crm.hasPermission(CRM_PERMISSIONS.contactsDelete)}
+            onEdit={openEdit}
+            onRemove={setRemoveId}
+          />
+        )}
       </ModuleStatus>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -293,6 +399,6 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
           void crm.removeContact(removeId).finally(() => setRemoveId(null));
         }}
       />
-    </div>
+    </ModulePage>
   );
 }

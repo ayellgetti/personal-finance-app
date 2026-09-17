@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ModuleStatus } from "@/components/modules/shared";
+import { ModulePage, ModuleStatus } from "@/components/modules/shared";
 import { useCrm } from "@/lib/crm/store";
 import { CRM_PERMISSIONS } from "@/types/crm";
 
@@ -54,15 +54,16 @@ export function RolesModule() {
   };
 
   return (
-    <ModuleStatus
-      sessionReady={sessionReady}
-      allowed={allowed}
-      status={crm.roles.status}
-      errorMessage={crm.roles.errorMessage}
-      empty={crm.roles.items.length === 0}
-      emptyLabel="No roles yet"
-      onRetry={reload}
-    >
+    <ModulePage crumb="Roles">
+      <ModuleStatus
+        sessionReady={sessionReady}
+        allowed={allowed}
+        status={crm.roles.status}
+        errorMessage={crm.roles.errorMessage}
+        empty={crm.roles.items.length === 0}
+        emptyLabel="No roles yet"
+        onRetry={reload}
+      >
       <div className="grid gap-4">
         {crm.roles.items.map((role) => (
           <Card key={role.id} className="rounded-2xl shadow-[var(--shadow-card)]">
@@ -103,6 +104,7 @@ export function RolesModule() {
           </Card>
         ))}
       </div>
-    </ModuleStatus>
+      </ModuleStatus>
+    </ModulePage>
   );
 }

@@ -7,6 +7,7 @@ import { DashboardModule } from "@/components/modules/DashboardModule";
 import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
 import { FollowUpsModule } from "@/components/modules/FollowUpsModule";
 import { PaymentsModule } from "@/components/modules/PaymentsModule";
+import { ProfileModule } from "@/components/modules/ProfileModule";
 import { RolesModule } from "@/components/modules/RolesModule";
 import { TasksModule } from "@/components/modules/TasksModule";
 import { UsersModule } from "@/components/modules/UsersModule";
@@ -14,6 +15,7 @@ import { useCrm } from "@/lib/crm/store";
 import type { CrmViewId } from "@/types/crm";
 
 const META: Record<CrmViewId, { title: string; description: string }> = {
+  profile: { title: "Profile", description: "Your account and roles" },
   dashboard: { title: "Dashboard", description: "Your CRM workspace at a glance" },
   contacts: { title: "Contacts", description: "People and companies in the pipeline" },
   enquiries: { title: "Enquiries", description: "Sales cases from first touch to close" },
@@ -70,6 +72,7 @@ const Index = () => {
       {view === "calendar" ? <CalendarModule /> : null}
       {view === "users" ? <UsersModule /> : null}
       {view === "roles" ? <RolesModule /> : null}
+      {view === "profile" ? <ProfileModule /> : null}
     </AppLayout>
   );
 };

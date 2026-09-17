@@ -7,7 +7,7 @@ import {
 } from "@/lib/finance/calculations";
 import { FIRE_GOAL_DESCRIPTIONS, EMERGENCY_FUND_GOAL_ID, FireGoalType, Goal, Priority, USER_GOAL_TYPES } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
-import { Panel, EmptyState, Badge, EditButton } from "./shared";
+import { Panel, EmptyState, Badge, EditButton, ActionTooltip } from "./shared";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Trash2, Target } from "lucide-react";
@@ -89,9 +89,17 @@ export function GoalsModule() {
                           trigger={<EditButton />}
                           onSubmit={(v) => updateItem("goals", g.id, v)}
                         />
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-danger" onClick={() => removeItem("goals", g.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <ActionTooltip label="Delete">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Delete"
+                            className="text-muted-foreground hover:text-danger"
+                            onClick={() => removeItem("goals", g.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </ActionTooltip>
                       </div>
                     )}
                   </div>

@@ -12,9 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ConfirmRemoveDialog,
+  EditAction,
   Field,
+  ModulePage,
   ModuleStatus,
   NativeSelect,
+  RemoveAction,
 } from "@/components/modules/shared";
 import {
   TASK_STATUS_LABELS,
@@ -112,15 +115,16 @@ export function TasksModule() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        {crm.hasPermission(CRM_PERMISSIONS.tasksCreate) ? (
+    <ModulePage
+      crumb="Tasks"
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.tasksCreate) ? (
           <Button type="button" className="rounded-xl" onClick={openCreate}>
             Add task
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       <ModuleStatus
         sessionReady={sessionReady}
         allowed={allowed}
@@ -172,16 +176,12 @@ export function TasksModule() {
                           </div>
                         </div>
                       ) : null}
-                      <div className="mt-2 flex gap-2">
+                      <div className="mt-2 flex gap-1">
                         {crm.hasPermission(CRM_PERMISSIONS.tasksUpdate) ? (
-                          <Button type="button" size="sm" variant="ghost" onClick={() => openEdit(task)}>
-                            Edit
-                          </Button>
+                          <EditAction onClick={() => openEdit(task)} />
                         ) : null}
                         {crm.hasPermission(CRM_PERMISSIONS.tasksDelete) ? (
-                          <Button type="button" size="sm" variant="ghost" onClick={() => setRemoveId(task.id)}>
-                            Remove
-                          </Button>
+                          <RemoveAction onClick={() => setRemoveId(task.id)} />
                         ) : null}
                       </div>
                     </div>
@@ -252,6 +252,6 @@ export function TasksModule() {
           void crm.removeTask(removeId).finally(() => setRemoveId(null));
         }}
       />
-    </div>
+    </ModulePage>
   );
 }

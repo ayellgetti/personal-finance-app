@@ -22,7 +22,7 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="fp-theme">
       <AuthProvider>
         <FinanceProvider>
-          <TooltipProvider>
+          <TooltipProvider delayDuration={200}>
             <Toaster />
             <Sonner />
             <BrowserRouter>

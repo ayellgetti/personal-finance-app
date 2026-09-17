@@ -11,10 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ConfirmRemoveDialog,
+  EditAction,
   Field,
+  ModulePage,
   ModuleStatus,
   NativeSelect,
+  RemoveAction,
   RowActions,
+  StatusBadge,
 } from "@/components/modules/shared";
 import { CLIENT_STATUS_LABELS, clientStatusOptions } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
@@ -124,10 +128,11 @@ export function ClientsModule({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <ModulePage
+      crumb="Clients"
+      toolbar={
         <form
-          className="flex flex-1 flex-col gap-3 sm:flex-row"
+          className="flex flex-1 flex-wrap items-end gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             setAppliedSearch(search.trim());
@@ -152,13 +157,15 @@ export function ClientsModule({
             Search
           </Button>
         </form>
-        {crm.hasPermission(CRM_PERMISSIONS.clientsCreate) ? (
+      }
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.clientsCreate) ? (
           <Button type="button" className="rounded-xl" onClick={openCreate}>
             Add client
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       <ModuleStatus
         sessionReady={sessionReady}
         allowed={allowed}
@@ -183,8 +190,9 @@ export function ClientsModule({
               <TableRow key={client.id}>
                 <TableCell className="font-medium">{client.billingName}</TableCell>
                 <TableCell>{contactName(client.contactId)}</TableCell>
-                <TableCell>{CLIENT_STATUS_LABELS[client.status]}</TableCell>
-                <TableCell>{client.gstin ?? "—"}</TableCell>
+                <TableCell>
+                  <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
+                </TableCell>
                 <TableCell>
                   <RowActions>
                     <Button
@@ -206,20 +214,10 @@ export function ClientsModule({
                       Payments
                     </Button>
                     {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? (
-                      <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => openEdit(client)}>
-                        Edit
-                      </Button>
+                      <EditAction onClick={() => openEdit(client)} />
                     ) : null}
                     {crm.hasPermission(CRM_PERMISSIONS.clientsDelete) ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        className="rounded-xl"
-                        onClick={() => setRemoveId(client.id)}
-                      >
-                        Remove
-                      </Button>
+                      <RemoveAction onClick={() => setRemoveId(client.id)} />
                     ) : null}
                   </RowActions>
                 </TableCell>
@@ -295,6 +293,6 @@ export function ClientsModule({
           void crm.removeClient(removeId).finally(() => setRemoveId(null));
         }}
       />
-    </div>
+    </ModulePage>
   );
 }

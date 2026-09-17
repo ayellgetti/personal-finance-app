@@ -11,10 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ConfirmRemoveDialog,
+  EditAction,
   Field,
+  ModulePage,
   ModuleStatus,
   NativeSelect,
+  RemoveAction,
   RowActions,
+  StatusBadge,
 } from "@/components/modules/shared";
 import {
   PAYMENT_MODE_LABELS,
@@ -153,9 +157,10 @@ export function PaymentsModule({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-end">
+    <ModulePage
+      crumb="Payments"
+      toolbar={
+        <div className="flex flex-1 flex-wrap items-end gap-3">
           <Field id="payment-status-filter" label="Status">
             <NativeSelect
               id="payment-status-filter"
@@ -173,13 +178,15 @@ export function PaymentsModule({
             </Button>
           ) : null}
         </div>
-        {crm.hasPermission(CRM_PERMISSIONS.paymentsCreate) ? (
+      }
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.paymentsCreate) ? (
           <Button type="button" className="rounded-xl" onClick={openCreate}>
             Add payment
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       <ModuleStatus
         sessionReady={sessionReady}
         allowed={allowed}
@@ -207,34 +214,18 @@ export function PaymentsModule({
               <TableRow key={payment.id}>
                 <TableCell className="font-medium">{clientName(payment.clientId)}</TableCell>
                 <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
-                <TableCell>{PAYMENT_TYPE_LABELS[payment.type]}</TableCell>
+                <TableCell><StatusBadge status={payment.type} label={PAYMENT_TYPE_LABELS[payment.type]} /></TableCell>
                 <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
-                <TableCell>{PAYMENT_STATUS_LABELS[payment.status]}</TableCell>
+                <TableCell><StatusBadge status={payment.status} label={PAYMENT_STATUS_LABELS[payment.status]} /></TableCell>
                 <TableCell>{formatDateTime(payment.paidAt)}</TableCell>
                 <TableCell>{payment.reference ?? "—"}</TableCell>
                 <TableCell>
                   <RowActions>
                     {crm.hasPermission(CRM_PERMISSIONS.paymentsUpdate) ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="rounded-xl"
-                        onClick={() => openEdit(payment)}
-                      >
-                        Edit
-                      </Button>
+                      <EditAction onClick={() => openEdit(payment)} />
                     ) : null}
                     {crm.hasPermission(CRM_PERMISSIONS.paymentsDelete) ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        className="rounded-xl"
-                        onClick={() => setRemoveId(payment.id)}
-                      >
-                        Remove
-                      </Button>
+                      <RemoveAction onClick={() => setRemoveId(payment.id)} />
                     ) : null}
                   </RowActions>
                 </TableCell>
@@ -338,6 +329,6 @@ export function PaymentsModule({
           void crm.removePayment(removeId).finally(() => setRemoveId(null));
         }}
       />
-    </div>
+    </ModulePage>
   );
 }

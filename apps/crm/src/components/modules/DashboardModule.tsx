@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ModuleStatus } from "@/components/modules/shared";
+import { ModulePage, ModuleStatus } from "@/components/modules/shared";
 import { CONTACT_TYPE_LABELS, TASK_STATUS_LABELS, formatDate, formatMoney } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
 import { CRM_CONTACT_TYPES, CRM_PERMISSIONS, CRM_TASK_STATUSES } from "@/types/crm";
@@ -17,15 +17,16 @@ export function DashboardModule() {
   const snapshot = dashboard.data;
 
   return (
-    <ModuleStatus
-      sessionReady={sessionReady}
-      allowed={allowed}
-      status={dashboard.status}
-      errorMessage={dashboard.errorMessage}
-      empty={false}
-      emptyLabel=""
-      onRetry={() => void loadDashboard()}
-    >
+    <ModulePage crumb="Dashboard">
+      <ModuleStatus
+        sessionReady={sessionReady}
+        allowed={allowed}
+        status={dashboard.status}
+        errorMessage={dashboard.errorMessage}
+        empty={false}
+        emptyLabel=""
+        onRetry={() => void loadDashboard()}
+      >
       {snapshot ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Card className="rounded-2xl shadow-[var(--shadow-card)]">
@@ -122,6 +123,7 @@ export function DashboardModule() {
           </Card>
         </div>
       ) : null}
-    </ModuleStatus>
+      </ModuleStatus>
+    </ModulePage>
   );
 }

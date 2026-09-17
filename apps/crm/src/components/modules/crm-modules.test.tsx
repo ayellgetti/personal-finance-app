@@ -164,6 +164,17 @@ describe("CRM modules", () => {
     expect(await screen.findByText("No contacts yet")).toBeInTheDocument();
   });
 
+  it("uses icon edit and remove actions with accessible names", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    renderCrm(<ContactsModule />);
+    const edit = await screen.findByRole("button", { name: "Edit" });
+    const remove = screen.getByRole("button", { name: "Remove" });
+    expect(edit).toBeInTheDocument();
+    expect(remove).toBeInTheDocument();
+    expect(edit.querySelector("svg")).not.toBeNull();
+    expect(remove.querySelector("svg")).not.toBeNull();
+  });
+
   it("shows an error state when the list fails", async () => {
     listContacts.mockRejectedValue(new Error("Contacts unavailable"));
     renderCrm(<ContactsModule />);

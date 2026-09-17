@@ -10,7 +10,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  EditAction,
   Field,
+  ModulePage,
   ModuleStatus,
   NativeSelect,
   RowActions,
@@ -161,15 +163,16 @@ export function UsersModule() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        {crm.hasPermission(CRM_PERMISSIONS.usersCreate) ? (
+    <ModulePage
+      crumb="Users"
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.usersCreate) ? (
           <Button type="button" className="rounded-xl" onClick={openCreate}>
             Add user
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       <ModuleStatus
         sessionReady={sessionReady}
         allowed={allowed}
@@ -201,9 +204,7 @@ export function UsersModule() {
                 <TableCell>
                   <RowActions>
                     {crm.hasPermission(CRM_PERMISSIONS.usersUpdate) ? (
-                      <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => openEdit(user)}>
-                        Edit roles
-                      </Button>
+                      <EditAction label="Edit roles" onClick={() => openEdit(user)} />
                     ) : null}
                   </RowActions>
                 </TableCell>
@@ -326,6 +327,6 @@ export function UsersModule() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </ModulePage>
   );
 }

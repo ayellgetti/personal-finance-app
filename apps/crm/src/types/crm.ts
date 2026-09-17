@@ -70,7 +70,8 @@ export type CrmViewId =
   | "tasks"
   | "calendar"
   | "users"
-  | "roles";
+  | "roles"
+  | "profile";
 
 export const CRM_CONTACT_TYPES = ["lead", "client", "vendor", "employee"] as const;
 export type CrmContactType = (typeof CRM_CONTACT_TYPES)[number];

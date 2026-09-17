@@ -12,7 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ConfirmRemoveDialog,
   Field,
+  ModulePage,
   ModuleStatus,
+  RemoveAction,
 } from "@/components/modules/shared";
 import { formatDateTime, isoToLocalInput, localInputToIso } from "@/lib/crm/display";
 import { cn } from "@/lib/utils";
@@ -143,8 +145,9 @@ export function CalendarModule() {
   const monthLabel = cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <ModulePage
+      crumb="Calendar"
+      toolbar={
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -164,13 +167,15 @@ export function CalendarModule() {
             Next
           </Button>
         </div>
-        {crm.hasPermission(CRM_PERMISSIONS.calendarCreate) ? (
+      }
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.calendarCreate) ? (
           <Button type="button" className="rounded-xl" onClick={() => openCreate()}>
             Add event
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+    >
       <ModuleStatus
         sessionReady={sessionReady}
         allowed={allowed}
@@ -304,9 +309,7 @@ export function CalendarModule() {
               </div>
               {detail.kind === "event" && crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
                 <DialogFooter>
-                  <Button type="button" variant="destructive" className="rounded-xl" onClick={() => setRemoveId(detail.id)}>
-                    Remove event
-                  </Button>
+                  <RemoveAction label="Remove event" onClick={() => setRemoveId(detail.id)} />
                 </DialogFooter>
               ) : null}
             </>
@@ -327,6 +330,6 @@ export function CalendarModule() {
           });
         }}
       />
-    </div>
+    </ModulePage>
   );
 }

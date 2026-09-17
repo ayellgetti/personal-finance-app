@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Landmark, Percent, Sparkles, Wallet } from "lucide-react";
+import { Landmark, Percent, Sparkles, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ import {
   type TaxDeductionCode,
   type TaxScenario,
 } from "@/lib/finance/tax-remote";
-import { Panel, EmptyState } from "./shared";
+import { Panel, EmptyState, ActionTooltip } from "./shared";
 
 function AmountInput({
   value,
@@ -523,21 +523,25 @@ export function TaxPlannerModule() {
                     >
                       Load
                     </Button>
-                    <Button
-                      variant="ghost"
-                      className="text-danger"
-                      onClick={() => {
-                        void removeTaxScenario(scenario.id)
-                          .then(() =>
-                            setScenarios((current) =>
-                              current.filter((item) => item.id !== scenario.id),
-                            ),
-                          )
-                          .catch((error) => toast.error(taxApiError(error)));
-                      }}
-                    >
-                      Delete
-                    </Button>
+                    <ActionTooltip label="Delete">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Delete ${scenario.title}`}
+                        className="text-danger"
+                        onClick={() => {
+                          void removeTaxScenario(scenario.id)
+                            .then(() =>
+                              setScenarios((current) =>
+                                current.filter((item) => item.id !== scenario.id),
+                              ),
+                            )
+                            .catch((error) => toast.error(taxApiError(error)));
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </ActionTooltip>
                   </div>
                 </div>
               );

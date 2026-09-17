@@ -23,9 +23,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import {
   ConfirmRemoveDialog,
+  EditAction,
   Field,
+  ModulePage,
   ModuleStatus,
   NativeSelect,
+  RemoveAction,
   RowActions,
 } from "@/components/modules/shared";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
@@ -292,26 +295,10 @@ function EnquiryDetailSheet({
                   </Button>
                 ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={() => { onEdit(enquiry); onClose(); }}
-                  >
-                    Edit
-                  </Button>
+                  <EditAction onClick={() => { onEdit(enquiry); onClose(); }} />
                 ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesDelete) ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    className="rounded-xl"
-                    onClick={() => { onRemove(enquiry.id); onClose(); }}
-                  >
-                    Remove
-                  </Button>
+                  <RemoveAction onClick={() => { onRemove(enquiry.id); onClose(); }} />
                 ) : null}
               </div>
 
@@ -455,14 +442,10 @@ function EnquiryTable({
                   </Button>
                 ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
-                  <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onEdit(enquiry)}>
-                    Edit
-                  </Button>
+                  <EditAction onClick={() => onEdit(enquiry)} />
                 ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesDelete) ? (
-                  <Button type="button" size="sm" variant="destructive" className="rounded-xl" onClick={() => onRemove(enquiry.id)}>
-                    Remove
-                  </Button>
+                  <RemoveAction onClick={() => onRemove(enquiry.id)} />
                 ) : null}
               </RowActions>
             </TableCell>
@@ -524,14 +507,10 @@ function EnquiryCards({
                 </Button>
               ) : null}
               {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
-                <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onEdit(enquiry)}>
-                  Edit
-                </Button>
+                <EditAction onClick={() => onEdit(enquiry)} />
               ) : null}
               {crm.hasPermission(CRM_PERMISSIONS.enquiriesDelete) ? (
-                <Button type="button" size="sm" variant="destructive" className="rounded-xl" onClick={() => onRemove(enquiry.id)}>
-                  Remove
-                </Button>
+                <RemoveAction onClick={() => onRemove(enquiry.id)} />
               ) : null}
             </RowActions>
           </CardContent>
@@ -684,26 +663,10 @@ function EnquiryKanban({
                         </Button>
                       ) : null}
                       {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-6 rounded-lg px-2 text-xs"
-                          onClick={() => onEdit(enquiry)}
-                        >
-                          Edit
-                        </Button>
+                        <EditAction className="h-7 w-7" onClick={() => onEdit(enquiry)} />
                       ) : null}
                       {crm.hasPermission(CRM_PERMISSIONS.enquiriesDelete) ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 rounded-lg px-2 text-xs text-destructive hover:text-destructive"
-                          onClick={() => onRemove(enquiry.id)}
-                        >
-                          Remove
-                        </Button>
+                        <RemoveAction className="h-7 w-7" onClick={() => onRemove(enquiry.id)} />
                       ) : null}
                     </div>
                   </div>
@@ -838,7 +801,7 @@ export function EnquiriesModule() {
   };
 
   return (
-    <div className="space-y-4">
+    <ModulePage crumb="Enquiries">
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-wrap items-end gap-3">
@@ -1114,6 +1077,6 @@ export function EnquiriesModule() {
           void crm.removeEnquiry(removeId).finally(() => setRemoveId(null));
         }}
       />
-    </div>
+    </ModulePage>
   );
 }

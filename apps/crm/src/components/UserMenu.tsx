@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { BookOpen, LogOut } from "lucide-react";
+import { BookOpen, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth/store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ function initials(name: string) {
   );
 }
 
-export function UserMenu() {
+export function UserMenu({ onProfile }: { onProfile?: () => void }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -65,6 +65,12 @@ export function UserMenu() {
         <DropdownMenuItem onSelect={() => navigate("/freedom")}>
           <BookOpen className="mr-2 h-4 w-4" /> Freedom Planner use case
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {onProfile ? (
+          <DropdownMenuItem onClick={onProfile}>
+            <UserRound className="mr-2 h-4 w-4" /> My profile
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="text-danger focus:text-danger">
           <LogOut className="mr-2 h-4 w-4" /> Log out

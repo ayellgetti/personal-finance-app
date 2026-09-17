@@ -15,9 +15,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import {
   ConfirmRemoveDialog,
+  EditAction,
   Field,
+  ModulePage,
   ModuleStatus,
   NativeSelect,
+  RemoveAction,
   RowActions,
 } from "@/components/modules/shared";
 import {
@@ -158,26 +161,10 @@ function FollowUpTable({
               <TableCell>
                 <RowActions>
                   {crm.hasPermission(CRM_PERMISSIONS.followUpsUpdate) ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="rounded-xl"
-                      onClick={() => onEdit(item)}
-                    >
-                      Edit
-                    </Button>
+                    <EditAction onClick={() => onEdit(item)} />
                   ) : null}
                   {crm.hasPermission(CRM_PERMISSIONS.followUpsDelete) ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      className="rounded-xl"
-                      onClick={() => onRemove(item.id)}
-                    >
-                      Remove
-                    </Button>
+                    <RemoveAction onClick={() => onRemove(item.id)} />
                   ) : null}
                 </RowActions>
               </TableCell>
@@ -233,26 +220,10 @@ function FollowUpCards({
               ) : null}
               <RowActions>
                 {crm.hasPermission(CRM_PERMISSIONS.followUpsUpdate) ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={() => onEdit(item)}
-                  >
-                    Edit
-                  </Button>
+                  <EditAction onClick={() => onEdit(item)} />
                 ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.followUpsDelete) ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    className="rounded-xl"
-                    onClick={() => onRemove(item.id)}
-                  >
-                    Remove
-                  </Button>
+                  <RemoveAction onClick={() => onRemove(item.id)} />
                 ) : null}
               </RowActions>
             </CardContent>
@@ -555,7 +526,7 @@ export function FollowUpsModule() {
         : crm.followUps.items.length === 0;
 
   return (
-    <div className="space-y-4">
+    <ModulePage crumb="Follow-ups">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-wrap items-end gap-3">
           {view !== "calendar" ? (
@@ -847,6 +818,6 @@ export function FollowUpsModule() {
           void crm.removeFollowUp(removeId).finally(() => setRemoveId(null));
         }}
       />
-    </div>
+    </ModulePage>
   );
 }

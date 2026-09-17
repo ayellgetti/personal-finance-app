@@ -112,10 +112,15 @@ export function EmergencyFundModule() {
           description="Update your essentials, balances and contribution plan."
           fields={fields}
           trigger={
-            <button className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium transition hover:bg-muted">
-              <Settings2 className="h-4 w-4" /> Edit Inputs
+            <button
+              type="button"
+              aria-label="Edit inputs"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border text-sm font-medium transition hover:bg-muted"
+            >
+              <Settings2 className="h-4 w-4" />
             </button>
           }
+          triggerTooltip="Edit inputs"
           onSubmit={(v) => updateProfile(v)}
         />
       </div>

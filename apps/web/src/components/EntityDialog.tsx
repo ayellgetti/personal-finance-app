@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -38,10 +39,11 @@ interface EntityDialogProps {
   fields: FieldDef[];
   triggerLabel?: string;
   trigger?: ReactNode;
+  triggerTooltip?: string;
   onSubmit: (values: Record<string, any>) => void;
 }
 
-export function EntityDialog({ title, description, fields, triggerLabel = "Add", trigger, onSubmit }: EntityDialogProps) {
+export function EntityDialog({ title, description, fields, triggerLabel = "Add", trigger, triggerTooltip, onSubmit }: EntityDialogProps) {
   const [open, setOpen] = useState(false);
   const init = () => {
     const v: Record<string, any> = {};
@@ -61,15 +63,28 @@ export function EntityDialog({ title, description, fields, triggerLabel = "Add",
     setOpen(false);
   };
 
+  const triggerEl = (
+    <DialogTrigger asChild>
+      {trigger ?? (
+        <Button className="gap-2 rounded-xl">
+          <Plus className="h-4 w-4" /> {triggerLabel}
+        </Button>
+      )}
+    </DialogTrigger>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setValues(init()); }}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button className="gap-2 rounded-xl">
-            <Plus className="h-4 w-4" /> {triggerLabel}
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger ? (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>{triggerEl}</TooltipTrigger>
+            <TooltipContent side="top">{triggerTooltip ?? "Edit"}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        triggerEl
+      )}
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display">{title}</DialogTitle>
