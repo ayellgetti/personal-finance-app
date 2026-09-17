@@ -6,24 +6,12 @@ import type {
   CrmCalendarEventModel,
   CrmContactModel,
   CrmEnquiryModel,
-  CrmFollowUpModel,
   CrmTaskModel,
 } from "../models/index";
 import { fakeCrud } from "./crm-test-utils";
 
 function setup() {
   const events = fakeCrud("event", []);
-  const followUps = fakeCrud("followup", [
-    {
-      id: "f-1",
-      enquiryId: "e-1",
-      contactId: "c-1",
-      stage: "new",
-      dueAt: new Date("2026-09-10T10:00:00.000Z"),
-      notes: "Call",
-      isActive: 1,
-    },
-  ]);
   const tasks = fakeCrud("task", [
     {
       id: "t-1",
@@ -54,7 +42,6 @@ function setup() {
   ]);
   const service = new CalendarService(
     events.model as unknown as CrmCalendarEventModel,
-    followUps.model as unknown as CrmFollowUpModel,
     tasks.model as unknown as CrmTaskModel,
     contacts.model as unknown as CrmContactModel,
     enquiries.model as unknown as CrmEnquiryModel,
@@ -62,7 +49,7 @@ function setup() {
   return { service, events };
 }
 
-test("calendar feed unions follow-ups, due tasks, and events", async () => {
+test("calendar feed unions due tasks and events, not follow-ups", async () => {
   const { service } = setup();
   await service.createEvent("user-1", {
     title: "Site visit",
@@ -73,10 +60,10 @@ test("calendar feed unions follow-ups, due tasks, and events", async () => {
     from: new Date("2026-09-01T00:00:00.000Z"),
     to: new Date("2026-09-30T00:00:00.000Z"),
   });
-  assert.equal(feed.items.length, 3);
+  assert.equal(feed.items.length, 2);
   assert.deepEqual(
     feed.items.map((item) => item.kind),
-    ["followup", "task", "event"],
+    ["task", "event"],
   );
 });
 

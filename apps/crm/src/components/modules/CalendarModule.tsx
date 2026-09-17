@@ -21,7 +21,6 @@ import { CRM_PERMISSIONS, type CreateCalendarEventInput, type CrmCalendarItem } 
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const KIND_LABELS: Record<CrmCalendarItem["kind"], string> = {
-  followup: "Follow-up",
   task: "Task",
   event: "Event",
 };

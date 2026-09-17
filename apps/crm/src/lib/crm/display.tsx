@@ -1,6 +1,7 @@
 import {
   CRM_CLIENT_STATUSES,
   CRM_CONTACT_TYPES,
+  CRM_ENQUIRY_DUE_DATE_WINDOWS,
   CRM_ENQUIRY_STATUSES,
   CRM_PAYMENT_MODES,
   CRM_PAYMENT_STATUSES,
@@ -8,6 +9,7 @@ import {
   CRM_TASK_STATUSES,
   type CrmClientStatus,
   type CrmContactType,
+  type CrmEnquiryDueDateWindow,
   type CrmEnquiryStatus,
   type CrmPaymentMode,
   type CrmPaymentStatus,
@@ -31,6 +33,15 @@ export const ENQUIRY_STATUS_LABELS: Record<CrmEnquiryStatus, string> = {
   negotiation: "Negotiation",
   schedule_meeting: "Schedule Meeting / Site Visit",
   closed: "Closed",
+};
+
+export const ENQUIRY_DUE_DATE_WINDOW_LABELS: Record<CrmEnquiryDueDateWindow, string> = {
+  within_7_days: "Within 7 days",
+  within_15_days: "Within 15 days",
+  within_1_month: "Within 1 month",
+  within_2_months: "Within 2 months",
+  within_3_months: "Within 3 months",
+  within_6_months: "Within 6 months",
 };
 
 export const CLIENT_STATUS_LABELS: Record<CrmClientStatus, string> = {
@@ -84,6 +95,13 @@ export function paymentModeOptions() {
 export const MOBILE_PATTERN = /^\+?[0-9]{7,15}$/;
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { dateStyle: "medium" });
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);
@@ -92,6 +110,18 @@ export function formatDateTime(value: string | null | undefined): string {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+export function isoToLocalDateInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function localDateInputToIso(value: string): string {
+  return new Date(`${value}T12:00:00`).toISOString();
 }
 
 export function formatMoney(amount: number, currency = "INR"): string {
@@ -145,6 +175,14 @@ export function enquirySourceOptions() {
   return CRM_ENQUIRY_SOURCES.map((source) => (
     <option key={source} value={source}>
       {source}
+    </option>
+  ));
+}
+
+export function enquiryDueDateWindowOptions() {
+  return CRM_ENQUIRY_DUE_DATE_WINDOWS.map((window) => (
+    <option key={window} value={window}>
+      {ENQUIRY_DUE_DATE_WINDOW_LABELS[window]}
     </option>
   ));
 }

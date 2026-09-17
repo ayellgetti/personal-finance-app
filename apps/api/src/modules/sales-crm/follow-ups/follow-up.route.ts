@@ -6,6 +6,7 @@ import { followUpController } from "./follow-up.controller";
 import {
   createFollowUpBodySchema,
   followUpIdParamsSchema,
+  listFollowUpCalendarQuerySchema,
   listFollowUpsQuerySchema,
   removeFollowUpBodySchema,
   updateFollowUpBodySchema,
@@ -19,6 +20,15 @@ followUpRouter.get(
   validate({ query: listFollowUpsQuerySchema }),
   asyncHandler(async (req, res) => {
     await followUpController.list(req, res);
+  }),
+);
+
+followUpRouter.get(
+  "/calendar",
+  requirePermission("crm.followups.read"),
+  validate({ query: listFollowUpCalendarQuerySchema }),
+  asyncHandler(async (req, res) => {
+    await followUpController.calendar(req, res);
   }),
 );
 

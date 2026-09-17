@@ -3,6 +3,7 @@ import { BaseController } from "../../shared/base/base.controller";
 import { currentUserId, requireParamId } from "../crm.http";
 import type {
   CreateFollowUpBody,
+  ListFollowUpCalendarQuery,
   ListFollowUpsQuery,
   RemoveFollowUpBody,
   UpdateFollowUpBody,
@@ -17,6 +18,11 @@ export class FollowUpController extends BaseController {
   async list(req: Request, res: Response) {
     const result = await this.service.list(req.query as ListFollowUpsQuery);
     this.sendSuccess(req, res, result, "Follow-ups retrieved");
+  }
+
+  async calendar(req: Request, res: Response) {
+    const result = await this.service.calendar(req.query as unknown as ListFollowUpCalendarQuery);
+    this.sendSuccess(req, res, result, "Follow-up calendar retrieved");
   }
 
   async getById(req: Request, res: Response) {

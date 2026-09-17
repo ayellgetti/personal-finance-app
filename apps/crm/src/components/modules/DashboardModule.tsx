@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModuleStatus } from "@/components/modules/shared";
-import { CONTACT_TYPE_LABELS, TASK_STATUS_LABELS, formatMoney } from "@/lib/crm/display";
+import { CONTACT_TYPE_LABELS, TASK_STATUS_LABELS, formatDate, formatMoney } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
 import { CRM_CONTACT_TYPES, CRM_PERMISSIONS, CRM_TASK_STATUSES } from "@/types/crm";
 
@@ -30,22 +30,47 @@ export function DashboardModule() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Card className="rounded-2xl shadow-[var(--shadow-card)]">
             <CardHeader>
-              <CardTitle>Contacts by type</CardTitle>
-              <CardDescription>Active parties in the CRM</CardDescription>
+              <CardTitle>Leads generated today</CardTitle>
+              <CardDescription>New enquiries created today</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {CRM_CONTACT_TYPES.map((type) => (
-                <p key={type} className="flex justify-between">
-                  <span>{CONTACT_TYPE_LABELS[type]}</span>
-                  <span className="font-medium">{snapshot.contactsByType[type] ?? 0}</span>
-                </p>
-              ))}
+            <CardContent>
+              <p className="font-display text-3xl font-bold">{snapshot.leadsGeneratedToday}</p>
             </CardContent>
           </Card>
           <Card className="rounded-2xl shadow-[var(--shadow-card)]">
             <CardHeader>
-              <CardTitle>Enquiries</CardTitle>
-              <CardDescription>Open versus closed cases</CardDescription>
+              <CardTitle>Customer due dates</CardTitle>
+              <CardDescription>Open enquiries due today</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p className="font-display text-3xl font-bold">{snapshot.customerDueToday}</p>
+              {snapshot.customerDueItems.length ? (
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {snapshot.customerDueItems.slice(0, 4).map((item) => (
+                    <li key={item.id} className="flex justify-between gap-2">
+                      <span className="truncate">{item.title}</span>
+                      <span>{formatDate(item.dueDate)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">No customer due dates today</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl shadow-[var(--shadow-card)]">
+            <CardHeader>
+              <CardTitle>Overdue follow-ups</CardTitle>
+              <CardDescription>Open enquiries past next follow-up date</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="font-display text-3xl font-bold">{snapshot.overdueFollowUps}</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl shadow-[var(--shadow-card)]">
+            <CardHeader>
+              <CardTitle>Open enquiries</CardTitle>
+              <CardDescription>Cases that are not closed</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p className="flex justify-between">
@@ -60,11 +85,16 @@ export function DashboardModule() {
           </Card>
           <Card className="rounded-2xl shadow-[var(--shadow-card)]">
             <CardHeader>
-              <CardTitle>Overdue follow-ups</CardTitle>
-              <CardDescription>Pending items past due</CardDescription>
+              <CardTitle>Contacts by type</CardTitle>
+              <CardDescription>Active parties in the CRM</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="font-display text-3xl font-bold">{snapshot.overdueFollowUps}</p>
+            <CardContent className="space-y-2 text-sm">
+              {CRM_CONTACT_TYPES.map((type) => (
+                <p key={type} className="flex justify-between">
+                  <span>{CONTACT_TYPE_LABELS[type]}</span>
+                  <span className="font-medium">{snapshot.contactsByType[type] ?? 0}</span>
+                </p>
+              ))}
             </CardContent>
           </Card>
           <Card className="rounded-2xl shadow-[var(--shadow-card)]">

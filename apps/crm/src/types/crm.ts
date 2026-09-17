@@ -87,6 +87,16 @@ export const CRM_ENQUIRY_STATUSES = [
 ] as const;
 export type CrmEnquiryStatus = (typeof CRM_ENQUIRY_STATUSES)[number];
 
+export const CRM_ENQUIRY_DUE_DATE_WINDOWS = [
+  "within_7_days",
+  "within_15_days",
+  "within_1_month",
+  "within_2_months",
+  "within_3_months",
+  "within_6_months",
+] as const;
+export type CrmEnquiryDueDateWindow = (typeof CRM_ENQUIRY_DUE_DATE_WINDOWS)[number];
+
 // Follow-ups are activity logs for enquiries; their "stage" mirrors the enquiry stage.
 
 export const CRM_CLIENT_STATUSES = ["active", "inactive"] as const;
@@ -124,6 +134,11 @@ export type CrmEnquiry = {
   expectedValue: number | null;
   assignedToId: string | null;
   notes: string | null;
+  dueDateWindow: CrmEnquiryDueDateWindow | null;
+  dueDate: string | null;
+  nextFollowupDate: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 export type CrmFollowUp = {
@@ -132,6 +147,7 @@ export type CrmFollowUp = {
   contactId: string;
   stage: CrmEnquiryStatus;
   dueAt: string;
+  nextFollowupDate: string | null;
   notes: string | null;
 };
 
@@ -168,7 +184,7 @@ export type CrmTask = {
   enquiryId: string | null;
 };
 
-export type CrmCalendarKind = "followup" | "task" | "event";
+export type CrmCalendarKind = "task" | "event";
 
 export type CrmCalendarItem = {
   kind: CrmCalendarKind;
@@ -189,12 +205,40 @@ export type CrmCalendarEvent = {
   notes: string | null;
 };
 
+export type CrmFollowUpCalendarKind = "new_enquiry" | "followup";
+
+export type CrmFollowUpCalendarItem = {
+  kind: CrmFollowUpCalendarKind;
+  enquiryId: string;
+  title: string;
+  contactId: string;
+  status: CrmEnquiryStatus;
+  at: string;
+  nextFollowupDate: string | null;
+  overdue: boolean;
+};
+
+export type CrmFollowUpCalendar = {
+  items: CrmFollowUpCalendarItem[];
+  overdue: CrmFollowUpCalendarItem[];
+};
+
+export type CrmDashboardDueEnquiry = {
+  id: string;
+  title: string;
+  dueDate: string | null;
+  contactId: string;
+};
+
 export type CrmDashboard = {
   contactsByType: Record<CrmContactType, number>;
   enquiries: {
     open: number;
     closed: number;
   };
+  leadsGeneratedToday: number;
+  customerDueToday: number;
+  customerDueItems: CrmDashboardDueEnquiry[];
   overdueFollowUps: number;
   paymentsPaidThisMonth: number;
   tasksByStatus: Record<CrmTaskStatus, number>;
@@ -263,12 +307,14 @@ export type CreateEnquiryInput = {
   expectedValue?: number | null;
   assignedToId?: string | null;
   notes?: string | null;
+  dueDateWindow: CrmEnquiryDueDateWindow;
 };
 
 export type CreateFollowUpInput = {
   enquiryId: string;
   stage: CrmEnquiryStatus;
   dueAt: string;
+  nextFollowupDate: string;
   notes?: string | null;
 };
 

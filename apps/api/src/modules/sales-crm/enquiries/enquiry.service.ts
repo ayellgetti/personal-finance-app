@@ -6,11 +6,14 @@ import {
   crmClientModel,
   crmContactModel,
   crmEnquiryModel,
+  crmFollowUpModel,
   type CrmClientModel,
   type CrmContactModel,
   type CrmEnquiryModel,
+  type CrmFollowUpModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
+import { resolveEnquiryDueDate } from "./enquiry-due-date";
 import type {
   ConvertEnquiryBody,
   CreateEnquiryBody,
@@ -82,6 +85,7 @@ export class EnquiryService {
     private readonly contacts: CrmContactModel = crmContactModel,
     private readonly clients: CrmClientModel = crmClientModel,
     private readonly persistConvert: PersistEnquiryConversion = persistEnquiryConversion,
+    private readonly followUps: CrmFollowUpModel = crmFollowUpModel,
   ) {}
 
   list(query: ListEnquiriesQuery) {
@@ -104,9 +108,10 @@ export class EnquiryService {
     return requireActive(await this.model.readOne({ id }), "Enquiry");
   }
 
-  async create(actorId: string, input: CreateEnquiryBody) {
+  async create(actorId: string, input: CreateEnquiryBody, now = new Date()) {
     await this.requireUsableContact(input.contactId);
-    return this.model.create({
+    const dueDate = resolveEnquiryDueDate(input.dueDateWindow, now);
+    const enquiry = await this.model.create({
       contactId: input.contactId,
       title: input.title,
       source: input.source,
@@ -114,25 +119,48 @@ export class EnquiryService {
       expectedValue: input.expectedValue ?? null,
       assignedToId: input.assignedToId ?? null,
       notes: input.notes ?? null,
+      dueDateWindow: input.dueDateWindow,
+      dueDate,
       ...actorCreate(actorId),
     });
+    if (input.notes?.trim()) {
+      await this.recordHistory(actorId, enquiry, enquiry.notes, enquiry.status);
+    }
+    return enquiry;
   }
 
-  async update(actorId: string, id: string, input: UpdateEnquiryBody) {
-    await this.getById(id);
+  async update(actorId: string, id: string, input: UpdateEnquiryBody, now = new Date()) {
+    const existing = await this.getById(id);
     if (input.contactId) {
       await this.requireUsableContact(input.contactId);
     }
     if (input.status === "closed" && !input.closedReason?.trim()) {
       throw new HttpError(422, "A closed reason is required when closing an enquiry");
     }
-    return this.model.update(
+    const dueDate =
+      input.dueDateWindow !== undefined
+        ? resolveEnquiryDueDate(input.dueDateWindow, existing.createdAt ?? now)
+        : undefined;
+    const enquiry = await this.model.update(
       { id },
       {
         ...input,
+        ...(dueDate ? { dueDate } : {}),
         ...actorUpdate(actorId),
       },
     );
+    const notesChanged =
+      input.notes !== undefined && (input.notes ?? null) !== (existing.notes ?? null);
+    const statusChanged = input.status !== undefined && input.status !== existing.status;
+    if (notesChanged || statusChanged) {
+      await this.recordHistory(
+        actorId,
+        enquiry,
+        notesChanged ? enquiry.notes : existing.notes,
+        enquiry.status,
+      );
+    }
+    return enquiry;
   }
 
   async remove(actorId: string, input: RemoveEnquiryBody) {
@@ -168,6 +196,23 @@ export class EnquiryService {
       billingName,
       existingClientId: existingClient?.id ?? null,
       convertedFromEnquiryId: enquiry.id,
+    });
+  }
+
+  private async recordHistory(
+    actorId: string,
+    enquiry: CrmEnquiry,
+    notes: string | null,
+    stage: CrmEnquiry["status"],
+  ) {
+    await this.followUps.create({
+      enquiryId: enquiry.id,
+      contactId: enquiry.contactId,
+      stage,
+      dueAt: new Date(),
+      nextFollowupDate: enquiry.nextFollowupDate ?? enquiry.dueDate ?? null,
+      notes,
+      ...actorCreate(actorId),
     });
   }
 

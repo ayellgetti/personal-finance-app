@@ -21,7 +21,7 @@ const META: Record<CrmViewId, { title: string; description: string }> = {
   clients: { title: "Clients", description: "Converted commercial records" },
   payments: { title: "Payments", description: "Collections against clients" },
   tasks: { title: "Tasks", description: "Work items across the team" },
-  calendar: { title: "Calendar", description: "Follow-ups, tasks, and meetings" },
+  calendar: { title: "Calendar", description: "Tasks and meetings" },
   users: { title: "Users", description: "Staff accounts and role assignment" },
   roles: { title: "Roles", description: "Permission sets for CRM access" },
 };

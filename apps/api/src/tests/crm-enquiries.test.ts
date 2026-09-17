@@ -7,6 +7,7 @@ import type {
   CrmClientModel,
   CrmContactModel,
   CrmEnquiryModel,
+  CrmFollowUpModel,
 } from "../models/index";
 import { fakeCrud } from "./crm-test-utils";
 
@@ -38,6 +39,9 @@ type FakeEnquiry = {
   expectedValue: number | null;
   assignedToId: string | null;
   notes: string | null;
+  dueDateWindow: string | null;
+  dueDate: Date | null;
+  nextFollowupDate: Date | null;
   isActive: number;
   createdBy?: string;
   updatedBy?: string;
@@ -59,6 +63,12 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
   const contacts = fakeCrud("contact", contactSeed);
   const enquiries = fakeCrud("enquiry", enquirySeed);
   const clients = fakeCrud<FakeClient>("client", []);
+  const followUps = fakeCrud<{
+    id: string;
+    isActive: number;
+    notes: string | null;
+    stage: string;
+  }>("followup", []);
   const service = new EnquiryService(
     enquiries.model as unknown as CrmEnquiryModel,
     contacts.model as unknown as CrmContactModel,
@@ -92,8 +102,9 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
           });
       return { enquiry, contact, client: existing } as ConvertedEnquiry;
     },
+    followUps.model as unknown as CrmFollowUpModel,
   );
-  return { service, contacts, enquiries, clients };
+  return { service, contacts, enquiries, clients, followUps };
 }
 
 test("enquiry create, list, update, and soft-delete hide the row", async () => {
@@ -104,6 +115,7 @@ test("enquiry create, list, update, and soft-delete hide the row", async () => {
     contactId: "c-1",
     title: "Banquet",
     source: "web",
+    dueDateWindow: "within_7_days",
   });
   assert.equal(created.status, "new");
   const listed = await service.list({ contactId: "c-1" });
@@ -124,6 +136,7 @@ test("enquiry against a soft-deleted contact is 422", async () => {
         contactId: "c-1",
         title: "Banquet",
         source: "web",
+        dueDateWindow: "within_7_days",
       }),
     (error: unknown) => error instanceof HttpError && error.status === 422,
   );
@@ -137,6 +150,7 @@ test("closing an enquiry without a reason is 422", async () => {
     contactId: "c-1",
     title: "Banquet",
     source: "web",
+    dueDateWindow: "within_15_days",
   });
   await assert.rejects(
     () => service.update("user-1", enquiry.id, { status: "closed" }),
@@ -158,6 +172,7 @@ test("convert sets closed + client type and creates a client; second convert is 
     contactId: "c-1",
     title: "Banquet",
     source: "web",
+    dueDateWindow: "within_1_month",
   });
   const first = await service.convert("user-1", enquiry.id, { billingName: "Ada LLC" });
   assert.equal(first.enquiry.status, "closed");
@@ -179,7 +194,48 @@ test("enquiry create rejects empty title", () => {
       contactId: "00000000-0000-4000-8000-000000000001",
       title: "",
       source: "web",
+      dueDateWindow: "within_7_days",
     }).success,
     false,
   );
+});
+
+test("enquiry create stores due date window and logs note history", async () => {
+  const { service, followUps } = setup([
+    { id: "c-1", name: "Ada", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const now = new Date("2026-09-17T10:00:00.000Z");
+  const created = await service.create(
+    "user-1",
+    {
+      contactId: "c-1",
+      title: "Banquet",
+      source: "web",
+      dueDateWindow: "within_7_days",
+      notes: "Prefers evening slot",
+    },
+    now,
+  );
+  assert.equal(created.dueDateWindow, "within_7_days");
+  assert.ok(created.dueDate instanceof Date);
+  assert.equal(followUps.rows.length, 1);
+  assert.equal(followUps.rows[0]?.notes, "Prefers evening slot");
+  assert.equal(followUps.rows[0]?.stage, "new");
+});
+
+test("enquiry note and status changes append follow-up history", async () => {
+  const { service, followUps } = setup([
+    { id: "c-1", name: "Ada", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const enquiry = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Banquet",
+    source: "web",
+    dueDateWindow: "within_7_days",
+  });
+  await service.update("user-1", enquiry.id, { notes: "Called, awaiting quote" });
+  await service.update("user-1", enquiry.id, { status: "contacted" });
+  assert.equal(followUps.rows.length, 2);
+  assert.equal(followUps.rows[0]?.notes, "Called, awaiting quote");
+  assert.equal(followUps.rows[1]?.stage, "contacted");
 });

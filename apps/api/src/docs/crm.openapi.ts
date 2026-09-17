@@ -68,11 +68,11 @@ export const crmOpenApiTags = [
   { name: "CRM", description: "Sales CRM session, dashboard, and company-wide records. RBAC is CRM-only." },
   { name: "CRM Contacts", description: "Party records (lead, client, vendor, employee)" },
   { name: "CRM Enquiries", description: "Sales cases and conversion to clients" },
-  { name: "CRM Follow-ups", description: "Follow-up actions; contactId is required" },
+  { name: "CRM Follow-ups", description: "Follow-up history, next-contact calendar, and lead timeline; not added to the main calendar" },
   { name: "CRM Clients", description: "Commercial client records created on convert or manually" },
   { name: "CRM Payments", description: "Collection records (not a payment gateway)" },
   { name: "CRM Tasks", description: "Work items with kanban statuses" },
-  { name: "CRM Calendar", description: "Union feed plus standalone events" },
+  { name: "CRM Calendar", description: "Task due dates plus standalone events. Follow-ups live under Follow-ups calendar." },
   { name: "CRM Users", description: "Admin create and assign CRM roles" },
   { name: "CRM Roles", description: "Roles and permission catalog" },
 ];
@@ -92,7 +92,7 @@ export const crmOpenApiSchemas = {
   },
   CreateCrmEnquiryRequest: {
     type: "object",
-    required: ["contactId", "title", "source"],
+    required: ["contactId", "title", "source", "dueDateWindow"],
     properties: {
       contactId: { type: "string", format: "uuid" },
       title: { type: "string" },
@@ -114,6 +114,17 @@ export const crmOpenApiSchemas = {
       expectedValue: { type: "number", minimum: 0, nullable: true },
       assignedToId: { type: "string", format: "uuid", nullable: true },
       notes: { type: "string", nullable: true },
+      dueDateWindow: {
+        type: "string",
+        enum: [
+          "within_7_days",
+          "within_15_days",
+          "within_1_month",
+          "within_2_months",
+          "within_3_months",
+          "within_6_months",
+        ],
+      },
     },
   },
   ConvertCrmEnquiryRequest: {
@@ -124,7 +135,7 @@ export const crmOpenApiSchemas = {
   },
   CreateCrmFollowUpRequest: {
     type: "object",
-    required: ["enquiryId", "stage", "dueAt"],
+    required: ["enquiryId", "stage", "dueAt", "nextFollowupDate"],
     properties: {
       enquiryId: { type: "string", format: "uuid" },
       stage: {
@@ -141,6 +152,7 @@ export const crmOpenApiSchemas = {
         ],
       },
       dueAt: { type: "string", format: "date-time" },
+      nextFollowupDate: { type: "string", format: "date-time" },
       notes: { type: "string", nullable: true },
     },
   },
@@ -274,6 +286,8 @@ export const crmOpenApiPaths = {
     get: {
       tags: ["CRM"],
       summary: "Dashboard analytics cards",
+      description:
+        "Includes leads generated today, customer due dates, overdue follow-ups (nextFollowupDate past and enquiry not closed), and open versus closed enquiries.",
       security: [{ bearerAuth: [] }],
       parameters: [requestId],
       responses: {
@@ -459,6 +473,21 @@ export const crmOpenApiPaths = {
       parameters: [requestId],
       requestBody: jsonBody("CreateCrmFollowUpRequest"),
       responses: { ...created("Follow-up created") },
+    },
+  },
+  "/api/crm/followups/calendar": {
+    get: {
+      tags: ["CRM Follow-ups"],
+      summary: "Follow-up calendar feed",
+      description:
+        "Counts new enquiries (customer due date) and follow-ups (nextFollowupDate) in the range. Overdue items are open enquiries whose nextFollowupDate has passed. Follow-ups are not added to /api/crm/calendar.",
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        requestId,
+        { name: "from", in: "query", required: true, schema: { type: "string", format: "date-time" } },
+        { name: "to", in: "query", required: true, schema: { type: "string", format: "date-time" } },
+      ],
+      responses: { ...ok("Follow-up calendar") },
     },
   },
   "/api/crm/followups/remove": {

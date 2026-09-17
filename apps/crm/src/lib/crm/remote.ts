@@ -17,8 +17,11 @@ import type {
   CrmContactType,
   CrmDashboard,
   CrmEnquiry,
+  CrmEnquiryDueDateWindow,
   CrmEnquiryStatus,
   CrmFollowUp,
+  CrmFollowUpCalendar,
+  CrmFollowUpCalendarItem,
   CrmMe,
   CrmPaginated,
   CrmPagination,
@@ -165,6 +168,11 @@ function mapEnquiry(row: Record<string, unknown>): CrmEnquiry {
     expectedValue: asNumberOrNull(row.expectedValue),
     assignedToId: row.assignedToId == null ? null : String(row.assignedToId),
     notes: row.notes == null ? null : String(row.notes),
+    dueDateWindow: (row.dueDateWindow as CrmEnquiryDueDateWindow | null) ?? null,
+    dueDate: asIsoOrNull(row.dueDate),
+    nextFollowupDate: asIsoOrNull(row.nextFollowupDate),
+    createdAt: asIsoOrNull(row.createdAt),
+    updatedAt: asIsoOrNull(row.updatedAt),
   };
 }
 
@@ -175,6 +183,7 @@ function mapFollowUp(row: Record<string, unknown>): CrmFollowUp {
     contactId: String(row.contactId),
     stage: row.stage as CrmEnquiryStatus,
     dueAt: asIso(row.dueAt),
+    nextFollowupDate: asIsoOrNull(row.nextFollowupDate),
     notes: row.notes == null ? null : String(row.notes),
   };
 }
@@ -276,16 +285,43 @@ function mapPermission(row: Record<string, unknown>): CrmPermission {
   };
 }
 
+function mapFollowUpCalendarItem(row: Record<string, unknown>): CrmFollowUpCalendarItem {
+  return {
+    kind: row.kind as CrmFollowUpCalendarItem["kind"],
+    enquiryId: String(row.enquiryId),
+    title: String(row.title ?? ""),
+    contactId: String(row.contactId),
+    status: row.status as CrmEnquiryStatus,
+    at: asIso(row.at),
+    nextFollowupDate: asIsoOrNull(row.nextFollowupDate),
+    overdue: Boolean(row.overdue),
+  };
+}
+
 function mapDashboard(row: Record<string, unknown>): CrmDashboard {
   const contactsByType = (row.contactsByType ?? {}) as CrmDashboard["contactsByType"];
   const enquiries = (row.enquiries ?? {}) as CrmDashboard["enquiries"];
   const tasksByStatus = (row.tasksByStatus ?? {}) as CrmDashboard["tasksByStatus"];
+  const customerDueItems = Array.isArray(row.customerDueItems)
+    ? row.customerDueItems.map((item) => {
+        const due = asRecord(item);
+        return {
+          id: String(due.id),
+          title: String(due.title ?? ""),
+          dueDate: asIsoOrNull(due.dueDate),
+          contactId: String(due.contactId ?? ""),
+        };
+      })
+    : [];
   return {
     contactsByType,
     enquiries: {
       open: Number(enquiries.open ?? 0),
       closed: Number(enquiries.closed ?? 0),
     },
+    leadsGeneratedToday: Number(row.leadsGeneratedToday ?? 0),
+    customerDueToday: Number(row.customerDueToday ?? 0),
+    customerDueItems,
     overdueFollowUps: Number(row.overdueFollowUps ?? 0),
     paymentsPaidThisMonth: Number(row.paymentsPaidThisMonth ?? 0),
     tasksByStatus,
@@ -373,6 +409,19 @@ export async function convertEnquiry(id: string, body: { billingName?: string } 
 export async function listFollowUps(query: ListFollowUpsQuery = {}): Promise<CrmPaginated<CrmFollowUp>> {
   const raw = await api<unknown>(`/api/crm/followups${toSearchParams(query)}`);
   return mapPaginated(raw, mapFollowUp);
+}
+
+export async function listFollowUpCalendar(query: ListCalendarQuery): Promise<CrmFollowUpCalendar> {
+  const raw = await api<Record<string, unknown>>(
+    `/api/crm/followups/calendar${toSearchParams({ from: query.from, to: query.to })}`,
+  );
+  const items = Array.isArray(raw.items)
+    ? raw.items.map((item) => mapFollowUpCalendarItem(asRecord(item)))
+    : [];
+  const overdue = Array.isArray(raw.overdue)
+    ? raw.overdue.map((item) => mapFollowUpCalendarItem(asRecord(item)))
+    : [];
+  return { items, overdue };
 }
 
 export async function createFollowUp(input: CreateFollowUpInput): Promise<CrmFollowUp> {

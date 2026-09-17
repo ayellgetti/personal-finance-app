@@ -1,6 +1,5 @@
 import type {
   CrmCalendarEvent,
-  CrmFollowUp,
   CrmTask,
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
@@ -9,12 +8,10 @@ import {
   crmCalendarEventModel,
   crmContactModel,
   crmEnquiryModel,
-  crmFollowUpModel,
   crmTaskModel,
   type CrmCalendarEventModel,
   type CrmContactModel,
   type CrmEnquiryModel,
-  type CrmFollowUpModel,
   type CrmTaskModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
@@ -27,14 +24,6 @@ import type {
 } from "./calendar.request";
 
 export type CalendarFeedItem =
-  | {
-      kind: "followup";
-      id: string;
-      title: string;
-      at: Date;
-      endsAt: null;
-      followUp: CrmFollowUp;
-    }
   | {
       kind: "task";
       id: string;
@@ -55,18 +44,13 @@ export type CalendarFeedItem =
 export class CalendarService {
   constructor(
     private readonly events: CrmCalendarEventModel = crmCalendarEventModel,
-    private readonly followUps: CrmFollowUpModel = crmFollowUpModel,
     private readonly tasks: CrmTaskModel = crmTaskModel,
     private readonly contacts: CrmContactModel = crmContactModel,
     private readonly enquiries: CrmEnquiryModel = crmEnquiryModel,
   ) {}
 
   async feed(query: ListCalendarQuery) {
-    const [followUpRows, taskRows, eventRows] = await Promise.all([
-      this.followUps.read({
-        isActive: 1,
-        dueAt: { gte: query.from, lte: query.to },
-      }),
+    const [taskRows, eventRows] = await Promise.all([
       this.tasks.read({
         isActive: 1,
         dueAt: { not: null, gte: query.from, lte: query.to },
@@ -79,14 +63,6 @@ export class CalendarService {
     ]);
 
     const items: CalendarFeedItem[] = [
-      ...followUpRows.map((followUp) => ({
-        kind: "followup" as const,
-        id: followUp.id,
-        title: followUp.notes?.trim() || "Follow-up",
-        at: followUp.dueAt,
-        endsAt: null,
-        followUp,
-      })),
       ...taskRows
         .filter((task): task is CrmTask & { dueAt: Date } => task.dueAt !== null)
         .map((task) => ({

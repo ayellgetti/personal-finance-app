@@ -409,7 +409,9 @@ Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`
 
 Enquiries table with status filter and create/edit. Follow-ups list with overdue highlight. Shared loading / empty / error / 403 states.
 
-Enquiry pipeline (exactly these eight stages): New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Convert sets `closed`. Dashboard cards are open vs closed.
+Enquiry pipeline (exactly these eight stages): New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Convert sets `closed`. Dashboard cards include leads generated today, customer due dates, overdue follow-ups (`nextFollowupDate` past and enquiry not closed), and open versus closed.
+
+Enquiry create requires `dueDateWindow`. Note and status changes append follow-up history (date, notes, status, `nextFollowupDate`). Follow-ups are not written to `CrmCalendarEvent` or the main calendar feed. `GET /api/crm/followups/calendar?from&to` powers the Follow-ups calendar (new enquiry vs follow-up counts; click a day for enquiries due; overdue highlighted). Follow-ups Timeline view (and the enquiry detail sheet) shows lead created → follow-up history → next contact → closed/booked.
 
 ### Phase D5 — Convert, clients, payments
 
@@ -429,9 +431,9 @@ Four columns (Todo / In-Progress / In-Review / Done). Status changes via native 
 
 **Status: COMPLETED**
 
-Month grid of `GET /api/crm/calendar?from&to` (follow-ups, tasks, standalone events). Click an item for detail; create-event dialog.
+Month grid of `GET /api/crm/calendar?from&to` (tasks and standalone events). Click an item for detail; create-event dialog.
 
-Union of follow-up due dates, task due dates, and standalone `CrmCalendarEvent`.
+Union of task due dates and standalone `CrmCalendarEvent`. Follow-up contact dates live on the Follow-ups calendar (`GET /api/crm/followups/calendar`).
 
 ### Phase D8 — Users/roles admin UI
 

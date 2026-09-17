@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  crmEnquiryDueDateWindowSchema,
   crmEnquiryStatusSchema,
   crmIdParamsSchema,
   crmListQuerySchema,
@@ -24,6 +25,7 @@ export const createEnquiryBodySchema = z.object({
   expectedValue: z.number().finite().nonnegative().nullable().optional(),
   assignedToId: z.string().uuid().nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
+  dueDateWindow: crmEnquiryDueDateWindowSchema,
 });
 
 export const updateEnquiryBodySchema = createEnquiryBodySchema

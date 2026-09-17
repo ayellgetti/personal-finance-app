@@ -6,6 +6,7 @@ import { CalendarModule } from "@/components/modules/CalendarModule";
 import { ClientsModule } from "@/components/modules/ClientsModule";
 import { ContactsModule } from "@/components/modules/ContactsModule";
 import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
+import { FollowUpsModule } from "@/components/modules/FollowUpsModule";
 import { TasksModule } from "@/components/modules/TasksModule";
 import { ApiError } from "@/lib/api";
 import {
@@ -17,6 +18,7 @@ import {
   listClients,
   listContacts,
   listEnquiries,
+  listFollowUps,
   listTasks,
   updateTaskStatus,
 } from "@/test/crm-remote-mock";
@@ -73,6 +75,11 @@ const enquiry: CrmEnquiry = {
   expectedValue: 50000,
   assignedToId: null,
   notes: null,
+  dueDateWindow: "within_7_days",
+  dueDate: "2026-09-24T23:59:59.000Z",
+  nextFollowupDate: null,
+  createdAt: "2026-09-15T08:00:00.000Z",
+  updatedAt: "2026-09-15T08:00:00.000Z",
 };
 
 const client: CrmClient = {
@@ -117,6 +124,7 @@ describe("CRM modules", () => {
     fetchCrmMe.mockResolvedValue(adminMe);
     listContacts.mockResolvedValue(emptyPage());
     listEnquiries.mockResolvedValue(emptyPage());
+    listFollowUps.mockResolvedValue(emptyPage());
     listClients.mockResolvedValue(emptyPage());
     listTasks.mockResolvedValue(emptyPage());
     listCalendar.mockResolvedValue({ items: [] });
@@ -187,6 +195,15 @@ describe("CRM modules", () => {
     expect(updateTaskStatus).toHaveBeenCalledWith("task-1", "in_progress");
   });
 
+  it("requires a due date when creating an enquiry", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    renderCrm(<EnquiriesModule />);
+    await screen.findByRole("button", { name: "Add enquiry" });
+    fireEvent.click(screen.getByRole("button", { name: "Add enquiry" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(await screen.findByText("Due date is required")).toBeInTheDocument();
+  });
+
   it("shows the converted client on the Clients screen", async () => {
     const created: CrmClient[] = [];
     listContacts.mockResolvedValue(emptyPage([contact]));
@@ -227,5 +244,39 @@ describe("CRM modules", () => {
     const itemButton = await screen.findByRole("button", { name: "Send venue proposal" });
     expect(itemButton.closest("button")).toBe(itemButton);
     expect(screen.queryByRole("button", { name: /10 Send venue proposal/ })).not.toBeInTheDocument();
+  });
+
+  it("shows lead created, follow-up, and next contact on the Follow-ups timeline", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listEnquiries.mockResolvedValue(
+      emptyPage([
+        {
+          ...enquiry,
+          status: "contacted",
+          nextFollowupDate: "2026-09-20T00:00:00.000Z",
+        },
+      ]),
+    );
+    listFollowUps.mockResolvedValue(
+      emptyPage([
+        {
+          id: "fu-1",
+          enquiryId: enquiry.id,
+          contactId: contact.id,
+          stage: "contacted",
+          dueAt: "2026-09-16T10:00:00.000Z",
+          nextFollowupDate: "2026-09-20T00:00:00.000Z",
+          notes: "Called the venue",
+        },
+      ]),
+    );
+
+    renderCrm(<FollowUpsModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "Timeline view" }));
+
+    expect(await screen.findByText("Lead created")).toBeInTheDocument();
+    expect(screen.getByText("Follow-up — Contacted")).toBeInTheDocument();
+    expect(screen.getByText("Called the venue")).toBeInTheDocument();
+    expect(screen.getByText("Next follow-up")).toBeInTheDocument();
   });
 });

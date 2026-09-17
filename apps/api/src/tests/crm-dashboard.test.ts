@@ -4,14 +4,13 @@ import { DashboardService } from "../modules/sales-crm/dashboard/dashboard.servi
 import type {
   CrmContactModel,
   CrmEnquiryModel,
-  CrmFollowUpModel,
   CrmPaymentModel,
   CrmTaskModel,
 } from "../models/index";
 import { fakeCrud } from "./crm-test-utils";
 
 test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-month, and tasks", async () => {
-  const now = new Date("2026-09-15T12:00:00.000Z");
+  const now = new Date(2026, 8, 15, 12, 0, 0);
   const contacts = fakeCrud("contact", [
     { id: "c-1", type: "lead", isActive: 1 },
     { id: "c-2", type: "lead", isActive: 1 },
@@ -19,24 +18,44 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
     { id: "c-gone", type: "lead", isActive: 0 },
   ]);
   const enquiries = fakeCrud("enquiry", [
-    { id: "e-1", status: "new", isActive: 1 },
-    { id: "e-2", status: "closed", isActive: 1 },
-    { id: "e-3", status: "closed", isActive: 1 },
-    { id: "e-4", status: "negotiation", isActive: 1 },
-  ]);
-  const followUps = fakeCrud("followup", [
     {
-      id: "f-1",
-      enquiryId: "e-1",
-      stage: "new",
-      dueAt: new Date("2026-09-01T00:00:00.000Z"), // past → overdue
+      id: "e-1",
+      title: "New today",
+      contactId: "c-1",
+      status: "new",
+      createdAt: new Date(2026, 8, 15, 8, 0, 0),
+      dueDate: new Date(2026, 8, 15, 23, 59, 59),
+      nextFollowupDate: null,
       isActive: 1,
     },
     {
-      id: "f-2",
-      enquiryId: "e-4",
-      stage: "negotiation",
-      dueAt: new Date("2026-09-20T00:00:00.000Z"), // future → not overdue
+      id: "e-2",
+      title: "Closed",
+      contactId: "c-2",
+      status: "closed",
+      createdAt: new Date(2026, 8, 1, 8, 0, 0),
+      dueDate: null,
+      nextFollowupDate: new Date(2026, 8, 1, 0, 0, 0),
+      isActive: 1,
+    },
+    {
+      id: "e-3",
+      title: "Closed old",
+      contactId: "c-2",
+      status: "closed",
+      createdAt: new Date(2026, 8, 2, 8, 0, 0),
+      dueDate: null,
+      nextFollowupDate: null,
+      isActive: 1,
+    },
+    {
+      id: "e-4",
+      title: "Overdue open",
+      contactId: "c-3",
+      status: "negotiation",
+      createdAt: new Date(2026, 8, 1, 8, 0, 0),
+      dueDate: new Date(2026, 8, 10, 23, 59, 59),
+      nextFollowupDate: new Date(2026, 8, 1, 0, 0, 0),
       isActive: 1,
     },
   ]);
@@ -45,21 +64,21 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
       id: "p-1",
       status: "paid",
       amount: 100,
-      paidAt: new Date("2026-09-02T00:00:00.000Z"),
+      paidAt: new Date(2026, 8, 2, 0, 0, 0),
       isActive: 1,
     },
     {
       id: "p-2",
       status: "paid",
       amount: 50,
-      paidAt: new Date("2026-08-02T00:00:00.000Z"),
+      paidAt: new Date(2026, 7, 2, 0, 0, 0),
       isActive: 1,
     },
     {
       id: "p-3",
       status: "pending",
       amount: 999,
-      paidAt: new Date("2026-09-02T00:00:00.000Z"),
+      paidAt: new Date(2026, 8, 2, 0, 0, 0),
       isActive: 1,
     },
   ]);
@@ -71,7 +90,6 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
   const service = new DashboardService(
     contacts.model as unknown as CrmContactModel,
     enquiries.model as unknown as CrmEnquiryModel,
-    followUps.model as unknown as CrmFollowUpModel,
     payments.model as unknown as CrmPaymentModel,
     tasks.model as unknown as CrmTaskModel,
   );
@@ -81,6 +99,9 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
   assert.equal(snapshot.contactsByType.client, 1);
   assert.equal(snapshot.enquiries.open, 2);
   assert.equal(snapshot.enquiries.closed, 2);
+  assert.equal(snapshot.leadsGeneratedToday, 1);
+  assert.equal(snapshot.customerDueToday, 1);
+  assert.equal(snapshot.customerDueItems[0]?.id, "e-1");
   assert.equal(snapshot.overdueFollowUps, 1);
   assert.equal(snapshot.paymentsPaidThisMonth, 100);
   assert.equal(snapshot.tasksByStatus.todo, 1);

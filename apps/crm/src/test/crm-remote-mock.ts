@@ -39,6 +39,9 @@ export const fetchCrmMe = vi.fn(async () => adminMe);
 export const fetchDashboard = vi.fn(async () => ({
   contactsByType: { lead: 0, client: 0, vendor: 0, employee: 0 },
   enquiries: { open: 0, closed: 0 },
+  leadsGeneratedToday: 0,
+  customerDueToday: 0,
+  customerDueItems: [],
   overdueFollowUps: 0,
   paymentsPaidThisMonth: 0,
   tasksByStatus: { todo: 0, in_progress: 0, in_review: 0, done: 0 },
@@ -59,6 +62,7 @@ export const updateEnquiry = vi.fn();
 export const removeEnquiry = vi.fn();
 export const convertEnquiry = vi.fn();
 export const listFollowUps = vi.fn(async () => emptyPage());
+export const listFollowUpCalendar = vi.fn(async () => ({ items: [], overdue: [] }));
 export const createFollowUp = vi.fn();
 export const updateFollowUp = vi.fn();
 export const removeFollowUp = vi.fn();

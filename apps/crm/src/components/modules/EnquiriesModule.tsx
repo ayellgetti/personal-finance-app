@@ -28,12 +28,15 @@ import {
   NativeSelect,
   RowActions,
 } from "@/components/modules/shared";
+import { LeadTimeline } from "@/components/modules/LeadTimeline";
 import {
+  ENQUIRY_DUE_DATE_WINDOW_LABELS,
   ENQUIRY_STATUS_LABELS,
   contactTypeOptions,
+  enquiryDueDateWindowOptions,
   enquirySourceOptions,
   enquiryStatusOptions,
-  formatDateTime,
+  formatDate,
 } from "@/lib/crm/display";
 import { createContact, listFollowUps } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
@@ -44,6 +47,7 @@ import {
   type CreateEnquiryInput,
   type CrmContactType,
   type CrmEnquiry,
+  type CrmEnquiryDueDateWindow,
   type CrmEnquiryStatus,
   type CrmFollowUp,
 } from "@/types/crm";
@@ -243,6 +247,19 @@ function EnquiryDetailSheet({
                     <dd className="mt-0.5 whitespace-pre-wrap text-muted-foreground">{enquiry.notes}</dd>
                   </div>
                 ) : null}
+                <div>
+                  <dt className="text-xs text-muted-foreground">Due date</dt>
+                  <dd className="mt-0.5 font-medium">
+                    {enquiry.dueDateWindow
+                      ? ENQUIRY_DUE_DATE_WINDOW_LABELS[enquiry.dueDateWindow]
+                      : "—"}
+                    {enquiry.dueDate ? ` · ${formatDate(enquiry.dueDate)}` : ""}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Next follow-up</dt>
+                  <dd className="mt-0.5 font-medium">{formatDate(enquiry.nextFollowupDate)}</dd>
+                </div>
               </dl>
 
               {/* Stage move (if not closed) */}
@@ -300,31 +317,14 @@ function EnquiryDetailSheet({
 
               <hr className="border-border" />
 
-              {/* Follow-up history */}
               <div className="space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Follow-up history ({followUps.length})
+                  Timeline
                 </p>
                 {fuLoading ? (
                   <p className="text-xs text-muted-foreground">Loading…</p>
-                ) : followUps.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No follow-up activity yet.</p>
                 ) : (
-                  <ol className="space-y-3">
-                    {followUps.map((fu) => (
-                      <li key={fu.id} className="relative border-l-2 border-muted pl-4">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {ENQUIRY_STATUS_LABELS[fu.stage]}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">{formatDateTime(fu.dueAt)}</span>
-                        </div>
-                        {fu.notes ? (
-                          <p className="mt-1 text-sm text-muted-foreground">{fu.notes}</p>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ol>
+                  <LeadTimeline enquiry={enquiry} followUps={followUps} />
                 )}
               </div>
             </div>
@@ -359,6 +359,7 @@ type FormState = {
   source: string;
   status: CrmEnquiryStatus;
   notes: string;
+  dueDateWindow: CrmEnquiryDueDateWindow | "";
 };
 
 const EMPTY: FormState = {
@@ -371,6 +372,7 @@ const EMPTY: FormState = {
   source: "",
   status: "new",
   notes: "",
+  dueDateWindow: "",
 };
 
 function validate(form: FormState): Record<string, string> {
@@ -383,6 +385,7 @@ function validate(form: FormState): Record<string, string> {
   }
   if (!form.title.trim()) errors.title = "Title is required";
   if (!form.source.trim()) errors.source = "Source is required";
+  if (!form.dueDateWindow) errors.dueDateWindow = "Due date is required";
   return errors;
 }
 
@@ -393,6 +396,7 @@ function toEnquiryInput(contactId: string, form: FormState): CreateEnquiryInput 
     source: form.source.trim(),
     status: form.status,
     notes: form.notes.trim() || null,
+    dueDateWindow: form.dueDateWindow as CrmEnquiryDueDateWindow,
   };
 }
 
@@ -419,6 +423,7 @@ function EnquiryTable({
           <TableHead>Title</TableHead>
           <TableHead>Contact</TableHead>
           <TableHead>Source</TableHead>
+          <TableHead>Due date</TableHead>
           <TableHead>Stage</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -437,6 +442,7 @@ function EnquiryTable({
             </TableCell>
             <TableCell>{contactName(enquiry.contactId)}</TableCell>
             <TableCell>{enquiry.source}</TableCell>
+            <TableCell>{formatDate(enquiry.dueDate)}</TableCell>
             <TableCell><StageBadge status={enquiry.status} /></TableCell>
             <TableCell>
               <RowActions>
@@ -507,6 +513,9 @@ function EnquiryCards({
             ) : null}
             {enquiry.notes ? (
               <p className="line-clamp-2 text-xs text-muted-foreground">{enquiry.notes}</p>
+            ) : null}
+            {enquiry.dueDate ? (
+              <p className="text-xs text-muted-foreground">Due {formatDate(enquiry.dueDate)}</p>
             ) : null}
             <RowActions>
               {crm.hasPermission(CRM_PERMISSIONS.enquiriesConvert) && enquiry.status !== "closed" ? (
@@ -633,6 +642,9 @@ function EnquiryKanban({
                     </p>
                     {enquiry.closedReason ? (
                       <p className="mt-0.5 text-xs italic text-muted-foreground">{enquiry.closedReason}</p>
+                    ) : null}
+                    {enquiry.dueDate ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">Due {formatDate(enquiry.dueDate)}</p>
                     ) : null}
                     {/* Stage select — triggers confirm dialog */}
                     {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
@@ -768,6 +780,7 @@ export function EnquiriesModule() {
       source: enquiry.source,
       status: enquiry.status,
       notes: enquiry.notes ?? "",
+      dueDateWindow: enquiry.dueDateWindow ?? "within_7_days",
     });
     setErrors({});
     setDialogOpen(true);
@@ -787,20 +800,8 @@ export function EnquiriesModule() {
         status: newStage,
         ...(closedReason ? { closedReason } : {}),
       });
-      // Refresh detail sheet if open for this enquiry
       if (viewingEnquiry?.id === enquiry.id) {
         setViewingEnquiry((prev) => prev ? { ...prev, status: newStage, closedReason: closedReason ?? prev.closedReason } : null);
-      }
-      // Auto-log follow-up history entry
-      if (crm.hasPermission(CRM_PERMISSIONS.followUpsCreate)) {
-        await crm.createFollowUp({
-          enquiryId: enquiry.id,
-          stage: newStage,
-          dueAt: new Date().toISOString(),
-          notes: closedReason
-            ? `Closed – ${closedReason}`
-            : `Moved to ${ENQUIRY_STATUS_LABELS[newStage]}`,
-        });
       }
     } catch {
       // errors toasted in store
@@ -1072,6 +1073,18 @@ export function EnquiriesModule() {
                 onChange={(value) => setForm((cur) => ({ ...cur, status: value as CrmEnquiryStatus }))}
               >
                 {enquiryStatusOptions()}
+              </NativeSelect>
+            </Field>
+            <Field id="enquiry-due-date" label="Due date" error={errors.dueDateWindow}>
+              <NativeSelect
+                id="enquiry-due-date"
+                value={form.dueDateWindow}
+                onChange={(value) =>
+                  setForm((cur) => ({ ...cur, dueDateWindow: value as CrmEnquiryDueDateWindow }))
+                }
+              >
+                <option value="">Select due date</option>
+                {enquiryDueDateWindowOptions()}
               </NativeSelect>
             </Field>
             <Field id="enquiry-notes" label="Notes">
