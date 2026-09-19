@@ -1,8 +1,16 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type CrmContact, type CrmEnquiry, type CrmFollowUp, type CrmPayment } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import {
+  crmClientModel,
   crmContactModel,
+  crmEnquiryModel,
+  crmFollowUpModel,
+  crmPaymentModel,
+  type CrmClientModel,
   type CrmContactModel,
+  type CrmEnquiryModel,
+  type CrmFollowUpModel,
+  type CrmPaymentModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
 import type {
@@ -12,8 +20,28 @@ import type {
   UpdateContactBody,
 } from "./contact.request";
 
+export type ContactEnquiryDetail = CrmEnquiry & { followUps: CrmFollowUp[] };
+
+export type ContactDetail = {
+  contact: CrmContact;
+  enquiries: ContactEnquiryDetail[];
+  payments: CrmPayment[];
+};
+
+function sortTime(value: Date | string | null | undefined): number {
+  if (!value) return 0;
+  const parsed = value instanceof Date ? value.getTime() : Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export class ContactService {
-  constructor(private readonly model: CrmContactModel = crmContactModel) {}
+  constructor(
+    private readonly model: CrmContactModel = crmContactModel,
+    private readonly enquiries: CrmEnquiryModel = crmEnquiryModel,
+    private readonly followUps: CrmFollowUpModel = crmFollowUpModel,
+    private readonly clients: CrmClientModel = crmClientModel,
+    private readonly payments: CrmPaymentModel = crmPaymentModel,
+  ) {}
 
   list(query: ListContactsQuery) {
     const where: Prisma.CrmContactWhereInput = { isActive: 1 };
@@ -33,6 +61,45 @@ export class ContactService {
 
   async getById(id: string) {
     return requireActive(await this.model.readOne({ id }), "Contact");
+  }
+
+  async getDetail(id: string): Promise<ContactDetail> {
+    const contact = await this.getById(id);
+    const [enquiryRows, followUpRows, client] = await Promise.all([
+      this.enquiries.read({ contactId: id, isActive: 1 }),
+      this.followUps.read({ contactId: id, isActive: 1 }),
+      this.clients.findOne({ contactId: id, isActive: 1 }),
+    ]);
+
+    const enquiryList = [...enquiryRows].sort((left, right) => sortTime(right.createdAt) - sortTime(left.createdAt));
+    const followUpList = [...followUpRows].sort((left, right) => sortTime(left.dueAt) - sortTime(right.dueAt));
+    const enquiryIds = enquiryList.map((enquiry) => enquiry.id);
+
+    const paymentWhere: Prisma.CrmPaymentWhereInput = {
+      isActive: 1,
+      OR: [
+        { referenceType: "vendor", referenceId: id },
+        ...(client ? [{ referenceType: "client" as const, referenceId: client.id }] : []),
+        ...(enquiryIds.length ? [{ enquiryId: { in: enquiryIds } }] : []),
+      ],
+    };
+    const paymentRows = paymentWhere.OR && paymentWhere.OR.length > 0
+      ? await this.payments.read(paymentWhere)
+      : [];
+    const payments = [...paymentRows].sort((left, right) => {
+      const paid = sortTime(right.paidAt) - sortTime(left.paidAt);
+      if (paid !== 0) return paid;
+      return sortTime(right.createdAt) - sortTime(left.createdAt);
+    });
+
+    return {
+      contact,
+      enquiries: enquiryList.map((enquiry) => ({
+        ...enquiry,
+        followUps: followUpList.filter((followUp) => followUp.enquiryId === enquiry.id),
+      })),
+      payments,
+    };
   }
 
   async create(actorId: string, input: CreateContactBody) {

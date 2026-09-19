@@ -112,6 +112,9 @@ export type CrmPaymentMode = (typeof CRM_PAYMENT_MODES)[number];
 export const CRM_PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export type CrmPaymentStatus = (typeof CRM_PAYMENT_STATUSES)[number];
 
+export const CRM_PAYMENT_REFERENCE_TYPES = ["client", "vendor"] as const;
+export type CrmPaymentReferenceType = (typeof CRM_PAYMENT_REFERENCE_TYPES)[number];
+
 export const CRM_TASK_STATUSES = ["todo", "in_progress", "in_review", "done"] as const;
 export type CrmTaskStatus = (typeof CRM_TASK_STATUSES)[number];
 
@@ -152,6 +155,10 @@ export type CrmFollowUp = {
   notes: string | null;
 };
 
+export type CrmEnquiryWithFollowUps = CrmEnquiry & {
+  followUps: CrmFollowUp[];
+};
+
 export type CrmClient = {
   id: string;
   contactId: string;
@@ -163,7 +170,8 @@ export type CrmClient = {
 
 export type CrmPayment = {
   id: string;
-  clientId: string;
+  referenceType: CrmPaymentReferenceType;
+  referenceId: string;
   enquiryId: string | null;
   amount: number;
   currency: string;
@@ -172,6 +180,12 @@ export type CrmPayment = {
   status: CrmPaymentStatus;
   paidAt: string | null;
   reference: string | null;
+};
+
+export type CrmContactDetail = {
+  contact: CrmContact;
+  enquiries: CrmEnquiryWithFollowUps[];
+  payments: CrmPayment[];
 };
 
 export type CrmTask = {
@@ -241,7 +255,10 @@ export type CrmDashboard = {
   customerDueToday: number;
   customerDueItems: CrmDashboardDueEnquiry[];
   overdueFollowUps: number;
+  followUpsToday: number;
   paymentsPaidThisMonth: number;
+  paymentsIncomeThisMonth: number;
+  paymentsExpenseThisMonth: number;
   tasksByStatus: Record<CrmTaskStatus, number>;
 };
 
@@ -308,7 +325,7 @@ export type CreateEnquiryInput = {
   expectedValue?: number | null;
   assignedToId?: string | null;
   notes?: string | null;
-  dueDateWindow: CrmEnquiryDueDateWindow;
+  dueDate: string;
 };
 
 export type CreateFollowUpInput = {
@@ -328,7 +345,8 @@ export type CreateClientInput = {
 };
 
 export type CreatePaymentInput = {
-  clientId: string;
+  referenceType: CrmPaymentReferenceType;
+  referenceId: string;
   enquiryId?: string | null;
   amount: number;
   currency?: string;

@@ -1,12 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -18,7 +11,9 @@ import {
   NativeSelect,
   RemoveAction,
   RowActions,
+  SideSheet,
   StatusBadge,
+  ViewAction,
 } from "@/components/modules/shared";
 import { CLIENT_STATUS_LABELS, clientStatusOptions } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
@@ -70,7 +65,8 @@ export function ClientsModule({
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmClient | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewing, setViewing] = useState<CrmClient | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -87,7 +83,9 @@ export function ClientsModule({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionReady, allowed, statusFilter, appliedSearch]);
 
-  const contactName = (id: string) => crm.contacts.items.find((contact) => contact.id === id)?.name ?? id;
+  const contactFor = (id: string) => crm.contacts.items.find((contact) => contact.id === id) ?? null;
+  const contactName = (id: string) => contactFor(id)?.name ?? id;
+  const viewingContact = viewing ? contactFor(viewing.contactId) : null;
 
   const clientContacts = crm.contacts.items.filter((contact) => contact.type === "client");
 
@@ -95,7 +93,7 @@ export function ClientsModule({
     setEditing(null);
     setForm({ ...EMPTY, contactId: clientContacts[0]?.id ?? "" });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const openEdit = (client: CrmClient) => {
@@ -107,7 +105,7 @@ export function ClientsModule({
       gstin: client.gstin ?? "",
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -119,7 +117,7 @@ export function ClientsModule({
     try {
       if (editing) await crm.updateClient(editing.id, toInput(form));
       else await crm.createClient(toInput(form));
-      setDialogOpen(false);
+      setSheetOpen(false);
     } catch {
       // toast handled in store
     } finally {
@@ -188,13 +186,23 @@ export function ClientsModule({
           <TableBody>
             {crm.clients.items.map((client) => (
               <TableRow key={client.id}>
-                <TableCell className="font-medium">{client.billingName}</TableCell>
+                <TableCell className="font-medium">
+                  <button
+                    type="button"
+                    className="text-left underline-offset-2 hover:underline"
+                    onClick={() => setViewing(client)}
+                  >
+                    {client.billingName}
+                  </button>
+                </TableCell>
                 <TableCell>{contactName(client.contactId)}</TableCell>
                 <TableCell>
                   <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
                 </TableCell>
+                <TableCell className="text-muted-foreground">{client.gstin ?? "—"}</TableCell>
                 <TableCell>
                   <RowActions>
+                    <ViewAction onClick={() => setViewing(client)} />
                     <Button
                       type="button"
                       size="sm"
@@ -227,61 +235,155 @@ export function ClientsModule({
         </Table>
       </ModuleStatus>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit client" : "Add client"}</DialogTitle>
-            </DialogHeader>
-            {!editing ? (
-              <Field id="client-contact" label="Contact" error={errors.contactId}>
-                <NativeSelect
-                  id="client-contact"
-                  value={form.contactId}
-                  onChange={(value) => setForm((current) => ({ ...current, contactId: value }))}
+      <SideSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title={editing ? "Edit client" : "Add client"}
+        onSubmit={onSubmit}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            {editing ? "Save" : "Create"}
+          </Button>
+        }
+      >
+        {!editing ? (
+          <Field id="client-contact" label="Contact" error={errors.contactId}>
+            <NativeSelect
+              id="client-contact"
+              value={form.contactId}
+              onChange={(value) => setForm((current) => ({ ...current, contactId: value }))}
+            >
+              <option value="">Select client contact</option>
+              {clientContacts.map((contact) => (
+                <option key={contact.id} value={contact.id}>
+                  {contact.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
+        ) : null}
+        <Field id="client-billing" label="Billing name" error={errors.billingName}>
+          <Input
+            id="client-billing"
+            value={form.billingName}
+            onChange={(event) => setForm((current) => ({ ...current, billingName: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="client-status" label="Status">
+          <NativeSelect
+            id="client-status"
+            value={form.status}
+            onChange={(value) => setForm((current) => ({ ...current, status: value as CrmClientStatus }))}
+          >
+            {clientStatusOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="client-gstin" label="GSTIN">
+          <Input
+            id="client-gstin"
+            value={form.gstin}
+            onChange={(event) => setForm((current) => ({ ...current, gstin: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+      </SideSheet>
+
+      <SideSheet
+        open={Boolean(viewing)}
+        onOpenChange={(open) => {
+          if (!open) setViewing(null);
+        }}
+        title="View client"
+        description="Billing, contact, and GSTIN details"
+        footer={
+          <>
+            {viewing ? (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => {
+                    const contactId = viewing.contactId;
+                    setViewing(null);
+                    onOpenContact(contactId);
+                  }}
                 >
-                  <option value="">Select client contact</option>
-                  {clientContacts.map((contact) => (
-                    <option key={contact.id} value={contact.id}>
-                      {contact.name}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
+                  Contact
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => {
+                    const clientId = viewing.id;
+                    setViewing(null);
+                    onOpenPayments(clientId);
+                  }}
+                >
+                  Payments
+                </Button>
+                {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => {
+                      const client = viewing;
+                      setViewing(null);
+                      openEdit(client);
+                    }}
+                  >
+                    Edit
+                  </Button>
+                ) : null}
+              </>
             ) : null}
-            <Field id="client-billing" label="Billing name" error={errors.billingName}>
-              <Input
-                id="client-billing"
-                value={form.billingName}
-                onChange={(event) => setForm((current) => ({ ...current, billingName: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="client-status" label="Status">
-              <NativeSelect
-                id="client-status"
-                value={form.status}
-                onChange={(value) => setForm((current) => ({ ...current, status: value as CrmClientStatus }))}
-              >
-                {clientStatusOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="client-gstin" label="GSTIN">
-              <Input
-                id="client-gstin"
-                value={form.gstin}
-                onChange={(event) => setForm((current) => ({ ...current, gstin: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <DialogFooter>
-              <Button type="submit" className="rounded-xl" disabled={busy}>
-                {editing ? "Save" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <Button type="button" className="rounded-xl" onClick={() => setViewing(null)}>
+              Close
+            </Button>
+          </>
+        }
+      >
+        {viewing ? (
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+            <div>
+              <dt className="text-xs text-muted-foreground">Billing name</dt>
+              <dd className="mt-0.5 font-medium">{viewing.billingName}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Status</dt>
+              <dd className="mt-0.5">
+                <StatusBadge status={viewing.status} label={CLIENT_STATUS_LABELS[viewing.status]} />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Contact</dt>
+              <dd className="mt-0.5 font-medium">{contactName(viewing.contactId)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Mobile</dt>
+              <dd className="mt-0.5 font-medium">{viewingContact?.mobile ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Email</dt>
+              <dd className="mt-0.5 font-medium">{viewingContact?.email ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Company</dt>
+              <dd className="mt-0.5 font-medium">{viewingContact?.companyName ?? "—"}</dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-xs text-muted-foreground">GSTIN</dt>
+              <dd className="mt-0.5 font-medium">{viewing.gstin ?? "—"}</dd>
+            </div>
+          </dl>
+        ) : null}
+      </SideSheet>
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

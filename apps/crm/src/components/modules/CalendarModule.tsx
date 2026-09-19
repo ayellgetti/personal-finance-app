@@ -1,12 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -15,6 +8,7 @@ import {
   ModulePage,
   ModuleStatus,
   RemoveAction,
+  SideSheet,
 } from "@/components/modules/shared";
 import { formatDateTime, isoToLocalInput, localInputToIso } from "@/lib/crm/display";
 import { cn } from "@/lib/utils";
@@ -84,7 +78,7 @@ export function CalendarModule() {
   const [cursor, setCursor] = useState(() => new Date());
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [detail, setDetail] = useState<CrmCalendarItem | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -123,7 +117,7 @@ export function CalendarModule() {
       notes: "",
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -134,7 +128,7 @@ export function CalendarModule() {
     setBusy(true);
     try {
       await crm.createCalendarEvent(toInput(form));
-      setDialogOpen(false);
+      setSheetOpen(false);
     } catch {
       // toast handled in store
     } finally {
@@ -238,84 +232,81 @@ export function CalendarModule() {
         ) : null}
       </ModuleStatus>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>Add event</DialogTitle>
-            </DialogHeader>
-            <Field id="event-title" label="Title" error={errors.title}>
-              <Input
-                id="event-title"
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="event-start" label="Starts" error={errors.startsAt}>
-              <Input
-                id="event-start"
-                type="datetime-local"
-                value={form.startsAt}
-                onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="event-end" label="Ends" error={errors.endsAt}>
-              <Input
-                id="event-end"
-                type="datetime-local"
-                value={form.endsAt}
-                onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="event-notes" label="Notes">
-              <Textarea
-                id="event-notes"
-                value={form.notes}
-                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <DialogFooter>
-              <Button type="submit" className="rounded-xl" disabled={busy}>
-                Create
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <SideSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title="Add event"
+        onSubmit={onSubmit}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            Create
+          </Button>
+        }
+      >
+        <Field id="event-title" label="Title" error={errors.title}>
+          <Input
+            id="event-title"
+            value={form.title}
+            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="event-start" label="Starts" error={errors.startsAt}>
+          <Input
+            id="event-start"
+            type="datetime-local"
+            value={form.startsAt}
+            onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="event-end" label="Ends" error={errors.endsAt}>
+          <Input
+            id="event-end"
+            type="datetime-local"
+            value={form.endsAt}
+            onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="event-notes" label="Notes">
+          <Textarea
+            id="event-notes"
+            value={form.notes}
+            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+      </SideSheet>
 
-      <Dialog open={Boolean(detail)} onOpenChange={(open) => !open && setDetail(null)}>
-        <DialogContent>
-          {detail ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>{detail.title}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-2 text-sm">
-                <p>
-                  <span className="font-medium">Type:</span> {KIND_LABELS[detail.kind]}
-                </p>
-                <p>
-                  <span className="font-medium">Starts:</span> {formatDateTime(detail.at)}
-                </p>
-                {detail.endsAt ? (
-                  <p>
-                    <span className="font-medium">Ends:</span> {formatDateTime(detail.endsAt)}
-                  </p>
-                ) : null}
-              </div>
-              {detail.kind === "event" && crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
-                <DialogFooter>
-                  <RemoveAction label="Remove event" onClick={() => setRemoveId(detail.id)} />
-                </DialogFooter>
-              ) : null}
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <SideSheet
+        open={Boolean(detail)}
+        onOpenChange={(open) => {
+          if (!open) setDetail(null);
+        }}
+        title={detail?.title ?? "Event"}
+        footer={
+          detail?.kind === "event" && crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
+            <RemoveAction label="Remove event" onClick={() => setRemoveId(detail.id)} />
+          ) : null
+        }
+      >
+        {detail ? (
+          <div className="space-y-2 text-sm">
+            <p>
+              <span className="font-medium">Type:</span> {KIND_LABELS[detail.kind]}
+            </p>
+            <p>
+              <span className="font-medium">Starts:</span> {formatDateTime(detail.at)}
+            </p>
+            {detail.endsAt ? (
+              <p>
+                <span className="font-medium">Ends:</span> {formatDateTime(detail.endsAt)}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </SideSheet>
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

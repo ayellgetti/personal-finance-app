@@ -27,7 +27,10 @@ export type DashboardSnapshot = {
   customerDueToday: number;
   customerDueItems: DashboardDueEnquiry[];
   overdueFollowUps: number;
+  followUpsToday: number;
   paymentsPaidThisMonth: number;
+  paymentsIncomeThisMonth: number;
+  paymentsExpenseThisMonth: number;
   tasksByStatus: Record<(typeof CRM_TASK_STATUSES)[number], number>;
 };
 
@@ -60,7 +63,9 @@ export class DashboardService {
       leadsGeneratedToday,
       customerDueRows,
       overdueFollowUps,
-      paymentsPaidThisMonth,
+      followUpsToday,
+      paymentsIncomeThisMonth,
+      paymentsExpenseThisMonth,
       taskCounts,
     ] = await Promise.all([
       Promise.all(
@@ -88,9 +93,21 @@ export class DashboardService {
         status: { in: openStatuses },
         nextFollowupDate: { lt: now },
       }),
+      this.enquiries.count({
+        isActive: 1,
+        status: { in: openStatuses },
+        nextFollowupDate: { gte: dayStart, lt: dayEnd },
+      }),
       this.payments.sumAmount({
         isActive: 1,
         status: "paid",
+        type: "INCOME",
+        paidAt: { gte: monthStart, lt: monthEnd },
+      }),
+      this.payments.sumAmount({
+        isActive: 1,
+        status: "paid",
+        type: "EXPENSE",
         paidAt: { gte: monthStart, lt: monthEnd },
       }),
       Promise.all(
@@ -123,7 +140,10 @@ export class DashboardService {
         contactId: enquiry.contactId,
       })),
       overdueFollowUps,
-      paymentsPaidThisMonth,
+      followUpsToday,
+      paymentsPaidThisMonth: paymentsIncomeThisMonth + paymentsExpenseThisMonth,
+      paymentsIncomeThisMonth,
+      paymentsExpenseThisMonth,
       tasksByStatus,
     };
   }

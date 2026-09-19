@@ -16,6 +16,7 @@ function setup() {
   const contacts = fakeCrud("contact", [
     { id: "c-1", name: "Ada", mobile: "111", type: "client", isActive: 1 },
     { id: "c-lead", name: "Lead", mobile: "222", type: "lead", isActive: 1 },
+    { id: "c-vendor", name: "Decor Co", mobile: "333", type: "vendor", isActive: 1 },
   ]);
   const enquiries = fakeCrud("enquiry", []);
   const clients = fakeCrud("client", []);
@@ -29,8 +30,9 @@ function setup() {
     payments.model as unknown as CrmPaymentModel,
     clients.model as unknown as CrmClientModel,
     enquiries.model as unknown as CrmEnquiryModel,
+    contacts.model as unknown as CrmContactModel,
   );
-  return { clientService, paymentService, clients, payments };
+  return { clientService, paymentService, clients, payments, contacts };
 }
 
 test("client create, list, update, and soft-delete hide the row", async () => {
@@ -66,7 +68,8 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
     billingName: "Ada LLC",
   });
   const payment = await paymentService.create("user-1", {
-    clientId: client.id,
+    referenceType: "client",
+    referenceId: client.id,
     amount: 1500,
     mode: "UPI",
     status: "paid",
@@ -76,7 +79,8 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
   assert.equal(payment.type, "INCOME");
   assert.equal(payment.mode, "UPI");
   const listed = await paymentService.list({
-    clientId: client.id,
+    referenceType: "client",
+    referenceId: client.id,
     status: "paid",
     from: new Date("2026-09-01T00:00:00.000Z"),
     to: new Date("2026-09-30T00:00:00.000Z"),
@@ -87,7 +91,8 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
 
   assert.equal(
     createPaymentBodySchema.safeParse({
-      clientId: "00000000-0000-4000-8000-000000000001",
+      referenceType: "client",
+      referenceId: "00000000-0000-4000-8000-000000000001",
       amount: 0,
       mode: "UPI",
     }).success,
@@ -95,7 +100,8 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
   );
   assert.equal(
     createPaymentBodySchema.safeParse({
-      clientId: "00000000-0000-4000-8000-000000000001",
+      referenceType: "client",
+      referenceId: "00000000-0000-4000-8000-000000000001",
       amount: -1,
       mode: "UPI",
     }).success,
@@ -103,10 +109,60 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
   );
   assert.equal(
     createPaymentBodySchema.safeParse({
-      clientId: "00000000-0000-4000-8000-000000000001",
+      referenceType: "client",
+      referenceId: "00000000-0000-4000-8000-000000000001",
       amount: 10,
       mode: "WALLET",
     }).success,
     false,
+  );
+});
+
+test("payment can be made to a vendor instead of a client", async () => {
+  const { paymentService } = setup();
+  const payment = await paymentService.create("user-1", {
+    referenceType: "vendor",
+    referenceId: "c-vendor",
+    amount: 25000,
+    type: "EXPENSE",
+    mode: "BANK_TRANSFER",
+    status: "paid",
+  });
+  assert.equal(payment.referenceType, "vendor");
+  assert.equal(payment.referenceId, "c-vendor");
+  assert.equal(payment.type, "EXPENSE");
+
+  const listed = await paymentService.list({ referenceType: "vendor", referenceId: "c-vendor" });
+  assert.equal(listed.items.length, 1);
+});
+
+test("payment requires both referenceType and referenceId, and the vendor contact must be type vendor", async () => {
+  const { paymentService } = setup();
+
+  assert.equal(
+    createPaymentBodySchema.safeParse({
+      amount: 1000,
+      mode: "UPI",
+    }).success,
+    false,
+  );
+  assert.equal(
+    createPaymentBodySchema.safeParse({
+      referenceType: "client",
+      amount: 1000,
+      mode: "UPI",
+    }).success,
+    false,
+  );
+
+  await assert.rejects(
+    () =>
+      paymentService.create("user-1", {
+        referenceType: "vendor",
+        referenceId: "c-lead",
+        amount: 500,
+        mode: "CASH",
+      }),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
   );
 });

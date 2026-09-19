@@ -3,6 +3,7 @@ import {
   crmIdParamsSchema,
   crmListQuerySchema,
   crmPaymentModeSchema,
+  crmPaymentReferenceTypeSchema,
   crmPaymentStatusSchema,
   crmPaymentTypeSchema,
   crmRemoveBodySchema,
@@ -12,14 +13,16 @@ export const paymentIdParamsSchema = crmIdParamsSchema;
 export const removePaymentBodySchema = crmRemoveBodySchema;
 
 export const listPaymentsQuerySchema = crmListQuerySchema.extend({
-  clientId: z.string().uuid().optional(),
+  referenceType: crmPaymentReferenceTypeSchema.optional(),
+  referenceId: z.string().uuid().optional(),
   status: crmPaymentStatusSchema.optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
 });
 
-export const createPaymentBodySchema = z.object({
-  clientId: z.string().uuid(),
+const paymentBodyBaseSchema = z.object({
+  referenceType: crmPaymentReferenceTypeSchema,
+  referenceId: z.string().uuid(),
   enquiryId: z.string().uuid().nullable().optional(),
   amount: z.number().finite().positive(),
   currency: z.string().trim().min(1).max(8).optional(),
@@ -30,10 +33,16 @@ export const createPaymentBodySchema = z.object({
   reference: z.string().trim().min(1).max(80).nullable().optional(),
 });
 
-export const updatePaymentBodySchema = createPaymentBodySchema
+export const createPaymentBodySchema = paymentBodyBaseSchema;
+
+export const updatePaymentBodySchema = paymentBodyBaseSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field is required",
+  })
+  .refine((value) => Boolean(value.referenceType) === Boolean(value.referenceId), {
+    message: "referenceType and referenceId must be provided together",
+    path: ["referenceId"],
   });
 
 export type PaymentIdParams = z.infer<typeof paymentIdParamsSchema>;

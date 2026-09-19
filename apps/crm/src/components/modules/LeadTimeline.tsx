@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { ENQUIRY_STATUS_LABELS, formatDate, formatDateTime } from "@/lib/crm/display";
+import { ENQUIRY_STATUS_LABELS, formatDateTime } from "@/lib/crm/display";
 import { cn } from "@/lib/utils";
 import type { CrmEnquiry, CrmEnquiryStatus, CrmFollowUp } from "@/types/crm";
 
@@ -38,8 +38,12 @@ export function buildLeadTimeline(enquiry: CrmEnquiry, followUps: CrmFollowUp[],
   const history = [...followUps].sort(
     (left, right) => new Date(left.dueAt).getTime() - new Date(right.dueAt).getTime(),
   );
+  let lastNotes: string | null = null;
   for (const followUp of history) {
     const closed = followUp.stage === "closed";
+    const rawNotes = followUp.notes?.trim() ? followUp.notes : null;
+    const notes = rawNotes && rawNotes === lastNotes ? null : rawNotes;
+    lastNotes = rawNotes ?? lastNotes;
     events.push({
       id: followUp.id,
       kind: closed ? "closed" : "followup",
@@ -47,7 +51,7 @@ export function buildLeadTimeline(enquiry: CrmEnquiry, followUps: CrmFollowUp[],
       title: closed
         ? closureLabel(enquiry.closedReason)
         : `Follow-up — ${ENQUIRY_STATUS_LABELS[followUp.stage]}`,
-      notes: followUp.notes,
+      notes,
       status: followUp.stage,
       overdue: false,
     });
@@ -127,9 +131,7 @@ export function LeadTimeline({
               ) : null}
               {event.overdue ? <Badge variant="destructive">Overdue</Badge> : null}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {event.kind === "next" ? formatDate(event.at) : formatDateTime(event.at)}
-            </p>
+            <p className="text-xs text-muted-foreground">{formatDateTime(event.at)}</p>
             {event.notes ? (
               <p className="whitespace-pre-wrap text-sm text-muted-foreground">{event.notes}</p>
             ) : null}

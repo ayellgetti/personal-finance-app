@@ -5,6 +5,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { CalendarModule } from "@/components/modules/CalendarModule";
 import { ClientsModule } from "@/components/modules/ClientsModule";
 import { ContactsModule } from "@/components/modules/ContactsModule";
+import { DashboardModule } from "@/components/modules/DashboardModule";
 import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
 import { FollowUpsModule } from "@/components/modules/FollowUpsModule";
 import { TasksModule } from "@/components/modules/TasksModule";
@@ -13,7 +14,9 @@ import {
   adminMe,
   convertEnquiry,
   emptyPage,
+  fetchContactDetail,
   fetchCrmMe,
+  fetchDashboard,
   listCalendar,
   listClients,
   listContacts,
@@ -23,7 +26,7 @@ import {
   updateTaskStatus,
 } from "@/test/crm-remote-mock";
 import { renderCrm } from "@/test/render-crm";
-import type { CrmCalendarItem, CrmClient, CrmContact, CrmEnquiry, CrmTask } from "@/types/crm";
+import type { CrmCalendarItem, CrmClient, CrmContact, CrmEnquiry, CrmPayment, CrmTask } from "@/types/crm";
 
 vi.mock("@/lib/auth/store", () => ({
   useAuth: () => ({
@@ -130,6 +133,20 @@ describe("CRM modules", () => {
     listCalendar.mockResolvedValue({ items: [] });
     convertEnquiry.mockReset();
     updateTaskStatus.mockReset();
+    fetchContactDetail.mockReset();
+    fetchContactDetail.mockImplementation(async (id: string) => ({
+      contact: {
+        id,
+        name: "",
+        mobile: "",
+        type: "lead",
+        email: null,
+        companyName: null,
+        notes: null,
+      },
+      enquiries: [],
+      payments: [],
+    }));
   });
 
   it("validates the contact form before create", async () => {
@@ -164,15 +181,75 @@ describe("CRM modules", () => {
     expect(await screen.findByText("No contacts yet")).toBeInTheDocument();
   });
 
-  it("uses icon edit and remove actions with accessible names", async () => {
+  it("uses icon view, edit and remove actions with accessible names", async () => {
     listContacts.mockResolvedValue(emptyPage([contact]));
     renderCrm(<ContactsModule />);
-    const edit = await screen.findByRole("button", { name: "Edit" });
+    const view = await screen.findByRole("button", { name: "View" });
+    const edit = screen.getByRole("button", { name: "Edit" });
     const remove = screen.getByRole("button", { name: "Remove" });
+    expect(view).toBeInTheDocument();
     expect(edit).toBeInTheDocument();
     expect(remove).toBeInTheDocument();
+    expect(view.querySelector("svg")).not.toBeNull();
     expect(edit.querySelector("svg")).not.toBeNull();
     expect(remove.querySelector("svg")).not.toBeNull();
+  });
+
+  it("opens a contact view with enquiry follow-ups and payments tabs", async () => {
+    const payment: CrmPayment = {
+      id: "pay-1",
+      referenceType: "client",
+      referenceId: "client-1",
+      enquiryId: enquiry.id,
+      amount: 15000,
+      currency: "INR",
+      type: "INCOME",
+      mode: "UPI",
+      status: "paid",
+      paidAt: "2026-09-16T00:00:00.000Z",
+      reference: "TXN-1",
+    };
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    fetchContactDetail.mockResolvedValue({
+      contact,
+      enquiries: [
+        {
+          ...enquiry,
+          followUps: [
+            {
+              id: "fu-1",
+              enquiryId: enquiry.id,
+              contactId: contact.id,
+              stage: "contacted",
+              dueAt: "2026-09-16T10:00:00.000Z",
+              nextFollowupDate: "2026-09-20T00:00:00.000Z",
+              notes: "Called the venue",
+            },
+          ],
+        },
+        {
+          ...enquiry,
+          id: "enquiry-2",
+          title: "Second catering enquiry",
+          status: "qualified",
+          followUps: [],
+        },
+      ],
+      payments: [payment],
+    });
+    renderCrm(<ContactsModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+
+    expect(await screen.findByRole("heading", { name: "Priya Shah" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Enquiries (2)" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Payments (1)" })).toBeInTheDocument();
+    expect(screen.getByText("Banquet inquiry")).toBeInTheDocument();
+    expect(screen.getByText("Second catering enquiry")).toBeInTheDocument();
+    expect(screen.getByText("Called the venue")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Payments (1)" }));
+    expect(await screen.findByText("Paid")).toBeInTheDocument();
+    expect(screen.getByText("Income")).toBeInTheDocument();
   });
 
   it("shows an error state when the list fails", async () => {
@@ -213,6 +290,15 @@ describe("CRM modules", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add enquiry" }));
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     expect(await screen.findByText("Due date is required")).toBeInTheDocument();
+  });
+
+  it("accepts a calendar shortcut as the enquiry due date", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    renderCrm(<EnquiriesModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "Add enquiry" }));
+    fireEvent.click(screen.getByRole("button", { name: "7 days" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(screen.queryByText("Due date is required")).not.toBeInTheDocument();
   });
 
   it("shows the converted client on the Clients screen", async () => {
@@ -283,11 +369,140 @@ describe("CRM modules", () => {
     );
 
     renderCrm(<FollowUpsModule />);
-    fireEvent.click(await screen.findByRole("button", { name: "Timeline view" }));
 
     expect(await screen.findByText("Lead created")).toBeInTheDocument();
     expect(screen.getByText("Follow-up — Contacted")).toBeInTheDocument();
     expect(screen.getByText("Called the venue")).toBeInTheDocument();
     expect(screen.getByText("Next follow-up")).toBeInTheDocument();
+  });
+
+  it("opens add follow-up for the enquiry from the recent timeline title", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listEnquiries.mockResolvedValue(emptyPage([enquiry]));
+    renderCrm(<FollowUpsModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "Add followup" }));
+    expect(await screen.findByRole("heading", { name: "Add follow-up" })).toBeInTheDocument();
+    const select = document.getElementById("followup-enquiry") as HTMLSelectElement;
+    expect(select.value).toBe("enquiry-1");
+  });
+
+  it("hides the add follow-up button once the lead is converted (closed) in the recent timeline", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listEnquiries.mockResolvedValue(
+      emptyPage([{ ...enquiry, status: "closed" as const, closedReason: "Booked" }]),
+    );
+    renderCrm(<FollowUpsModule />);
+    expect(await screen.findByText("Banquet inquiry")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add followup" })).not.toBeInTheDocument();
+  });
+
+  it("filters the follow-up recent view by today, tomorrow, and upcoming", async () => {
+    const now = new Date();
+    const dueToday: CrmEnquiry = {
+      ...enquiry,
+      id: "enquiry-today",
+      title: "Due today enquiry",
+      status: "contacted",
+      nextFollowupDate: now.toISOString(),
+    };
+    const dueUpcoming: CrmEnquiry = {
+      ...enquiry,
+      id: "enquiry-upcoming",
+      title: "Due later enquiry",
+      status: "contacted",
+      nextFollowupDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listEnquiries.mockResolvedValue(emptyPage([dueToday, dueUpcoming]));
+    renderCrm(<FollowUpsModule />);
+
+    expect(await screen.findByText("Due today enquiry")).toBeInTheDocument();
+    expect(screen.getByText("Due later enquiry")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("When"), { target: { value: "today" } });
+    await waitFor(() => {
+      expect(screen.getByText("Due today enquiry")).toBeInTheDocument();
+      expect(screen.queryByText("Due later enquiry")).not.toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("When"), { target: { value: "upcoming" } });
+    await waitFor(() => {
+      expect(screen.queryByText("Due today enquiry")).not.toBeInTheDocument();
+      expect(screen.getByText("Due later enquiry")).toBeInTheDocument();
+    });
+  });
+
+  it("pre-selects the today due filter from the dashboard", async () => {
+    const now = new Date();
+    const dueToday: CrmEnquiry = {
+      ...enquiry,
+      id: "enquiry-today",
+      title: "Due today enquiry",
+      status: "contacted",
+      nextFollowupDate: now.toISOString(),
+    };
+    const dueUpcoming: CrmEnquiry = {
+      ...enquiry,
+      id: "enquiry-upcoming",
+      title: "Due later enquiry",
+      status: "contacted",
+      nextFollowupDate: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listEnquiries.mockResolvedValue(emptyPage([dueToday, dueUpcoming]));
+    renderCrm(<FollowUpsModule initialDueFilter="today" />);
+
+    expect(await screen.findByText("Due today enquiry")).toBeInTheDocument();
+    expect(screen.queryByText("Due later enquiry")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("When")).toHaveValue("today");
+  });
+
+  it("opens Follow-ups with today selected from the dashboard card", async () => {
+    const onOpenFollowUps = vi.fn();
+    fetchDashboard.mockResolvedValue({
+      contactsByType: { lead: 0, client: 0, vendor: 0, employee: 0 },
+      enquiries: { open: 0, closed: 0 },
+      leadsGeneratedToday: 0,
+      customerDueToday: 0,
+      customerDueItems: [],
+      overdueFollowUps: 2,
+      followUpsToday: 4,
+      paymentsPaidThisMonth: 0,
+      paymentsIncomeThisMonth: 0,
+      paymentsExpenseThisMonth: 0,
+      tasksByStatus: { todo: 0, in_progress: 0, in_review: 0, done: 0 },
+    });
+    renderCrm(<DashboardModule onOpenFollowUps={onOpenFollowUps} />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Follow-ups for today" })).toHaveTextContent("4");
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Follow-ups for today" }));
+    expect(onOpenFollowUps).toHaveBeenCalledWith("today");
+  });
+
+  it("opens a client view sidebar from the client row", async () => {
+    const clientContact: CrmContact = { ...contact, type: "client" };
+    listContacts.mockResolvedValue(emptyPage([clientContact]));
+    listClients.mockResolvedValue(emptyPage([{ ...client, gstin: "27AAPFU0939F1ZV" }]));
+    renderCrm(<ClientsModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+
+    expect(await screen.findByRole("heading", { name: "View client" })).toBeInTheDocument();
+    expect(screen.getAllByText("27AAPFU0939F1ZV")).toHaveLength(2);
+    expect(screen.getByText("+919888888888")).toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+  });
+
+  it("shows customer name and mobile in the follow-up enquiry dropdown", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listEnquiries.mockResolvedValue(emptyPage([enquiry]));
+    renderCrm(<FollowUpsModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "Add follow-up" }));
+    expect(
+      await screen.findByRole("option", {
+        name: "Priya Shah · +919888888888 · Banquet inquiry — New",
+      }),
+    ).toBeInTheDocument();
   });
 });

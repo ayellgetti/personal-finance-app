@@ -52,6 +52,20 @@ describe("buildLeadTimeline", () => {
     expect(next?.overdue).toBe(true);
   });
 
+  it("does not repeat the same notes on consecutive follow-ups", () => {
+    const second: CrmFollowUp = {
+      ...followUp,
+      id: "fu-2",
+      stage: "qualified",
+      dueAt: "2026-09-17T10:00:00.000Z",
+      notes: "Called the venue",
+    };
+    const events = buildLeadTimeline(enquiry, [followUp, second], new Date("2026-09-18T12:00:00.000Z"));
+    const followUpEvents = events.filter((event) => event.kind === "followup");
+    expect(followUpEvents[0]?.notes).toBe("Called the venue");
+    expect(followUpEvents[1]?.notes).toBeNull();
+  });
+
   it("adds a booked closure and omits the next follow-up", () => {
     const closed: CrmEnquiry = {
       ...enquiry,

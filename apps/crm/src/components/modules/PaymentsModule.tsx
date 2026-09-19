@@ -1,12 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -18,6 +11,7 @@ import {
   NativeSelect,
   RemoveAction,
   RowActions,
+  SideSheet,
   StatusBadge,
 } from "@/components/modules/shared";
 import {
@@ -38,12 +32,15 @@ import {
   type CreatePaymentInput,
   type CrmPayment,
   type CrmPaymentMode,
+  type CrmPaymentReferenceType,
   type CrmPaymentStatus,
   type CrmPaymentType,
 } from "@/types/crm";
 
 type FormState = {
+  referenceType: CrmPaymentReferenceType;
   clientId: string;
+  vendorContactId: string;
   amount: string;
   type: CrmPaymentType;
   mode: CrmPaymentMode;
@@ -53,7 +50,9 @@ type FormState = {
 };
 
 const EMPTY: FormState = {
+  referenceType: "client",
   clientId: "",
+  vendorContactId: "",
   amount: "",
   type: "INCOME",
   mode: "UPI",
@@ -64,7 +63,11 @@ const EMPTY: FormState = {
 
 function validate(form: FormState): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!form.clientId) errors.clientId = "Client is required";
+  if (form.referenceType === "vendor") {
+    if (!form.vendorContactId) errors.vendorContactId = "Vendor is required";
+  } else if (!form.clientId) {
+    errors.clientId = "Client is required";
+  }
   const amount = Number(form.amount);
   if (!form.amount.trim() || !Number.isFinite(amount) || amount <= 0) {
     errors.amount = "Amount must be greater than 0";
@@ -73,8 +76,10 @@ function validate(form: FormState): Record<string, string> {
 }
 
 function toInput(form: FormState): CreatePaymentInput {
+  const vendor = form.referenceType === "vendor";
   return {
-    clientId: form.clientId,
+    referenceType: form.referenceType,
+    referenceId: vendor ? form.vendorContactId : form.clientId,
     amount: Number(form.amount),
     type: form.type,
     mode: form.mode,
@@ -98,16 +103,20 @@ export function PaymentsModule({
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmPayment | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = () => {
     void crm.loadPayments({
-      clientId: clientId || undefined,
+      referenceType: clientId ? "client" : undefined,
+      referenceId: clientId || undefined,
       status: statusFilter ? (statusFilter as CrmPaymentStatus) : undefined,
     });
     if (crm.hasPermission(CRM_PERMISSIONS.clientsRead)) void crm.loadClients({ limit: 100 });
+    if (crm.hasPermission(CRM_PERMISSIONS.contactsRead)) {
+      void crm.loadContacts({ type: "vendor", limit: 100 });
+    }
   };
 
   useEffect(() => {
@@ -115,19 +124,31 @@ export function PaymentsModule({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionReady, allowed, statusFilter, clientId]);
 
-  const clientName = (id: string) => crm.clients.items.find((client) => client.id === id)?.billingName ?? id;
+  const clientName = (id: string) =>
+    crm.clients.items.find((client) => client.id === id)?.billingName ?? id;
+  const vendorName = (id: string) =>
+    crm.contacts.items.find((contact) => contact.id === id)?.name ?? id;
+  const payeeName = (payment: CrmPayment) =>
+    payment.referenceType === "vendor" ? vendorName(payment.referenceId) : clientName(payment.referenceId);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...EMPTY, clientId: clientId || crm.clients.items[0]?.id || "" });
+    setForm({
+      ...EMPTY,
+      referenceType: "client",
+      clientId: clientId || crm.clients.items[0]?.id || "",
+      vendorContactId: crm.contacts.items.find((contact) => contact.type === "vendor")?.id || "",
+    });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const openEdit = (payment: CrmPayment) => {
     setEditing(payment);
     setForm({
-      clientId: payment.clientId,
+      referenceType: payment.referenceType,
+      clientId: payment.referenceType === "client" ? payment.referenceId : "",
+      vendorContactId: payment.referenceType === "vendor" ? payment.referenceId : "",
       amount: String(payment.amount),
       type: payment.type,
       mode: payment.mode,
@@ -136,7 +157,7 @@ export function PaymentsModule({
       reference: payment.reference ?? "",
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -148,7 +169,7 @@ export function PaymentsModule({
     try {
       if (editing) await crm.updatePayment(editing.id, toInput(form));
       else await crm.createPayment(toInput(form));
-      setDialogOpen(false);
+      setSheetOpen(false);
     } catch {
       // toast handled in store
     } finally {
@@ -199,7 +220,7 @@ export function PaymentsModule({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Client</TableHead>
+              <TableHead>Payee</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Mode</TableHead>
@@ -212,7 +233,7 @@ export function PaymentsModule({
           <TableBody>
             {crm.payments.items.map((payment) => (
               <TableRow key={payment.id}>
-                <TableCell className="font-medium">{clientName(payment.clientId)}</TableCell>
+                <TableCell className="font-medium">{payeeName(payment)}</TableCell>
                 <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
                 <TableCell><StatusBadge status={payment.type} label={PAYMENT_TYPE_LABELS[payment.type]} /></TableCell>
                 <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
@@ -235,89 +256,118 @@ export function PaymentsModule({
         </Table>
       </ModuleStatus>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit payment" : "Add payment"}</DialogTitle>
-            </DialogHeader>
-            <Field id="payment-client" label="Client" error={errors.clientId}>
-              <NativeSelect
-                id="payment-client"
-                value={form.clientId}
-                onChange={(value) => setForm((current) => ({ ...current, clientId: value }))}
-              >
-                <option value="">Select client</option>
-                {crm.clients.items.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.billingName}
+      <SideSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title={editing ? "Edit payment" : "Add payment"}
+        onSubmit={onSubmit}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            {editing ? "Save" : "Create"}
+          </Button>
+        }
+      >
+        <Field id="payment-payee-type" label="Type">
+          <NativeSelect
+            id="payment-payee-type"
+            value={form.referenceType}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, referenceType: value as CrmPaymentReferenceType }))
+            }
+          >
+            <option value="client">Client</option>
+            <option value="vendor">Vendor</option>
+          </NativeSelect>
+        </Field>
+        {form.referenceType === "vendor" ? (
+          <Field id="payment-vendor" label="Vendor" error={errors.vendorContactId}>
+            <NativeSelect
+              id="payment-vendor"
+              value={form.vendorContactId}
+              onChange={(value) => setForm((current) => ({ ...current, vendorContactId: value }))}
+            >
+              <option value="">Select vendor</option>
+              {crm.contacts.items
+                .filter((contact) => contact.type === "vendor")
+                .map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.name}
                   </option>
                 ))}
-              </NativeSelect>
-            </Field>
-            <Field id="payment-amount" label="Amount" error={errors.amount}>
-              <Input
-                id="payment-amount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={form.amount}
-                onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="payment-type" label="Type">
-              <NativeSelect
-                id="payment-type"
-                value={form.type}
-                onChange={(value) => setForm((current) => ({ ...current, type: value as CrmPaymentType }))}
-              >
-                {paymentTypeOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="payment-mode" label="Mode">
-              <NativeSelect
-                id="payment-mode"
-                value={form.mode}
-                onChange={(value) => setForm((current) => ({ ...current, mode: value as CrmPaymentMode }))}
-              >
-                {paymentModeOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="payment-status" label="Status">
-              <NativeSelect
-                id="payment-status"
-                value={form.status}
-                onChange={(value) => setForm((current) => ({ ...current, status: value as CrmPaymentStatus }))}
-              >
-                {paymentStatusOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="payment-paid-at" label="Paid at">
-              <Input
-                id="payment-paid-at"
-                type="datetime-local"
-                value={form.paidAt}
-                onChange={(event) => setForm((current) => ({ ...current, paidAt: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="payment-reference" label="Reference">
-              <Input
-                id="payment-reference"
-                value={form.reference}
-                onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <DialogFooter>
-              <Button type="submit" className="rounded-xl" disabled={busy}>
-                {editing ? "Save" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </NativeSelect>
+          </Field>
+        ) : (
+          <Field id="payment-client" label="Client" error={errors.clientId}>
+            <NativeSelect
+              id="payment-client"
+              value={form.clientId}
+              onChange={(value) => setForm((current) => ({ ...current, clientId: value }))}
+            >
+              <option value="">Select client</option>
+              {crm.clients.items.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.billingName}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
+        )}
+        <Field id="payment-type" label="Payment type">
+          <NativeSelect
+            id="payment-type"
+            value={form.type}
+            onChange={(value) => setForm((current) => ({ ...current, type: value as CrmPaymentType }))}
+          >
+            {paymentTypeOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="payment-amount" label="Amount" error={errors.amount}>
+          <Input
+            id="payment-amount"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={form.amount}
+            onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="payment-mode" label="Mode">
+          <NativeSelect
+            id="payment-mode"
+            value={form.mode}
+            onChange={(value) => setForm((current) => ({ ...current, mode: value as CrmPaymentMode }))}
+          >
+            {paymentModeOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="payment-status" label="Status">
+          <NativeSelect
+            id="payment-status"
+            value={form.status}
+            onChange={(value) => setForm((current) => ({ ...current, status: value as CrmPaymentStatus }))}
+          >
+            {paymentStatusOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="payment-paid-at" label="Paid at">
+          <Input
+            id="payment-paid-at"
+            type="datetime-local"
+            value={form.paidAt}
+            onChange={(event) => setForm((current) => ({ ...current, paidAt: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="payment-reference" label="Reference">
+          <Input
+            id="payment-reference"
+            value={form.reference}
+            onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+      </SideSheet>
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

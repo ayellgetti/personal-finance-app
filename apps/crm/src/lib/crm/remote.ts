@@ -14,11 +14,13 @@ import type {
   CrmClient,
   CrmClientStatus,
   CrmContact,
+  CrmContactDetail,
   CrmContactType,
   CrmDashboard,
   CrmEnquiry,
   CrmEnquiryDueDateWindow,
   CrmEnquiryStatus,
+  CrmEnquiryWithFollowUps,
   CrmFollowUp,
   CrmFollowUpCalendar,
   CrmFollowUpCalendarItem,
@@ -27,6 +29,7 @@ import type {
   CrmPagination,
   CrmPayment,
   CrmPaymentMode,
+  CrmPaymentReferenceType,
   CrmPaymentStatus,
   CrmPaymentType,
   CrmPermission,
@@ -72,7 +75,8 @@ export type ListClientsQuery = {
 export type ListPaymentsQuery = {
   page?: number;
   limit?: number;
-  clientId?: string;
+  referenceType?: CrmPaymentReferenceType;
+  referenceId?: string;
   status?: CrmPaymentStatus;
   from?: string;
   to?: string;
@@ -176,6 +180,27 @@ function mapEnquiry(row: Record<string, unknown>): CrmEnquiry {
   };
 }
 
+function mapEnquiryWithFollowUps(row: Record<string, unknown>): CrmEnquiryWithFollowUps {
+  const followUps = Array.isArray(row.followUps)
+    ? row.followUps.map((item) => mapFollowUp(asRecord(item)))
+    : [];
+  return { ...mapEnquiry(row), followUps };
+}
+
+function mapContactDetail(row: Record<string, unknown>): CrmContactDetail {
+  const enquiries = Array.isArray(row.enquiries)
+    ? row.enquiries.map((item) => mapEnquiryWithFollowUps(asRecord(item)))
+    : [];
+  const payments = Array.isArray(row.payments)
+    ? row.payments.map((item) => mapPayment(asRecord(item)))
+    : [];
+  return {
+    contact: mapContact(asRecord(row.contact)),
+    enquiries,
+    payments,
+  };
+}
+
 function mapFollowUp(row: Record<string, unknown>): CrmFollowUp {
   return {
     id: String(row.id),
@@ -202,7 +227,8 @@ function mapClient(row: Record<string, unknown>): CrmClient {
 function mapPayment(row: Record<string, unknown>): CrmPayment {
   return {
     id: String(row.id),
-    clientId: String(row.clientId),
+    referenceType: row.referenceType as CrmPaymentReferenceType,
+    referenceId: String(row.referenceId),
     enquiryId: row.enquiryId == null ? null : String(row.enquiryId),
     amount: typeof row.amount === "number" ? row.amount : Number(row.amount),
     currency: String(row.currency ?? "INR"),
@@ -323,7 +349,10 @@ function mapDashboard(row: Record<string, unknown>): CrmDashboard {
     customerDueToday: Number(row.customerDueToday ?? 0),
     customerDueItems,
     overdueFollowUps: Number(row.overdueFollowUps ?? 0),
+    followUpsToday: Number(row.followUpsToday ?? 0),
     paymentsPaidThisMonth: Number(row.paymentsPaidThisMonth ?? 0),
+    paymentsIncomeThisMonth: Number(row.paymentsIncomeThisMonth ?? 0),
+    paymentsExpenseThisMonth: Number(row.paymentsExpenseThisMonth ?? 0),
     tasksByStatus,
   };
 }
@@ -359,6 +388,11 @@ export async function fetchDashboard(): Promise<CrmDashboard> {
 export async function listContacts(query: ListContactsQuery = {}): Promise<CrmPaginated<CrmContact>> {
   const raw = await api<unknown>(`/api/crm/contacts${toSearchParams(query)}`);
   return mapPaginated(raw, mapContact);
+}
+
+export async function fetchContactDetail(id: string): Promise<CrmContactDetail> {
+  const data = await api<Record<string, unknown>>(`/api/crm/contacts/${id}`);
+  return mapContactDetail(data);
 }
 
 export async function createContact(input: CreateContactInput): Promise<CrmContact> {

@@ -1,13 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -18,6 +11,7 @@ import {
   ModuleStatus,
   NativeSelect,
   RemoveAction,
+  SideSheet,
 } from "@/components/modules/shared";
 import {
   TASK_STATUS_LABELS,
@@ -65,7 +59,7 @@ export function TasksModule() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmTask | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -82,7 +76,7 @@ export function TasksModule() {
     setEditing(null);
     setForm(EMPTY);
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const openEdit = (task: CrmTask) => {
@@ -94,7 +88,7 @@ export function TasksModule() {
       dueAt: isoToLocalInput(task.dueAt),
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -106,7 +100,7 @@ export function TasksModule() {
     try {
       if (editing) await crm.updateTask(editing.id, toInput(form));
       else await crm.createTask(toInput(form));
-      setDialogOpen(false);
+      setSheetOpen(false);
     } catch {
       // toast handled in store
     } finally {
@@ -193,54 +187,52 @@ export function TasksModule() {
         </div>
       </ModuleStatus>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit task" : "Add task"}</DialogTitle>
-            </DialogHeader>
-            <Field id="task-title" label="Title" error={errors.title}>
-              <Input
-                id="task-title"
-                value={form.title}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="task-description" label="Description">
-              <Textarea
-                id="task-description"
-                value={form.description}
-                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="task-status" label="Status">
-              <NativeSelect
-                id="task-status"
-                value={form.status}
-                onChange={(value) => setForm((current) => ({ ...current, status: value as CrmTaskStatus }))}
-              >
-                {taskStatusOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="task-due" label="Due">
-              <Input
-                id="task-due"
-                type="datetime-local"
-                value={form.dueAt}
-                onChange={(event) => setForm((current) => ({ ...current, dueAt: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <DialogFooter>
-              <Button type="submit" className="rounded-xl" disabled={busy}>
-                {editing ? "Save" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <SideSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title={editing ? "Edit task" : "Add task"}
+        onSubmit={onSubmit}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            {editing ? "Save" : "Create"}
+          </Button>
+        }
+      >
+        <Field id="task-title" label="Title" error={errors.title}>
+          <Input
+            id="task-title"
+            value={form.title}
+            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="task-description" label="Description">
+          <Textarea
+            id="task-description"
+            value={form.description}
+            onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="task-status" label="Status">
+          <NativeSelect
+            id="task-status"
+            value={form.status}
+            onChange={(value) => setForm((current) => ({ ...current, status: value as CrmTaskStatus }))}
+          >
+            {taskStatusOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="task-due" label="Due">
+          <Input
+            id="task-due"
+            type="datetime-local"
+            value={form.dueAt}
+            onChange={(event) => setForm((current) => ({ ...current, dueAt: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+      </SideSheet>
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

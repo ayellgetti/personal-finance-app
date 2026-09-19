@@ -1,7 +1,6 @@
 import {
   CRM_CLIENT_STATUSES,
   CRM_CONTACT_TYPES,
-  CRM_ENQUIRY_DUE_DATE_WINDOWS,
   CRM_ENQUIRY_STATUSES,
   CRM_PAYMENT_MODES,
   CRM_PAYMENT_STATUSES,
@@ -9,7 +8,6 @@ import {
   CRM_TASK_STATUSES,
   type CrmClientStatus,
   type CrmContactType,
-  type CrmEnquiryDueDateWindow,
   type CrmEnquiryStatus,
   type CrmPaymentMode,
   type CrmPaymentStatus,
@@ -33,15 +31,6 @@ export const ENQUIRY_STATUS_LABELS: Record<CrmEnquiryStatus, string> = {
   negotiation: "Negotiation",
   schedule_meeting: "Schedule Meeting / Site Visit",
   closed: "Closed",
-};
-
-export const ENQUIRY_DUE_DATE_WINDOW_LABELS: Record<CrmEnquiryDueDateWindow, string> = {
-  within_7_days: "Within 7 days",
-  within_15_days: "Within 15 days",
-  within_1_month: "Within 1 month",
-  within_2_months: "Within 2 months",
-  within_3_months: "Within 3 months",
-  within_6_months: "Within 6 months",
 };
 
 export const CLIENT_STATUS_LABELS: Record<CrmClientStatus, string> = {
@@ -116,12 +105,52 @@ export function isoToLocalDateInput(iso: string | null | undefined): string {
   if (!iso) return "";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return toLocalDateKey(date);
 }
 
 export function localDateInputToIso(value: string): string {
   return new Date(`${value}T12:00:00`).toISOString();
+}
+
+export function toLocalDateKey(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function parseLocalDateKey(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+  return date;
+}
+
+export const DUE_DATE_SHORTCUTS = [
+  { id: "7d", label: "7 days", days: 7, months: 0 },
+  { id: "1m", label: "1 month", days: 0, months: 1 },
+  { id: "3m", label: "3 months", days: 0, months: 3 },
+  { id: "6m", label: "6 months", days: 0, months: 6 },
+] as const;
+
+export type DueDateShortcutId = (typeof DUE_DATE_SHORTCUTS)[number]["id"];
+
+export function applyDueDateShortcut(id: DueDateShortcutId, from = new Date()): Date {
+  const shortcut = DUE_DATE_SHORTCUTS.find((item) => item.id === id);
+  if (!shortcut) return new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  return new Date(
+    from.getFullYear(),
+    from.getMonth() + shortcut.months,
+    from.getDate() + shortcut.days,
+  );
+}
+
+export function dueDateShortcutKey(id: DueDateShortcutId, from = new Date()): string {
+  return toLocalDateKey(applyDueDateShortcut(id, from));
 }
 
 export function formatMoney(amount: number, currency = "INR"): string {
@@ -175,14 +204,6 @@ export function enquirySourceOptions() {
   return CRM_ENQUIRY_SOURCES.map((source) => (
     <option key={source} value={source}>
       {source}
-    </option>
-  ));
-}
-
-export function enquiryDueDateWindowOptions() {
-  return CRM_ENQUIRY_DUE_DATE_WINDOWS.map((window) => (
-    <option key={window} value={window}>
-      {ENQUIRY_DUE_DATE_WINDOW_LABELS[window]}
     </option>
   ));
 }

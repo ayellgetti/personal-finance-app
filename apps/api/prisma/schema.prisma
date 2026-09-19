@@ -715,6 +715,11 @@ enum CrmPaymentStatus {
   refunded
 }
 
+enum CrmPaymentReferenceType {
+  client
+  vendor
+}
+
 enum CrmTaskStatus {
   todo
   in_progress
@@ -897,32 +902,33 @@ model CrmClient {
 
   contact              CrmContact  @relation(fields: [contactId], references: [id], onDelete: Restrict)
   convertedFromEnquiry CrmEnquiry? @relation("CrmEnquiryConvertedClient", fields: [convertedFromEnquiryId], references: [id], onDelete: SetNull)
-  payments             CrmPayment[]
 }
 
 model CrmPayment {
-  id        String           @id @default(uuid())
-  clientId  String
-  enquiryId String?
-  amount    Float
-  currency  String           @default("INR")
-  type      PaymentType      @default(INCOME)
-  mode      PaymentMode
-  status    CrmPaymentStatus @default(pending)
-  paidAt    DateTime?
-  reference String?
-  isActive  Int              @default(1)
-  createdBy String?
-  createdAt DateTime         @default(now())
-  updatedBy String?
-  updatedAt DateTime         @updatedAt
-  deletedBy String?
-  deletedAt DateTime?
+  id            String                  @id @default(uuid())
+  /// "client" -> referenceId is a CrmClient.id; "vendor" -> referenceId is a CrmContact.id (type = vendor).
+  /// Polymorphic by design: no DB-level FK, referential integrity is enforced in PaymentService.
+  referenceType CrmPaymentReferenceType
+  referenceId   String
+  enquiryId     String?
+  amount        Float
+  currency      String                  @default("INR")
+  type          PaymentType             @default(INCOME)
+  mode          PaymentMode
+  status        CrmPaymentStatus        @default(pending)
+  paidAt        DateTime?
+  reference     String?
+  isActive      Int                     @default(1)
+  createdBy     String?
+  createdAt     DateTime                @default(now())
+  updatedBy     String?
+  updatedAt     DateTime                @updatedAt
+  deletedBy     String?
+  deletedAt     DateTime?
 
-  client  CrmClient   @relation(fields: [clientId], references: [id], onDelete: Restrict)
   enquiry CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
 
-  @@index([clientId])
+  @@index([referenceType, referenceId])
   @@index([status])
   @@index([paidAt])
   @@index([enquiryId])

@@ -3,13 +3,6 @@ import { CalendarDays, History, LayoutGrid, List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,15 +15,14 @@ import {
   NativeSelect,
   RemoveAction,
   RowActions,
+  SideSheet,
 } from "@/components/modules/shared";
 import {
   ENQUIRY_STATUS_LABELS,
   enquiryStatusOptions,
   formatDate,
   formatDateTime,
-  isoToLocalDateInput,
   isoToLocalInput,
-  localDateInputToIso,
   localInputToIso,
 } from "@/lib/crm/display";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
@@ -77,6 +69,32 @@ function isOverdue(item: CrmFollowUp, enquiry: CrmEnquiry | undefined): boolean 
   return new Date(item.nextFollowupDate).getTime() < Date.now();
 }
 
+export type FollowUpDueFilter = "all" | "today" | "tomorrow" | "upcoming";
+type DueFilter = FollowUpDueFilter;
+
+function endOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
+
+function isSameDay(left: Date, right: Date): boolean {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function matchesDueFilter(value: string | null, filter: DueFilter, now: Date): boolean {
+  if (filter === "all") return true;
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  if (filter === "today") return isSameDay(date, now);
+  if (filter === "tomorrow") return isSameDay(date, tomorrow);
+  return date.getTime() > endOfDay(tomorrow).getTime();
+}
+
 type FormState = {
   enquiryId: string;
   stage: CrmEnquiryStatus;
@@ -105,13 +123,23 @@ function toInput(form: FormState): CreateFollowUpInput {
     enquiryId: form.enquiryId,
     stage: form.stage,
     dueAt: form.dueAt ? localInputToIso(form.dueAt) : new Date().toISOString(),
-    nextFollowupDate: localDateInputToIso(form.nextFollowupDate),
+    nextFollowupDate: localInputToIso(form.nextFollowupDate),
     notes: form.notes.trim() || null,
   };
 }
 
 function StageBadge({ stage }: { stage: CrmEnquiryStatus }) {
   return <Badge variant="secondary">{ENQUIRY_STATUS_LABELS[stage]}</Badge>;
+}
+
+function enquirySelectLabel(
+  enquiry: CrmEnquiry,
+  contact: { name: string; mobile: string } | undefined,
+): string {
+  const parts = [contact?.name, contact?.mobile].filter((part): part is string => Boolean(part?.trim()));
+  const customer = parts.join(" · ");
+  const title = `${enquiry.title} — ${ENQUIRY_STATUS_LABELS[enquiry.status]}`;
+  return customer ? `${customer} · ${title}` : title;
 }
 
 function FollowUpTable({
@@ -153,7 +181,7 @@ function FollowUpTable({
               <TableCell><StageBadge stage={item.stage} /></TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {formatDate(item.nextFollowupDate)}
+                  {formatDateTime(item.nextFollowupDate)}
                   {overdue ? <Badge variant="destructive">Overdue</Badge> : null}
                 </div>
               </TableCell>
@@ -213,7 +241,7 @@ function FollowUpCards({
             <CardContent className="space-y-3">
               <StageBadge stage={item.stage} />
               <p className="text-xs text-muted-foreground">
-                Next follow-up {formatDate(item.nextFollowupDate)}
+                Next follow-up {formatDateTime(item.nextFollowupDate)}
               </p>
               {item.notes ? (
                 <p className="line-clamp-3 text-xs text-muted-foreground">{item.notes}</p>
@@ -316,10 +344,14 @@ function FollowUpTimelines({
   enquiries,
   followUps,
   contactName,
+  canCreate,
+  onFollow,
 }: {
   enquiries: CrmEnquiry[];
   followUps: CrmFollowUp[];
   contactName: (id: string) => string;
+  canCreate: boolean;
+  onFollow: (enquiry: CrmEnquiry) => void;
 }) {
   if (enquiries.length === 0) {
     return <p className="text-sm text-muted-foreground">No leads to track</p>;
@@ -341,11 +373,21 @@ function FollowUpTimelines({
                   <CardTitle className="text-base leading-snug">{enquiry.title}</CardTitle>
                   <CardDescription>{contactName(enquiry.contactId)}</CardDescription>
                 </div>
-                <div className="flex flex-wrap justify-end gap-1">
+                <div className="flex flex-wrap items-center justify-end gap-1">
                   <StageBadge stage={enquiry.status} />
                   {overdue ? <Badge variant="destructive">Overdue</Badge> : null}
                   {enquiry.status === "closed" ? (
                     <Badge variant="outline">{enquiry.closedReason === "Booked" ? "Booked" : "Closed"}</Badge>
+                  ) : null}
+                  {canCreate && enquiry.status !== "closed" ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 rounded-lg px-2"
+                      onClick={() => onFollow(enquiry)}
+                    >
+                      Add followup
+                    </Button>
                   ) : null}
                 </div>
               </div>
@@ -360,18 +402,23 @@ function FollowUpTimelines({
   );
 }
 
-export function FollowUpsModule() {
+export function FollowUpsModule({
+  initialDueFilter = "all",
+}: {
+  initialDueFilter?: FollowUpDueFilter;
+} = {}) {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.followUpsRead);
-  const [view, setView] = useState<ViewMode>("table");
+  const [view, setView] = useState<ViewMode>("timeline");
   const [enquiryFilter, setEnquiryFilter] = useState("");
   const [stageFilter, setStageFilter] = useState("");
   const [outcomeFilter, setOutcomeFilter] = useState<"all" | "open" | "closed">("all");
+  const [dueFilter, setDueFilter] = useState<DueFilter>(initialDueFilter);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmFollowUp | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [cursor, setCursor] = useState(() => new Date());
@@ -434,28 +481,39 @@ export function FollowUpsModule() {
   }, [sessionReady, allowed, view, range.from, range.to]);
 
   const enquiryById = (id: string) => crm.enquiries.items.find((enquiry) => enquiry.id === id);
-  const contactName = (id: string) =>
-    crm.contacts.items.find((contact) => contact.id === id)?.name ?? id;
+  const contactById = (id: string) => crm.contacts.items.find((contact) => contact.id === id);
+  const contactName = (id: string) => contactById(id)?.name ?? id;
 
   const timelineEnquiries = useMemo(() => {
+    const now = new Date();
     let items = crm.enquiries.items;
     if (enquiryFilter) items = items.filter((enquiry) => enquiry.id === enquiryFilter);
     if (outcomeFilter === "open") items = items.filter((enquiry) => enquiry.status !== "closed");
     if (outcomeFilter === "closed") items = items.filter((enquiry) => enquiry.status === "closed");
+    if (dueFilter !== "all") {
+      items = items.filter((enquiry) => matchesDueFilter(enquiry.nextFollowupDate, dueFilter, now));
+    }
     return items;
-  }, [crm.enquiries.items, enquiryFilter, outcomeFilter]);
+  }, [crm.enquiries.items, enquiryFilter, outcomeFilter, dueFilter]);
 
-  const openCreate = () => {
+  const filteredFollowUps = useMemo(() => {
+    if (dueFilter === "all") return crm.followUps.items;
+    const now = new Date();
+    return crm.followUps.items.filter((item) => matchesDueFilter(item.nextFollowupDate, dueFilter, now));
+  }, [crm.followUps.items, dueFilter]);
+
+  const openCreate = (enquiry?: CrmEnquiry) => {
+    const selected = enquiry ?? crm.enquiries.items[0];
     const now = new Date();
     setEditing(null);
     setForm({
       ...EMPTY,
-      enquiryId: crm.enquiries.items[0]?.id ?? "",
-      stage: crm.enquiries.items[0]?.status ?? "new",
+      enquiryId: selected?.id ?? "",
+      stage: selected?.status ?? "new",
       dueAt: isoToLocalInput(now.toISOString()),
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const openEdit = (item: CrmFollowUp) => {
@@ -464,11 +522,11 @@ export function FollowUpsModule() {
       enquiryId: item.enquiryId,
       stage: item.stage,
       dueAt: isoToLocalInput(item.dueAt),
-      nextFollowupDate: isoToLocalDateInput(item.nextFollowupDate),
+      nextFollowupDate: isoToLocalInput(item.nextFollowupDate),
       notes: item.notes ?? "",
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const handleEnquiryChange = (id: string) => {
@@ -489,7 +547,7 @@ export function FollowUpsModule() {
     try {
       if (editing) await crm.updateFollowUp(editing.id, toInput(form));
       else await crm.createFollowUp(toInput(form));
-      setDialogOpen(false);
+      setSheetOpen(false);
       if (view === "calendar") {
         const result = await listFollowUpCalendar(range);
         setCalendarItems(result.items);
@@ -523,7 +581,7 @@ export function FollowUpsModule() {
       ? calendarItems.length === 0 && calendarOverdue.length === 0
       : view === "timeline"
         ? timelineEnquiries.length === 0
-        : crm.followUps.items.length === 0;
+        : filteredFollowUps.length === 0;
 
   return (
     <ModulePage crumb="Follow-ups">
@@ -541,7 +599,7 @@ export function FollowUpsModule() {
                   <option value="">All enquiries</option>
                   {crm.enquiries.items.map((enquiry) => (
                     <option key={enquiry.id} value={enquiry.id}>
-                      {enquiry.title}
+                      {enquirySelectLabel(enquiry, contactById(enquiry.contactId))}
                     </option>
                   ))}
                 </NativeSelect>
@@ -572,6 +630,19 @@ export function FollowUpsModule() {
                   </NativeSelect>
                 </Field>
               )}
+              <Field id="followup-due-filter" label="When">
+                <NativeSelect
+                  id="followup-due-filter"
+                  aria-label="When"
+                  value={dueFilter}
+                  onChange={(value) => setDueFilter(value as DueFilter)}
+                >
+                  <option value="all">All</option>
+                  <option value="today">Today</option>
+                  <option value="tomorrow">Tomorrow</option>
+                  <option value="upcoming">Upcoming</option>
+                </NativeSelect>
+              </Field>
             </>
           ) : (
             <div className="flex items-center gap-2">
@@ -639,7 +710,7 @@ export function FollowUpsModule() {
         </div>
 
         {crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) ? (
-          <Button type="button" className="rounded-xl" onClick={openCreate}>
+          <Button type="button" className="rounded-xl" onClick={() => openCreate()}>
             Add follow-up
           </Button>
         ) : null}
@@ -662,14 +733,14 @@ export function FollowUpsModule() {
       >
         {view === "table" ? (
           <FollowUpTable
-            items={crm.followUps.items}
+            items={filteredFollowUps}
             enquiryById={enquiryById}
             onEdit={openEdit}
             onRemove={setRemoveId}
           />
         ) : view === "card" ? (
           <FollowUpCards
-            items={crm.followUps.items}
+            items={filteredFollowUps}
             enquiryById={enquiryById}
             onEdit={openEdit}
             onRemove={setRemoveId}
@@ -679,6 +750,8 @@ export function FollowUpsModule() {
             enquiries={timelineEnquiries}
             followUps={crm.followUps.items}
             contactName={contactName}
+            canCreate={crm.hasPermission(CRM_PERMISSIONS.followUpsCreate)}
+            onFollow={openCreate}
           />
         ) : (
           <FollowUpCalendarView
@@ -691,122 +764,113 @@ export function FollowUpsModule() {
         )}
       </ModuleStatus>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>
-                {editing ? "Edit follow-up" : "Add follow-up"}
-              </DialogTitle>
-            </DialogHeader>
+      <SideSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title={editing ? "Edit follow-up" : "Add follow-up"}
+        onSubmit={onSubmit}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            {editing ? "Save" : "Create"}
+          </Button>
+        }
+      >
+        <Field id="followup-enquiry" label="Enquiry" error={errors.enquiryId}>
+          <NativeSelect
+            id="followup-enquiry"
+            value={form.enquiryId}
+            onChange={handleEnquiryChange}
+          >
+            <option value="">Select enquiry</option>
+            {crm.enquiries.items.map((enquiry) => (
+              <option key={enquiry.id} value={enquiry.id}>
+                {enquirySelectLabel(enquiry, contactById(enquiry.contactId))}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
 
-            <Field id="followup-enquiry" label="Enquiry" error={errors.enquiryId}>
-              <NativeSelect
-                id="followup-enquiry"
-                value={form.enquiryId}
-                onChange={handleEnquiryChange}
-              >
-                <option value="">Select enquiry</option>
-                {crm.enquiries.items.map((enquiry) => (
-                  <option key={enquiry.id} value={enquiry.id}>
-                    {enquiry.title} — {ENQUIRY_STATUS_LABELS[enquiry.status]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
+        <Field id="followup-stage" label="Status">
+          <NativeSelect
+            id="followup-stage"
+            value={form.stage}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, stage: value as CrmEnquiryStatus }))
+            }
+          >
+            {CRM_ENQUIRY_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {ENQUIRY_STATUS_LABELS[status]}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
 
-            <Field id="followup-stage" label="Status">
-              <NativeSelect
-                id="followup-stage"
-                value={form.stage}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, stage: value as CrmEnquiryStatus }))
-                }
-              >
-                {CRM_ENQUIRY_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {ENQUIRY_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
+        <Field id="followup-due" label="Activity date">
+          <Input
+            id="followup-due"
+            type="datetime-local"
+            value={form.dueAt}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, dueAt: event.target.value }))
+            }
+            className="rounded-xl"
+          />
+        </Field>
 
-            <Field id="followup-due" label="Activity date">
-              <Input
-                id="followup-due"
-                type="datetime-local"
-                value={form.dueAt}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, dueAt: event.target.value }))
-                }
-                className="rounded-xl"
-              />
-            </Field>
+        <Field id="followup-next" label="Next follow-up date & time" error={errors.nextFollowupDate}>
+          <Input
+            id="followup-next"
+            type="datetime-local"
+            value={form.nextFollowupDate}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, nextFollowupDate: event.target.value }))
+            }
+            className="rounded-xl"
+          />
+        </Field>
 
-            <Field id="followup-next" label="Next follow-up date" error={errors.nextFollowupDate}>
-              <Input
-                id="followup-next"
-                type="date"
-                value={form.nextFollowupDate}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, nextFollowupDate: event.target.value }))
-                }
-                className="rounded-xl"
-              />
-            </Field>
+        <Field id="followup-notes" label="Notes">
+          <Textarea
+            id="followup-notes"
+            value={form.notes}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, notes: event.target.value }))
+            }
+            className="rounded-xl"
+          />
+        </Field>
+      </SideSheet>
 
-            <Field id="followup-notes" label="Notes">
-              <Textarea
-                id="followup-notes"
-                value={form.notes}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, notes: event.target.value }))
-                }
-                className="rounded-xl"
-              />
-            </Field>
-
-            <DialogFooter>
-              <Button type="submit" className="rounded-xl" disabled={busy}>
-                {editing ? "Save" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={Boolean(selectedDay)} onOpenChange={(open) => !open && setSelectedDay(null)}>
-        <DialogContent>
-          {selectedDay ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>Contact due {formatDate(selectedDay.toISOString())}</DialogTitle>
-              </DialogHeader>
-              {selectedItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No enquiries due this day.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {selectedItems.map((item) => (
-                    <li key={`${item.kind}-${item.enquiryId}`} className="rounded-xl border p-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{item.title}</p>
-                        <Badge variant="secondary">
-                          {item.kind === "new_enquiry" ? "New enquiry" : "Follow-up"}
-                        </Badge>
-                        <StageBadge stage={item.status} />
-                        {item.overdue ? <Badge variant="destructive">Overdue</Badge> : null}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Next follow-up {formatDate(item.nextFollowupDate)}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <SideSheet
+        open={Boolean(selectedDay)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedDay(null);
+        }}
+        title={selectedDay ? `Contact due ${formatDate(selectedDay.toISOString())}` : "Contact due"}
+      >
+        {selectedItems.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No enquiries due this day.</p>
+        ) : (
+          <ul className="space-y-3">
+            {selectedItems.map((item) => (
+              <li key={`${item.kind}-${item.enquiryId}`} className="rounded-xl border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{item.title}</p>
+                  <Badge variant="secondary">
+                    {item.kind === "new_enquiry" ? "New enquiry" : "Follow-up"}
+                  </Badge>
+                  <StageBadge stage={item.status} />
+                  {item.overdue ? <Badge variant="destructive">Overdue</Badge> : null}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Next follow-up {formatDateTime(item.nextFollowupDate)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SideSheet>
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

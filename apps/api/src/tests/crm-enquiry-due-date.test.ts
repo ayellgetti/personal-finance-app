@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isFollowUpOverdue, resolveEnquiryDueDate } from "../modules/sales-crm/enquiries/enquiry-due-date";
+import { endOfLocalDay, isFollowUpOverdue } from "../modules/sales-crm/enquiries/enquiry-due-date";
 
-test("resolveEnquiryDueDate maps each window from the start date", () => {
-  const from = new Date("2026-09-17T10:00:00.000Z");
-  const seven = resolveEnquiryDueDate("within_7_days", from);
-  assert.equal(seven.getDate(), from.getDate() + 7);
-  const month = resolveEnquiryDueDate("within_1_month", from);
-  assert.equal(month.getMonth(), from.getMonth() + 1);
+test("endOfLocalDay keeps the calendar day and sets the last millisecond", () => {
+  const from = new Date(2026, 8, 17, 10, 0, 0);
+  const end = endOfLocalDay(from);
+  assert.equal(end.getFullYear(), 2026);
+  assert.equal(end.getMonth(), 8);
+  assert.equal(end.getDate(), 17);
+  assert.equal(end.getHours(), 23);
+  assert.equal(end.getMinutes(), 59);
+  assert.equal(end.getSeconds(), 59);
+  assert.equal(end.getMilliseconds(), 999);
 });
 
 test("isFollowUpOverdue is true only when next date passed and enquiry is open", () => {

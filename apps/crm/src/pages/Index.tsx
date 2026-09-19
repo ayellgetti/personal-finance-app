@@ -5,7 +5,7 @@ import { ClientsModule } from "@/components/modules/ClientsModule";
 import { ContactsModule } from "@/components/modules/ContactsModule";
 import { DashboardModule } from "@/components/modules/DashboardModule";
 import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
-import { FollowUpsModule } from "@/components/modules/FollowUpsModule";
+import { FollowUpsModule, type FollowUpDueFilter } from "@/components/modules/FollowUpsModule";
 import { PaymentsModule } from "@/components/modules/PaymentsModule";
 import { ProfileModule } from "@/components/modules/ProfileModule";
 import { RolesModule } from "@/components/modules/RolesModule";
@@ -33,12 +33,14 @@ const Index = () => {
   const [view, setView] = useState<CrmViewId>("dashboard");
   const [contactHighlightId, setContactHighlightId] = useState<string | null>(null);
   const [paymentClientId, setPaymentClientId] = useState<string | null>(null);
+  const [followUpDueFilter, setFollowUpDueFilter] = useState<FollowUpDueFilter>("all");
   const meta = META[view];
 
   const onSelect = (next: CrmViewId) => {
     setView(next);
     if (next !== "contacts") setContactHighlightId(null);
     if (next !== "payments") setPaymentClientId(null);
+    if (next !== "followUps") setFollowUpDueFilter("all");
   };
 
   return (
@@ -49,10 +51,17 @@ const Index = () => {
       title={meta.title}
       description={meta.description}
     >
-      {view === "dashboard" ? <DashboardModule /> : null}
+      {view === "dashboard" ? (
+        <DashboardModule
+          onOpenFollowUps={(dueFilter) => {
+            setFollowUpDueFilter(dueFilter);
+            setView("followUps");
+          }}
+        />
+      ) : null}
       {view === "contacts" ? <ContactsModule highlightId={contactHighlightId} /> : null}
       {view === "enquiries" ? <EnquiriesModule /> : null}
-      {view === "followUps" ? <FollowUpsModule /> : null}
+      {view === "followUps" ? <FollowUpsModule initialDueFilter={followUpDueFilter} /> : null}
       {view === "clients" ? (
         <ClientsModule
           onOpenContact={(contactId) => {

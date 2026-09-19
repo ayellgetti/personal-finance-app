@@ -3,7 +3,13 @@ import test from "node:test";
 import { HttpError } from "../utils/http-error.util";
 import { ContactService } from "../modules/sales-crm/contacts/contact.service";
 import { createContactBodySchema } from "../modules/sales-crm/contacts/contact.request";
-import type { CrmContactModel } from "../models/index";
+import type {
+  CrmClientModel,
+  CrmContactModel,
+  CrmEnquiryModel,
+  CrmFollowUpModel,
+  CrmPaymentModel,
+} from "../models/index";
 import { fakeCrud } from "./crm-test-utils";
 
 type FakeContact = {
@@ -104,6 +110,130 @@ test("duplicate active contact mobile is 409", async () => {
       }),
     (error: unknown) => error instanceof HttpError && error.status === 409,
   );
+});
+
+test("contact detail groups follow-ups under each enquiry and lists related payments", async () => {
+  const contacts = fakeCrud("contact", [
+    {
+      id: "c-1",
+      name: "Ada",
+      mobile: "1111111111",
+      type: "client" as const,
+      email: null,
+      companyName: null,
+      notes: null,
+      isActive: 1,
+    },
+    {
+      id: "c-other",
+      name: "Other",
+      mobile: "9999999999",
+      type: "lead" as const,
+      email: null,
+      companyName: null,
+      notes: null,
+      isActive: 1,
+    },
+  ]);
+  const enquiries = fakeCrud("enquiry", [
+    {
+      id: "e-new",
+      contactId: "c-1",
+      title: "Newer hall booking",
+      source: "Walk-in",
+      status: "new",
+      createdAt: new Date("2026-09-18T10:00:00.000Z"),
+      isActive: 1,
+    },
+    {
+      id: "e-old",
+      contactId: "c-1",
+      title: "Older catering lead",
+      source: "Website",
+      status: "contacted",
+      createdAt: new Date("2026-09-10T10:00:00.000Z"),
+      isActive: 1,
+    },
+    {
+      id: "e-other",
+      contactId: "c-other",
+      title: "Someone else",
+      source: "Ads",
+      status: "new",
+      createdAt: new Date("2026-09-19T10:00:00.000Z"),
+      isActive: 1,
+    },
+  ]);
+  const followUps = fakeCrud("followup", [
+    {
+      id: "fu-1",
+      enquiryId: "e-old",
+      contactId: "c-1",
+      stage: "contacted",
+      dueAt: new Date("2026-09-12T09:00:00.000Z"),
+      notes: "Called about catering",
+      isActive: 1,
+    },
+    {
+      id: "fu-other",
+      enquiryId: "e-other",
+      contactId: "c-other",
+      stage: "new",
+      dueAt: new Date("2026-09-19T11:00:00.000Z"),
+      notes: "Not this contact",
+      isActive: 1,
+    },
+  ]);
+  const clients = fakeCrud("client", [
+    {
+      id: "client-1",
+      contactId: "c-1",
+      billingName: "Ada LLC",
+      isActive: 1,
+    },
+  ]);
+  const payments = fakeCrud("payment", [
+    {
+      id: "pay-client",
+      referenceType: "client",
+      referenceId: "client-1",
+      enquiryId: "e-old",
+      amount: 15000,
+      status: "paid",
+      paidAt: new Date("2026-09-16T00:00:00.000Z"),
+      createdAt: new Date("2026-09-16T00:00:00.000Z"),
+      isActive: 1,
+    },
+    {
+      id: "pay-other",
+      referenceType: "client",
+      referenceId: "someone-else",
+      enquiryId: "e-other",
+      amount: 99,
+      status: "paid",
+      paidAt: new Date("2026-09-17T00:00:00.000Z"),
+      createdAt: new Date("2026-09-17T00:00:00.000Z"),
+      isActive: 1,
+    },
+  ]);
+  const contactsService = new ContactService(
+    contacts.model as unknown as CrmContactModel,
+    enquiries.model as unknown as CrmEnquiryModel,
+    followUps.model as unknown as CrmFollowUpModel,
+    clients.model as unknown as CrmClientModel,
+    payments.model as unknown as CrmPaymentModel,
+  );
+
+  const detail = await contactsService.getDetail("c-1");
+  assert.equal(detail.contact.name, "Ada");
+  assert.deepEqual(
+    detail.enquiries.map((enquiry) => enquiry.id),
+    ["e-new", "e-old"],
+  );
+  assert.equal(detail.enquiries[0]?.followUps.length, 0);
+  assert.equal(detail.enquiries[1]?.followUps[0]?.notes, "Called about catering");
+  assert.equal(detail.payments.length, 1);
+  assert.equal(detail.payments[0]?.id, "pay-client");
 });
 
 test("contact create rejects empty name and invalid mobile", () => {

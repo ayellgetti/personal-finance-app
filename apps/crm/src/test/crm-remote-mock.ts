@@ -3,6 +3,7 @@ import {
   ALL_CRM_PERMISSIONS,
   type CrmClient,
   type CrmContact,
+  type CrmContactDetail,
   type CrmCalendarItem,
   type CrmEnquiry,
   type CrmMe,
@@ -43,7 +44,10 @@ export const fetchDashboard = vi.fn(async () => ({
   customerDueToday: 0,
   customerDueItems: [],
   overdueFollowUps: 0,
+  followUpsToday: 0,
   paymentsPaidThisMonth: 0,
+  paymentsIncomeThisMonth: 0,
+  paymentsExpenseThisMonth: 0,
   tasksByStatus: { todo: 0, in_progress: 0, in_review: 0, done: 0 },
 }));
 export const listContacts = vi.fn(async (query?: { type?: string; search?: string; page?: number; limit?: number }) => {
@@ -53,6 +57,19 @@ export const listContacts = vi.fn(async (query?: { type?: string; search?: strin
 export const createContact = vi.fn();
 export const updateContact = vi.fn();
 export const removeContact = vi.fn();
+export const fetchContactDetail = vi.fn(async (id: string): Promise<CrmContactDetail> => ({
+  contact: {
+    id,
+    name: "",
+    mobile: "",
+    type: "lead",
+    email: null,
+    companyName: null,
+    notes: null,
+  },
+  enquiries: [],
+  payments: [],
+}));
 export const listEnquiries = vi.fn(async (query?: { status?: string; page?: number; limit?: number }) => {
   void query;
   return emptyPage<CrmEnquiry>();

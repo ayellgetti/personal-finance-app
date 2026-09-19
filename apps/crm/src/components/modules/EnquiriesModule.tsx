@@ -1,5 +1,5 @@
 import { DragEvent, FormEvent, useEffect, useState } from "react";
-import { Columns, LayoutGrid, List } from "lucide-react";
+import { CalendarPlus, CheckCircle2, Columns, Eye, LayoutGrid, List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,21 +25,26 @@ import {
   ConfirmRemoveDialog,
   EditAction,
   Field,
+  IconAction,
   ModulePage,
   ModuleStatus,
   NativeSelect,
   RemoveAction,
   RowActions,
+  SideSheet,
 } from "@/components/modules/shared";
+import { DatePicker } from "@/components/modules/DatePicker";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
 import {
-  ENQUIRY_DUE_DATE_WINDOW_LABELS,
   ENQUIRY_STATUS_LABELS,
   contactTypeOptions,
-  enquiryDueDateWindowOptions,
   enquirySourceOptions,
   enquiryStatusOptions,
   formatDate,
+  isoToLocalDateInput,
+  isoToLocalInput,
+  localDateInputToIso,
+  localInputToIso,
 } from "@/lib/crm/display";
 import { createContact, listFollowUps } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
@@ -50,7 +55,6 @@ import {
   type CreateEnquiryInput,
   type CrmContactType,
   type CrmEnquiry,
-  type CrmEnquiryDueDateWindow,
   type CrmEnquiryStatus,
   type CrmFollowUp,
 } from "@/types/crm";
@@ -178,6 +182,87 @@ function StageMoveDialog({
   );
 }
 
+// ─── Quick follow-up dialog ───────────────────────────────────────────────────
+
+function QuickFollowUpDialog({
+  enquiry,
+  contactName,
+  onCancel,
+  onConfirm,
+}: {
+  enquiry: CrmEnquiry;
+  contactName: (id: string) => string;
+  onCancel: () => void;
+  onConfirm: (nextFollowupDate: string, notes: string) => Promise<void>;
+}) {
+  const [nextFollowupDate, setNextFollowupDate] = useState(() => isoToLocalInput(enquiry.nextFollowupDate));
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const handle = async () => {
+    if (!nextFollowupDate) {
+      setError("Next follow-up date is required");
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await onConfirm(localInputToIso(nextFollowupDate), notes.trim());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SideSheet
+      open
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+      title="Add follow-up"
+      description={
+        <>
+          <span className="font-medium text-foreground">{enquiry.title}</span> · {contactName(enquiry.contactId)}
+        </>
+      }
+      onSubmit={(event) => {
+        event.preventDefault();
+        void handle();
+      }}
+      footer={
+        <>
+          <Button type="button" variant="outline" className="rounded-xl" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <Field id="quick-followup-next" label="Next follow-up date & time" error={error ?? undefined}>
+        <Input
+          id="quick-followup-next"
+          type="datetime-local"
+          value={nextFollowupDate}
+          onChange={(event) => setNextFollowupDate(event.target.value)}
+          className="rounded-xl"
+          autoFocus
+        />
+      </Field>
+      <Field id="quick-followup-notes" label="Notes">
+        <Textarea
+          id="quick-followup-notes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          className="rounded-xl"
+        />
+      </Field>
+    </SideSheet>
+  );
+}
+
 // ─── Detail sheet ─────────────────────────────────────────────────────────────
 
 function EnquiryDetailSheet({
@@ -187,6 +272,7 @@ function EnquiryDetailSheet({
   onEdit,
   onMove,
   onRemove,
+  onFollow,
 }: {
   enquiry: CrmEnquiry | null;
   contactName: (id: string) => string;
@@ -194,6 +280,7 @@ function EnquiryDetailSheet({
   onEdit: (enquiry: CrmEnquiry) => void;
   onMove: (enquiry: CrmEnquiry, stage: CrmEnquiryStatus) => void;
   onRemove: (id: string) => void;
+  onFollow: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   const [followUps, setFollowUps] = useState<CrmFollowUp[]>([]);
@@ -252,12 +339,7 @@ function EnquiryDetailSheet({
                 ) : null}
                 <div>
                   <dt className="text-xs text-muted-foreground">Due date</dt>
-                  <dd className="mt-0.5 font-medium">
-                    {enquiry.dueDateWindow
-                      ? ENQUIRY_DUE_DATE_WINDOW_LABELS[enquiry.dueDateWindow]
-                      : "—"}
-                    {enquiry.dueDate ? ` · ${formatDate(enquiry.dueDate)}` : ""}
-                  </dd>
+                  <dd className="mt-0.5 font-medium">{formatDate(enquiry.dueDate)}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Next follow-up</dt>
@@ -284,6 +366,17 @@ function EnquiryDetailSheet({
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2">
+                {crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && enquiry.status !== "closed" ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => { onFollow(enquiry); onClose(); }}
+                  >
+                    <CalendarPlus className="mr-1 h-4 w-4" /> Add follow-up
+                  </Button>
+                ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesConvert) && enquiry.status !== "closed" ? (
                   <Button
                     type="button"
@@ -291,7 +384,7 @@ function EnquiryDetailSheet({
                     className="rounded-xl"
                     onClick={() => { void crm.convertEnquiry(enquiry.id); onClose(); }}
                   >
-                    Convert
+                    <CheckCircle2 className="mr-1 h-4 w-4" /> Convert
                   </Button>
                 ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
@@ -346,7 +439,7 @@ type FormState = {
   source: string;
   status: CrmEnquiryStatus;
   notes: string;
-  dueDateWindow: CrmEnquiryDueDateWindow | "";
+  dueDate: string;
 };
 
 const EMPTY: FormState = {
@@ -359,7 +452,7 @@ const EMPTY: FormState = {
   source: "",
   status: "new",
   notes: "",
-  dueDateWindow: "",
+  dueDate: "",
 };
 
 function validate(form: FormState): Record<string, string> {
@@ -372,7 +465,7 @@ function validate(form: FormState): Record<string, string> {
   }
   if (!form.title.trim()) errors.title = "Title is required";
   if (!form.source.trim()) errors.source = "Source is required";
-  if (!form.dueDateWindow) errors.dueDateWindow = "Due date is required";
+  if (!form.dueDate) errors.dueDate = "Due date is required";
   return errors;
 }
 
@@ -383,7 +476,7 @@ function toEnquiryInput(contactId: string, form: FormState): CreateEnquiryInput 
     source: form.source.trim(),
     status: form.status,
     notes: form.notes.trim() || null,
-    dueDateWindow: form.dueDateWindow as CrmEnquiryDueDateWindow,
+    dueDate: localDateInputToIso(form.dueDate),
   };
 }
 
@@ -395,12 +488,14 @@ function EnquiryTable({
   onView,
   onEdit,
   onRemove,
+  onFollow,
 }: {
   items: CrmEnquiry[];
   contactName: (id: string) => string;
   onView: (enquiry: CrmEnquiry) => void;
   onEdit: (enquiry: CrmEnquiry) => void;
   onRemove: (id: string) => void;
+  onFollow: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   return (
@@ -433,13 +528,22 @@ function EnquiryTable({
             <TableCell><StageBadge status={enquiry.status} /></TableCell>
             <TableCell>
               <RowActions>
-                <Button type="button" size="sm" variant="ghost" className="rounded-xl" onClick={() => onView(enquiry)}>
-                  View
-                </Button>
+                <IconAction label="View" onClick={() => onView(enquiry)}>
+                  <Eye className="h-4 w-4" />
+                </IconAction>
+                {crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && enquiry.status !== "closed" ? (
+                  <IconAction label="Add follow-up" onClick={() => onFollow(enquiry)}>
+                    <CalendarPlus className="h-4 w-4" />
+                  </IconAction>
+                ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesConvert) && enquiry.status !== "closed" ? (
-                  <Button type="button" size="sm" className="rounded-xl" onClick={() => void crm.convertEnquiry(enquiry.id)}>
-                    Convert
-                  </Button>
+                  <IconAction
+                    label="Convert"
+                    className="text-primary hover:text-primary"
+                    onClick={() => void crm.convertEnquiry(enquiry.id)}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                  </IconAction>
                 ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
                   <EditAction onClick={() => onEdit(enquiry)} />
@@ -464,12 +568,14 @@ function EnquiryCards({
   onView,
   onEdit,
   onRemove,
+  onFollow,
 }: {
   items: CrmEnquiry[];
   contactName: (id: string) => string;
   onView: (enquiry: CrmEnquiry) => void;
   onEdit: (enquiry: CrmEnquiry) => void;
   onRemove: (id: string) => void;
+  onFollow: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   return (
@@ -501,10 +607,22 @@ function EnquiryCards({
               <p className="text-xs text-muted-foreground">Due {formatDate(enquiry.dueDate)}</p>
             ) : null}
             <RowActions>
+              <IconAction label="View" onClick={() => onView(enquiry)}>
+                <Eye className="h-4 w-4" />
+              </IconAction>
+              {crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && enquiry.status !== "closed" ? (
+                <IconAction label="Add follow-up" onClick={() => onFollow(enquiry)}>
+                  <CalendarPlus className="h-4 w-4" />
+                </IconAction>
+              ) : null}
               {crm.hasPermission(CRM_PERMISSIONS.enquiriesConvert) && enquiry.status !== "closed" ? (
-                <Button type="button" size="sm" className="rounded-xl" onClick={() => void crm.convertEnquiry(enquiry.id)}>
-                  Convert
-                </Button>
+                <IconAction
+                  label="Convert"
+                  className="text-primary hover:text-primary"
+                  onClick={() => void crm.convertEnquiry(enquiry.id)}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                </IconAction>
               ) : null}
               {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
                 <EditAction onClick={() => onEdit(enquiry)} />
@@ -530,6 +648,7 @@ function EnquiryKanban({
   onEdit,
   onRemove,
   onMove,
+  onFollow,
 }: {
   items: CrmEnquiry[];
   contactName: (id: string) => string;
@@ -537,6 +656,7 @@ function EnquiryKanban({
   onEdit: (enquiry: CrmEnquiry) => void;
   onRemove: (id: string) => void;
   onMove: (enquiry: CrmEnquiry, stage: CrmEnquiryStatus) => void;
+  onFollow: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   const [dragId, setDragId] = useState<string | null>(null);
@@ -570,8 +690,9 @@ function EnquiryKanban({
   };
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${CRM_ENQUIRY_STATUSES.length}, minmax(220px, 1fr))` }}>
+    <div className="pb-4">
+      {/* 4 columns per row up to xl (so 8 stages wrap into 2 rows of 4); a single row on xl+ screens */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-8">
         {CRM_ENQUIRY_STATUSES.map((stage) => {
           const columnItems = items.filter((e) => e.status === stage);
           const isDragTarget = dropTarget === stage && dragId !== null;
@@ -643,24 +764,22 @@ function EnquiryKanban({
                     ) : null}
                     {/* Action buttons */}
                     <div className="mt-2 flex flex-wrap gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 rounded-lg px-2 text-xs"
-                        onClick={() => onView(enquiry)}
-                      >
-                        View
-                      </Button>
+                      <IconAction className="h-7 w-7" label="View" onClick={() => onView(enquiry)}>
+                        <Eye className="h-4 w-4" />
+                      </IconAction>
+                      {crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && enquiry.status !== "closed" ? (
+                        <IconAction className="h-7 w-7" label="Add follow-up" onClick={() => onFollow(enquiry)}>
+                          <CalendarPlus className="h-4 w-4" />
+                        </IconAction>
+                      ) : null}
                       {crm.hasPermission(CRM_PERMISSIONS.enquiriesConvert) && enquiry.status !== "closed" ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-6 rounded-lg px-2 text-xs"
+                        <IconAction
+                          className="h-7 w-7 text-primary hover:text-primary"
+                          label="Convert"
                           onClick={() => void crm.convertEnquiry(enquiry.id)}
                         >
-                          Convert
-                        </Button>
+                          <CheckCircle2 className="h-4 w-4" />
+                        </IconAction>
                       ) : null}
                       {crm.hasPermission(CRM_PERMISSIONS.enquiriesUpdate) ? (
                         <EditAction className="h-7 w-7" onClick={() => onEdit(enquiry)} />
@@ -696,13 +815,14 @@ export function EnquiriesModule() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmEnquiry | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [viewingEnquiry, setViewingEnquiry] = useState<CrmEnquiry | null>(null);
   const [pendingMove, setPendingMove] = useState<{
     enquiry: CrmEnquiry;
     newStage: CrmEnquiryStatus;
   } | null>(null);
+  const [followingEnquiry, setFollowingEnquiry] = useState<CrmEnquiry | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = () => {
@@ -728,7 +848,7 @@ export function EnquiriesModule() {
     setEditing(null);
     setForm({ ...EMPTY });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const openEdit = (enquiry: CrmEnquiry) => {
@@ -743,10 +863,26 @@ export function EnquiriesModule() {
       source: enquiry.source,
       status: enquiry.status,
       notes: enquiry.notes ?? "",
-      dueDateWindow: enquiry.dueDateWindow ?? "within_7_days",
+      dueDate: isoToLocalDateInput(enquiry.dueDate),
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
+  };
+
+  const confirmFollowUp = async (nextFollowupDate: string, notes: string) => {
+    if (!followingEnquiry) return;
+    try {
+      await crm.createFollowUp({
+        enquiryId: followingEnquiry.id,
+        stage: followingEnquiry.status,
+        dueAt: new Date().toISOString(),
+        nextFollowupDate,
+        notes: notes || null,
+      });
+      setFollowingEnquiry(null);
+    } catch {
+      // toast handled in store
+    }
   };
 
   const requestMove = (enquiry: CrmEnquiry, newStage: CrmEnquiryStatus) => {
@@ -792,7 +928,7 @@ export function EnquiriesModule() {
       const input = toEnquiryInput(contactId, form);
       if (editing) await crm.updateEnquiry(editing.id, input);
       else await crm.createEnquiry(input);
-      setDialogOpen(false);
+      setSheetOpen(false);
     } catch {
       // toast handled in store
     } finally {
@@ -876,6 +1012,7 @@ export function EnquiriesModule() {
             onView={setViewingEnquiry}
             onEdit={openEdit}
             onRemove={setRemoveId}
+            onFollow={setFollowingEnquiry}
           />
         ) : view === "card" ? (
           <EnquiryCards
@@ -884,6 +1021,7 @@ export function EnquiriesModule() {
             onView={setViewingEnquiry}
             onEdit={openEdit}
             onRemove={setRemoveId}
+            onFollow={setFollowingEnquiry}
           />
         ) : (
           <EnquiryKanban
@@ -893,6 +1031,7 @@ export function EnquiriesModule() {
             onEdit={openEdit}
             onRemove={(id) => setRemoveId(id)}
             onMove={requestMove}
+            onFollow={setFollowingEnquiry}
           />
         )}
       </ModuleStatus>
@@ -905,6 +1044,7 @@ export function EnquiriesModule() {
         onEdit={openEdit}
         onMove={requestMove}
         onRemove={setRemoveId}
+        onFollow={setFollowingEnquiry}
       />
 
       {/* Stage-move confirmation dialog */}
@@ -917,88 +1057,55 @@ export function EnquiriesModule() {
         />
       ) : null}
 
-      {/* Create / Edit dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit enquiry" : "Add enquiry"}</DialogTitle>
-            </DialogHeader>
-            {/* ─ Contact section ─ */}
-            {!editing ? (
-              <>
-                {/* Mode toggle */}
-                <div className="space-y-1.5">
-                  <p className="text-sm font-medium">Contact</p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={form.contactMode === "existing" ? "default" : "outline"}
-                      className="rounded-xl"
-                      onClick={() => setForm((cur) => ({ ...cur, contactMode: "existing" }))}
-                    >
-                      Existing contact
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={form.contactMode === "new" ? "default" : "outline"}
-                      className="rounded-xl"
-                      onClick={() => setForm((cur) => ({ ...cur, contactMode: "new" }))}
-                    >
-                      + New contact
-                    </Button>
-                  </div>
-                </div>
-                {form.contactMode === "existing" ? (
-                  <Field id="enquiry-contact" label="" error={errors.contactId}>
-                    <NativeSelect
-                      id="enquiry-contact"
-                      value={form.contactId}
-                      onChange={(value) => setForm((cur) => ({ ...cur, contactId: value }))}
-                    >
-                      <option value="">Select contact</option>
-                      {crm.contacts.items.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </NativeSelect>
-                  </Field>
-                ) : (
-                  <div className="space-y-3 rounded-xl border p-3">
-                    <Field id="new-contact-name" label="Full name" error={errors.newName}>
-                      <Input
-                        id="new-contact-name"
-                        value={form.newName}
-                        onChange={(e) => setForm((cur) => ({ ...cur, newName: e.target.value }))}
-                        placeholder="e.g. Priya Sharma"
-                        className="rounded-xl"
-                        autoFocus
-                      />
-                    </Field>
-                    <Field id="new-contact-mobile" label="Mobile" error={errors.newMobile}>
-                      <Input
-                        id="new-contact-mobile"
-                        value={form.newMobile}
-                        onChange={(e) => setForm((cur) => ({ ...cur, newMobile: e.target.value }))}
-                        placeholder="+91 98765 43210"
-                        className="rounded-xl"
-                      />
-                    </Field>
-                    <Field id="new-contact-type" label="Contact type">
-                      <NativeSelect
-                        id="new-contact-type"
-                        value={form.newType}
-                        onChange={(value) => setForm((cur) => ({ ...cur, newType: value as CrmContactType }))}
-                      >
-                        {contactTypeOptions()}
-                      </NativeSelect>
-                    </Field>
-                  </div>
-                )}
-              </>
-            ) : (
-              <Field id="enquiry-contact" label="Contact" error={errors.contactId}>
+      {/* Quick follow-up dialog */}
+      {followingEnquiry ? (
+        <QuickFollowUpDialog
+          enquiry={followingEnquiry}
+          contactName={contactName}
+          onCancel={() => setFollowingEnquiry(null)}
+          onConfirm={confirmFollowUp}
+        />
+      ) : null}
+
+      {/* Create / Edit sheet */}
+      <SideSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title={editing ? "Edit enquiry" : "Add enquiry"}
+        onSubmit={onSubmit}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            {editing ? "Save" : "Create"}
+          </Button>
+        }
+      >
+        {!editing ? (
+          <>
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Contact</p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={form.contactMode === "existing" ? "default" : "outline"}
+                  className="rounded-xl"
+                  onClick={() => setForm((cur) => ({ ...cur, contactMode: "existing" }))}
+                >
+                  Existing contact
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={form.contactMode === "new" ? "default" : "outline"}
+                  className="rounded-xl"
+                  onClick={() => setForm((cur) => ({ ...cur, contactMode: "new" }))}
+                >
+                  + New contact
+                </Button>
+              </div>
+            </div>
+            {form.contactMode === "existing" ? (
+              <Field id="enquiry-contact" label="" error={errors.contactId}>
                 <NativeSelect
                   id="enquiry-contact"
                   value={form.contactId}
@@ -1010,62 +1117,97 @@ export function EnquiriesModule() {
                   ))}
                 </NativeSelect>
               </Field>
+            ) : (
+              <div className="space-y-3 rounded-xl border p-3">
+                <Field id="new-contact-name" label="Full name" error={errors.newName}>
+                  <Input
+                    id="new-contact-name"
+                    value={form.newName}
+                    onChange={(e) => setForm((cur) => ({ ...cur, newName: e.target.value }))}
+                    placeholder="e.g. Priya Sharma"
+                    className="rounded-xl"
+                    autoFocus
+                  />
+                </Field>
+                <Field id="new-contact-mobile" label="Mobile" error={errors.newMobile}>
+                  <Input
+                    id="new-contact-mobile"
+                    value={form.newMobile}
+                    onChange={(e) => setForm((cur) => ({ ...cur, newMobile: e.target.value }))}
+                    placeholder="+91 98765 43210"
+                    className="rounded-xl"
+                  />
+                </Field>
+                <Field id="new-contact-type" label="Contact type">
+                  <NativeSelect
+                    id="new-contact-type"
+                    value={form.newType}
+                    onChange={(value) => setForm((cur) => ({ ...cur, newType: value as CrmContactType }))}
+                  >
+                    {contactTypeOptions()}
+                  </NativeSelect>
+                </Field>
+              </div>
             )}
-            <Field id="enquiry-title" label="Title" error={errors.title}>
-              <Input
-                id="enquiry-title"
-                value={form.title}
-                onChange={(e) => setForm((cur) => ({ ...cur, title: e.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="enquiry-source" label="How did they find us?" error={errors.source}>
-              <NativeSelect
-                id="enquiry-source"
-                value={form.source}
-                onChange={(value) => setForm((cur) => ({ ...cur, source: value }))}
-              >
-                <option value="">Select source</option>
-                {enquirySourceOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="enquiry-status" label="Stage">
-              <NativeSelect
-                id="enquiry-status"
-                value={form.status}
-                onChange={(value) => setForm((cur) => ({ ...cur, status: value as CrmEnquiryStatus }))}
-              >
-                {enquiryStatusOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="enquiry-due-date" label="Due date" error={errors.dueDateWindow}>
-              <NativeSelect
-                id="enquiry-due-date"
-                value={form.dueDateWindow}
-                onChange={(value) =>
-                  setForm((cur) => ({ ...cur, dueDateWindow: value as CrmEnquiryDueDateWindow }))
-                }
-              >
-                <option value="">Select due date</option>
-                {enquiryDueDateWindowOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="enquiry-notes" label="Notes">
-              <Textarea
-                id="enquiry-notes"
-                value={form.notes}
-                onChange={(e) => setForm((cur) => ({ ...cur, notes: e.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <DialogFooter>
-              <Button type="submit" className="rounded-xl" disabled={busy}>
-                {editing ? "Save" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          </>
+        ) : (
+          <Field id="enquiry-contact" label="Contact" error={errors.contactId}>
+            <NativeSelect
+              id="enquiry-contact"
+              value={form.contactId}
+              onChange={(value) => setForm((cur) => ({ ...cur, contactId: value }))}
+            >
+              <option value="">Select contact</option>
+              {crm.contacts.items.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </NativeSelect>
+          </Field>
+        )}
+        <Field id="enquiry-title" label="Title" error={errors.title}>
+          <Input
+            id="enquiry-title"
+            value={form.title}
+            onChange={(e) => setForm((cur) => ({ ...cur, title: e.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="enquiry-source" label="How did they find us?" error={errors.source}>
+          <NativeSelect
+            id="enquiry-source"
+            value={form.source}
+            onChange={(value) => setForm((cur) => ({ ...cur, source: value }))}
+          >
+            <option value="">Select source</option>
+            {enquirySourceOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="enquiry-status" label="Stage">
+          <NativeSelect
+            id="enquiry-status"
+            value={form.status}
+            onChange={(value) => setForm((cur) => ({ ...cur, status: value as CrmEnquiryStatus }))}
+          >
+            {enquiryStatusOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="enquiry-due-date" label="Due date" error={errors.dueDate}>
+          <DatePicker
+            key={editing?.id ?? "new"}
+            id="enquiry-due-date"
+            value={form.dueDate}
+            onChange={(value) => setForm((cur) => ({ ...cur, dueDate: value }))}
+          />
+        </Field>
+        <Field id="enquiry-notes" label="Notes">
+          <Textarea
+            id="enquiry-notes"
+            value={form.notes}
+            onChange={(e) => setForm((cur) => ({ ...cur, notes: e.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+      </SideSheet>
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

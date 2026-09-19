@@ -13,7 +13,7 @@ import {
   type CrmFollowUpModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
-import { resolveEnquiryDueDate } from "./enquiry-due-date";
+import { endOfLocalDay } from "./enquiry-due-date";
 import type {
   ConvertEnquiryBody,
   CreateEnquiryBody,
@@ -108,9 +108,9 @@ export class EnquiryService {
     return requireActive(await this.model.readOne({ id }), "Enquiry");
   }
 
-  async create(actorId: string, input: CreateEnquiryBody, now = new Date()) {
+  async create(actorId: string, input: CreateEnquiryBody) {
     await this.requireUsableContact(input.contactId);
-    const dueDate = resolveEnquiryDueDate(input.dueDateWindow, now);
+    const dueDate = endOfLocalDay(input.dueDate);
     const enquiry = await this.model.create({
       contactId: input.contactId,
       title: input.title,
@@ -119,7 +119,6 @@ export class EnquiryService {
       expectedValue: input.expectedValue ?? null,
       assignedToId: input.assignedToId ?? null,
       notes: input.notes ?? null,
-      dueDateWindow: input.dueDateWindow,
       dueDate,
       ...actorCreate(actorId),
     });
@@ -129,7 +128,7 @@ export class EnquiryService {
     return enquiry;
   }
 
-  async update(actorId: string, id: string, input: UpdateEnquiryBody, now = new Date()) {
+  async update(actorId: string, id: string, input: UpdateEnquiryBody) {
     const existing = await this.getById(id);
     if (input.contactId) {
       await this.requireUsableContact(input.contactId);
@@ -137,10 +136,7 @@ export class EnquiryService {
     if (input.status === "closed" && !input.closedReason?.trim()) {
       throw new HttpError(422, "A closed reason is required when closing an enquiry");
     }
-    const dueDate =
-      input.dueDateWindow !== undefined
-        ? resolveEnquiryDueDate(input.dueDateWindow, existing.createdAt ?? now)
-        : undefined;
+    const dueDate = input.dueDate !== undefined ? endOfLocalDay(input.dueDate) : undefined;
     const enquiry = await this.model.update(
       { id },
       {
@@ -156,7 +152,7 @@ export class EnquiryService {
       await this.recordHistory(
         actorId,
         enquiry,
-        notesChanged ? enquiry.notes : existing.notes,
+        notesChanged ? enquiry.notes : null,
         enquiry.status,
       );
     }

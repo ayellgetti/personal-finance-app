@@ -58,11 +58,22 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
       nextFollowupDate: new Date(2026, 8, 1, 0, 0, 0),
       isActive: 1,
     },
+    {
+      id: "e-5",
+      title: "Follow-up today",
+      contactId: "c-1",
+      status: "contacted",
+      createdAt: new Date(2026, 8, 10, 8, 0, 0),
+      dueDate: new Date(2026, 8, 20, 23, 59, 59),
+      nextFollowupDate: new Date(2026, 8, 15, 15, 0, 0),
+      isActive: 1,
+    },
   ]);
   const payments = fakeCrud("payment", [
     {
       id: "p-1",
       status: "paid",
+      type: "INCOME",
       amount: 100,
       paidAt: new Date(2026, 8, 2, 0, 0, 0),
       isActive: 1,
@@ -70,6 +81,7 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
     {
       id: "p-2",
       status: "paid",
+      type: "INCOME",
       amount: 50,
       paidAt: new Date(2026, 7, 2, 0, 0, 0),
       isActive: 1,
@@ -77,8 +89,25 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
     {
       id: "p-3",
       status: "pending",
+      type: "INCOME",
       amount: 999,
       paidAt: new Date(2026, 8, 2, 0, 0, 0),
+      isActive: 1,
+    },
+    {
+      id: "p-4",
+      status: "paid",
+      type: "EXPENSE",
+      amount: 40,
+      paidAt: new Date(2026, 8, 10, 0, 0, 0),
+      isActive: 1,
+    },
+    {
+      id: "p-5",
+      status: "paid",
+      type: "EXPENSE",
+      amount: 25,
+      paidAt: new Date(2026, 7, 20, 0, 0, 0),
       isActive: 1,
     },
   ]);
@@ -97,13 +126,16 @@ test("dashboard cards count contacts, enquiries, overdue follow-ups, paid-this-m
   const snapshot = await service.get(now);
   assert.equal(snapshot.contactsByType.lead, 2);
   assert.equal(snapshot.contactsByType.client, 1);
-  assert.equal(snapshot.enquiries.open, 2);
+  assert.equal(snapshot.enquiries.open, 3);
   assert.equal(snapshot.enquiries.closed, 2);
   assert.equal(snapshot.leadsGeneratedToday, 1);
   assert.equal(snapshot.customerDueToday, 1);
   assert.equal(snapshot.customerDueItems[0]?.id, "e-1");
   assert.equal(snapshot.overdueFollowUps, 1);
-  assert.equal(snapshot.paymentsPaidThisMonth, 100);
+  assert.equal(snapshot.followUpsToday, 1);
+  assert.equal(snapshot.paymentsIncomeThisMonth, 100);
+  assert.equal(snapshot.paymentsExpenseThisMonth, 40);
+  assert.equal(snapshot.paymentsPaidThisMonth, 140);
   assert.equal(snapshot.tasksByStatus.todo, 1);
   assert.equal(snapshot.tasksByStatus.done, 2);
 });

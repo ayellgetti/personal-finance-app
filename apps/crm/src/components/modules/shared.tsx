@@ -1,5 +1,5 @@
-import { type ReactNode, useState } from "react";
-import { ChevronRight, LayoutGrid, List, Pencil, ShieldAlert, Trash2 } from "lucide-react";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { ChevronRight, Eye, LayoutGrid, List, Pencil, ShieldAlert, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -134,6 +141,60 @@ export function ModuleStatus({
   return <>{children}</>;
 }
 
+export function SideSheet({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  footer,
+  onSubmit,
+  className,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  onSubmit?: (event: FormEvent) => void;
+  className?: string;
+}) {
+  const body = (
+    <>
+      <SheetHeader className="space-y-1 border-b px-6 py-5 pr-12 text-left">
+        <SheetTitle>{title}</SheetTitle>
+        {description ? (
+          <SheetDescription>{description}</SheetDescription>
+        ) : (
+          <SheetDescription className="sr-only">{title}</SheetDescription>
+        )}
+      </SheetHeader>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">{children}</div>
+      {footer ? (
+        <div className="flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end">{footer}</div>
+      ) : null}
+    </>
+  );
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className={cn("flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg", className)}
+      >
+        {onSubmit ? (
+          <form onSubmit={onSubmit} className="flex h-full min-h-0 flex-col">
+            {body}
+          </form>
+        ) : (
+          body
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export function ConfirmRemoveDialog({
   open,
   title,
@@ -182,7 +243,7 @@ export function RowActions({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-center justify-end gap-1">{children}</div>;
 }
 
-function IconAction({
+export function IconAction({
   label,
   onClick,
   className,
@@ -211,6 +272,22 @@ function IconAction({
         <TooltipContent side="top">{label}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+}
+
+export function ViewAction({
+  onClick,
+  label = "View",
+  className,
+}: {
+  onClick: () => void;
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <IconAction label={label} onClick={onClick} className={className}>
+      <Eye className="h-4 w-4" />
+    </IconAction>
   );
 }
 

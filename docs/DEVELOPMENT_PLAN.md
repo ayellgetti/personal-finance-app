@@ -401,17 +401,17 @@ Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`
 
 **Status: COMPLETED**
 
-`apps/crm` Contacts module: table, type filter, search, create/edit dialog (name, mobile, type, email, company), remove confirm. Client: `lib/crm/remote.ts` + list cache in `CrmProvider`. Backend contacts API was already in `/api/crm/contacts`.
+`apps/crm` Contacts module: table, type filter, search, create/edit sheet (name, mobile, type, email, company), remove confirm, and a View sheet with Enquiries (each enquiry lists its follow-ups) and Payments tabs. Client: `lib/crm/remote.ts` + list cache in `CrmProvider`. Backend contacts API was already in `/api/crm/contacts`; `GET /api/crm/contacts/:id` returns the contact plus related enquiries (nested follow-ups) and payments.
 
 ### Phase D4 — Enquiry + follow-up
 
 **Status: COMPLETED**
 
-Enquiries table with status filter and create/edit. Follow-ups list with overdue highlight. Shared loading / empty / error / 403 states.
+Enquiries table with status filter and create/edit sheet. Follow-ups list with overdue highlight. Shared loading / empty / error / 403 states.
 
-Enquiry pipeline (exactly these eight stages): New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Convert sets `closed`. Dashboard cards include leads generated today, customer due dates, overdue follow-ups (`nextFollowupDate` past and enquiry not closed), and open versus closed.
+Enquiry pipeline (exactly these eight stages): New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Convert sets `closed`. Dashboard cards include leads generated today, customer due dates, overdue follow-ups (`nextFollowupDate` past and enquiry not closed), follow-ups for today (open enquiries with `nextFollowupDate` on the current calendar day; click opens Follow-ups with When = Today), and open versus closed.
 
-Enquiry create requires `dueDateWindow`. Note and status changes append follow-up history (date, notes, status, `nextFollowupDate`). Follow-ups are not written to `CrmCalendarEvent` or the main calendar feed. `GET /api/crm/followups/calendar?from&to` powers the Follow-ups calendar (new enquiry vs follow-up counts; click a day for enquiries due; overdue highlighted). Follow-ups Timeline view (and the enquiry detail sheet) shows lead created → follow-up history → next contact → closed/booked.
+Enquiry create requires an exact `dueDate`. The CRM form uses a calendar with shortcuts for 7 days, 1 month, 3 months, and 6 months from today. Note and status changes append follow-up history (date, notes, status, `nextFollowupDate`). Follow-ups are not written to `CrmCalendarEvent` or the main calendar feed. `GET /api/crm/followups/calendar?from&to` powers the Follow-ups calendar (new enquiry vs follow-up counts; click a day for enquiries due; overdue highlighted). Follow-ups Timeline view (and the enquiry detail sheet) shows lead created → follow-up history → next contact → closed/booked.
 
 ### Phase D5 — Convert, clients, payments
 
@@ -431,7 +431,7 @@ Four columns (Todo / In-Progress / In-Review / Done). Status changes via native 
 
 **Status: COMPLETED**
 
-Month grid of `GET /api/crm/calendar?from&to` (tasks and standalone events). Click an item for detail; create-event dialog.
+Month grid of `GET /api/crm/calendar?from&to` (tasks and standalone events). Click an item for detail; create-event sheet.
 
 Union of task due dates and standalone `CrmCalendarEvent`. Follow-up contact dates live on the Follow-ups calendar (`GET /api/crm/followups/calendar`).
 

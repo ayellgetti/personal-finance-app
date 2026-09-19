@@ -92,7 +92,7 @@ export const crmOpenApiSchemas = {
   },
   CreateCrmEnquiryRequest: {
     type: "object",
-    required: ["contactId", "title", "source", "dueDateWindow"],
+    required: ["contactId", "title", "source", "dueDate"],
     properties: {
       contactId: { type: "string", format: "uuid" },
       title: { type: "string" },
@@ -114,16 +114,10 @@ export const crmOpenApiSchemas = {
       expectedValue: { type: "number", minimum: 0, nullable: true },
       assignedToId: { type: "string", format: "uuid", nullable: true },
       notes: { type: "string", nullable: true },
-      dueDateWindow: {
+      dueDate: {
         type: "string",
-        enum: [
-          "within_7_days",
-          "within_15_days",
-          "within_1_month",
-          "within_2_months",
-          "within_3_months",
-          "within_6_months",
-        ],
+        format: "date-time",
+        description: "Exact enquiry due date. Calendar shortcuts (7 days / 1 month / 3 months / 6 months) are UI-only.",
       },
     },
   },
@@ -169,9 +163,11 @@ export const crmOpenApiSchemas = {
   },
   CreateCrmPaymentRequest: {
     type: "object",
-    required: ["clientId", "amount", "mode"],
+    description: "referenceType selects the payee kind; referenceId is that CrmClient's id (referenceType = client) or CrmContact's id (referenceType = vendor).",
+    required: ["referenceType", "referenceId", "amount", "mode"],
     properties: {
-      clientId: { type: "string", format: "uuid" },
+      referenceType: { type: "string", enum: ["client", "vendor"] },
+      referenceId: { type: "string", format: "uuid" },
       enquiryId: { type: "string", format: "uuid", nullable: true },
       amount: { type: "number", minimum: 0, exclusiveMinimum: true },
       currency: { type: "string", default: "INR" },
@@ -287,7 +283,7 @@ export const crmOpenApiPaths = {
       tags: ["CRM"],
       summary: "Dashboard analytics cards",
       description:
-        "Includes leads generated today, customer due dates, overdue follow-ups (nextFollowupDate past and enquiry not closed), and open versus closed enquiries.",
+        "Includes leads generated today, customer due dates, overdue follow-ups (nextFollowupDate past and enquiry not closed), follow-ups for today (open enquiries with nextFollowupDate on the current calendar day), open versus closed enquiries, and paid income versus expense this month.",
       security: [{ bearerAuth: [] }],
       parameters: [requestId],
       responses: {
@@ -335,10 +331,10 @@ export const crmOpenApiPaths = {
   "/api/crm/contacts/{id}": {
     get: {
       tags: ["CRM Contacts"],
-      summary: "Get a contact",
+      summary: "Get a contact with enquiries, follow-ups, and payments",
       security: [{ bearerAuth: [] }],
       parameters: [requestId, idParam],
-      responses: { ...ok("Contact"), "404": envelopeError },
+      responses: { ...ok("Contact, related enquiries (with follow-ups), and payments"), "404": envelopeError },
     },
     patch: {
       tags: ["CRM Contacts"],
@@ -576,7 +572,8 @@ export const crmOpenApiPaths = {
         requestId,
         pageParam,
         limitParam,
-        { name: "clientId", in: "query", schema: { type: "string", format: "uuid" } },
+        { name: "referenceType", in: "query", schema: { type: "string", enum: ["client", "vendor"] } },
+        { name: "referenceId", in: "query", schema: { type: "string", format: "uuid" } },
         {
           name: "status",
           in: "query",

@@ -1,10 +1,12 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type CrmPaymentReferenceType } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import {
   crmClientModel,
+  crmContactModel,
   crmEnquiryModel,
   crmPaymentModel,
   type CrmClientModel,
+  type CrmContactModel,
   type CrmEnquiryModel,
   type CrmPaymentModel,
 } from "../../../models/index";
@@ -21,12 +23,16 @@ export class PaymentService {
     private readonly model: CrmPaymentModel = crmPaymentModel,
     private readonly clients: CrmClientModel = crmClientModel,
     private readonly enquiries: CrmEnquiryModel = crmEnquiryModel,
+    private readonly contacts: CrmContactModel = crmContactModel,
   ) {}
 
   list(query: ListPaymentsQuery) {
     const where: Prisma.CrmPaymentWhereInput = { isActive: 1 };
-    if (query.clientId) {
-      where.clientId = query.clientId;
+    if (query.referenceType) {
+      where.referenceType = query.referenceType;
+    }
+    if (query.referenceId) {
+      where.referenceId = query.referenceId;
     }
     if (query.status) {
       where.status = query.status;
@@ -47,12 +53,13 @@ export class PaymentService {
   }
 
   async create(actorId: string, input: CreatePaymentBody) {
-    await this.requireActiveClient(input.clientId);
+    await this.requireReference(input.referenceType, input.referenceId);
     if (input.enquiryId) {
       await this.requireActiveEnquiry(input.enquiryId);
     }
     return this.model.create({
-      clientId: input.clientId,
+      referenceType: input.referenceType,
+      referenceId: input.referenceId,
       enquiryId: input.enquiryId ?? null,
       amount: input.amount,
       currency: input.currency ?? "INR",
@@ -66,9 +73,11 @@ export class PaymentService {
   }
 
   async update(actorId: string, id: string, input: UpdatePaymentBody) {
-    await this.getById(id);
-    if (input.clientId) {
-      await this.requireActiveClient(input.clientId);
+    const existing = await this.getById(id);
+    const nextReferenceType = input.referenceType ?? existing.referenceType;
+    const nextReferenceId = input.referenceId ?? existing.referenceId;
+    if (input.referenceType || input.referenceId) {
+      await this.requireReference(nextReferenceType, nextReferenceId);
     }
     if (input.enquiryId) {
       await this.requireActiveEnquiry(input.enquiryId);
@@ -88,12 +97,30 @@ export class PaymentService {
     return { id: input.id, removed: true };
   }
 
+  private async requireReference(referenceType: CrmPaymentReferenceType, referenceId: string) {
+    if (referenceType === "client") {
+      return this.requireActiveClient(referenceId);
+    }
+    return this.requireVendorContact(referenceId);
+  }
+
   private async requireActiveClient(clientId: string) {
     const client = await this.clients.readOne({ id: clientId });
     if (!client || client.isActive !== 1) {
       throw new HttpError(404, "Client not found");
     }
     return client;
+  }
+
+  private async requireVendorContact(vendorContactId: string) {
+    const contact = await this.contacts.readOne({ id: vendorContactId });
+    if (!contact || contact.isActive !== 1) {
+      throw new HttpError(404, "Vendor not found");
+    }
+    if (contact.type !== "vendor") {
+      throw new HttpError(422, "Payee contact must be a vendor");
+    }
+    return contact;
   }
 
   private async requireActiveEnquiry(enquiryId: string) {

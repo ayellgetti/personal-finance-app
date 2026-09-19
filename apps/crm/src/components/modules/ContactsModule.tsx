@@ -2,13 +2,6 @@ import { FormEvent, useEffect, useState } from "react";
 import { Mail, Phone, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,8 +14,11 @@ import {
   NativeSelect,
   RemoveAction,
   RowActions,
+  SideSheet,
   StatusBadge,
+  ViewAction,
 } from "@/components/modules/shared";
+import { ContactViewSheet } from "@/components/modules/ContactViewSheet";
 import {
   CONTACT_TYPE_LABELS,
   EMAIL_PATTERN,
@@ -77,6 +73,7 @@ function ContactTable({
   highlightId,
   canEdit,
   canDelete,
+  onView,
   onEdit,
   onRemove,
 }: {
@@ -84,6 +81,7 @@ function ContactTable({
   highlightId?: string | null;
   canEdit: boolean;
   canDelete: boolean;
+  onView: (c: CrmContact) => void;
   onEdit: (c: CrmContact) => void;
   onRemove: (id: string) => void;
 }) {
@@ -120,6 +118,7 @@ function ContactTable({
             <TableCell className="text-muted-foreground">{contact.companyName ?? "—"}</TableCell>
             <TableCell>
               <RowActions>
+                <ViewAction onClick={() => onView(contact)} />
                 {canEdit ? <EditAction onClick={() => onEdit(contact)} /> : null}
                 {canDelete ? <RemoveAction onClick={() => onRemove(contact.id)} /> : null}
               </RowActions>
@@ -135,12 +134,14 @@ function ContactCards({
   items,
   canEdit,
   canDelete,
+  onView,
   onEdit,
   onRemove,
 }: {
   items: CrmContact[];
   canEdit: boolean;
   canDelete: boolean;
+  onView: (c: CrmContact) => void;
   onEdit: (c: CrmContact) => void;
   onRemove: (id: string) => void;
 }) {
@@ -177,6 +178,7 @@ function ContactCards({
               <p className="line-clamp-2 text-xs text-muted-foreground">{contact.notes}</p>
             ) : null}
             <div className="flex justify-end gap-1 pt-1">
+              <ViewAction onClick={() => onView(contact)} />
               {canEdit ? <EditAction onClick={() => onEdit(contact)} /> : null}
               {canDelete ? <RemoveAction onClick={() => onRemove(contact.id)} /> : null}
             </div>
@@ -198,7 +200,8 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmContact | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewing, setViewing] = useState<CrmContact | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -218,7 +221,7 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
     setEditing(null);
     setForm(EMPTY);
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const openEdit = (contact: CrmContact) => {
@@ -232,7 +235,7 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
       notes: contact.notes ?? "",
     });
     setErrors({});
-    setDialogOpen(true);
+    setSheetOpen(true);
   };
 
   const onSubmit = async (event: FormEvent) => {
@@ -244,7 +247,7 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
     try {
       if (editing) await crm.updateContact(editing.id, toInput(form));
       else await crm.createContact(toInput(form));
-      setDialogOpen(false);
+      setSheetOpen(false);
     } catch {
       // toast handled in store
     } finally {
@@ -309,6 +312,7 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
             items={crm.contacts.items}
             canEdit={crm.hasPermission(CRM_PERMISSIONS.contactsUpdate)}
             canDelete={crm.hasPermission(CRM_PERMISSIONS.contactsDelete)}
+            onView={setViewing}
             onEdit={openEdit}
             onRemove={setRemoveId}
           />
@@ -318,76 +322,77 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
             highlightId={highlightId}
             canEdit={crm.hasPermission(CRM_PERMISSIONS.contactsUpdate)}
             canDelete={crm.hasPermission(CRM_PERMISSIONS.contactsDelete)}
+            onView={setViewing}
             onEdit={openEdit}
             onRemove={setRemoveId}
           />
         )}
       </ModuleStatus>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit contact" : "Add contact"}</DialogTitle>
-            </DialogHeader>
-            <Field id="contact-name" label="Name" error={errors.name}>
-              <Input
-                id="contact-name"
-                value={form.name}
-                onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="contact-mobile" label="Mobile" error={errors.mobile}>
-              <Input
-                id="contact-mobile"
-                value={form.mobile}
-                onChange={(event) => setForm((current) => ({ ...current, mobile: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="contact-type" label="Type">
-              <NativeSelect
-                id="contact-type"
-                value={form.type}
-                onChange={(value) => setForm((current) => ({ ...current, type: value as CrmContactType }))}
-              >
-                {contactTypeOptions()}
-              </NativeSelect>
-            </Field>
-            <Field id="contact-email" label="Email" error={errors.email}>
-              <Input
-                id="contact-email"
-                type="email"
-                value={form.email}
-                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="contact-company" label="Company">
-              <Input
-                id="contact-company"
-                value={form.companyName}
-                onChange={(event) => setForm((current) => ({ ...current, companyName: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <Field id="contact-notes" label="Notes">
-              <Textarea
-                id="contact-notes"
-                value={form.notes}
-                onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-                className="rounded-xl"
-              />
-            </Field>
-            <DialogFooter>
-              <Button type="submit" className="rounded-xl" disabled={busy}>
-                {editing ? "Save" : "Create"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <SideSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        title={editing ? "Edit contact" : "Add contact"}
+        onSubmit={onSubmit}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={busy}>
+            {editing ? "Save" : "Create"}
+          </Button>
+        }
+      >
+        <Field id="contact-name" label="Name" error={errors.name}>
+          <Input
+            id="contact-name"
+            value={form.name}
+            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="contact-mobile" label="Mobile" error={errors.mobile}>
+          <Input
+            id="contact-mobile"
+            value={form.mobile}
+            onChange={(event) => setForm((current) => ({ ...current, mobile: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="contact-type" label="Type">
+          <NativeSelect
+            id="contact-type"
+            value={form.type}
+            onChange={(value) => setForm((current) => ({ ...current, type: value as CrmContactType }))}
+          >
+            {contactTypeOptions()}
+          </NativeSelect>
+        </Field>
+        <Field id="contact-email" label="Email" error={errors.email}>
+          <Input
+            id="contact-email"
+            type="email"
+            value={form.email}
+            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="contact-company" label="Company">
+          <Input
+            id="contact-company"
+            value={form.companyName}
+            onChange={(event) => setForm((current) => ({ ...current, companyName: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="contact-notes" label="Notes">
+          <Textarea
+            id="contact-notes"
+            value={form.notes}
+            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
+            className="rounded-xl"
+          />
+        </Field>
+      </SideSheet>
+
+      <ContactViewSheet contact={viewing} onClose={() => setViewing(null)} />
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

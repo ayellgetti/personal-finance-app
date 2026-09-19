@@ -20,8 +20,8 @@ export class ContactController extends BaseController {
   }
 
   async getById(req: Request, res: Response) {
-    const contact = await this.service.getById(requireParamId(req, "Contact"));
-    this.sendSuccess(req, res, { contact }, "Contact retrieved");
+    const detail = await this.service.getDetail(requireParamId(req, "Contact"));
+    this.sendSuccess(req, res, detail, "Contact retrieved");
   }
 
   async create(req: Request, res: Response) {
