@@ -12,6 +12,8 @@ describe("Home", () => {
     );
 
     expect(screen.getByRole("heading", { name: /see your money clearly/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /plan the years that actually matter/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /questions people ask/i })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /open freedom planner/i })[0]).toHaveAttribute(
       "href",
       expect.stringContaining("/login"),
