@@ -69,6 +69,7 @@ export const fetchContactDetail = vi.fn(async (id: string): Promise<CrmContactDe
   },
   enquiries: [],
   payments: [],
+  bookings: [],
 }));
 export const listEnquiries = vi.fn(async (query?: { status?: string; page?: number; limit?: number }) => {
   void query;

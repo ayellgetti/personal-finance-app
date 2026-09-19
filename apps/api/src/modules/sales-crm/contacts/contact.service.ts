@@ -1,11 +1,13 @@
-import { Prisma, type CrmContact, type CrmEnquiry, type CrmFollowUp, type CrmPayment } from "@prisma/client";
+import { Prisma, type CrmCalendarEvent, type CrmContact, type CrmEnquiry, type CrmFollowUp, type CrmPayment } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import {
+  crmCalendarEventModel,
   crmClientModel,
   crmContactModel,
   crmEnquiryModel,
   crmFollowUpModel,
   crmPaymentModel,
+  type CrmCalendarEventModel,
   type CrmClientModel,
   type CrmContactModel,
   type CrmEnquiryModel,
@@ -26,6 +28,7 @@ export type ContactDetail = {
   contact: CrmContact;
   enquiries: ContactEnquiryDetail[];
   payments: CrmPayment[];
+  bookings: CrmCalendarEvent[];
 };
 
 function sortTime(value: Date | string | null | undefined): number {
@@ -41,6 +44,7 @@ export class ContactService {
     private readonly followUps: CrmFollowUpModel = crmFollowUpModel,
     private readonly clients: CrmClientModel = crmClientModel,
     private readonly payments: CrmPaymentModel = crmPaymentModel,
+    private readonly events: CrmCalendarEventModel = crmCalendarEventModel,
   ) {}
 
   list(query: ListContactsQuery) {
@@ -92,6 +96,24 @@ export class ContactService {
       return sortTime(right.createdAt) - sortTime(left.createdAt);
     });
 
+    const bookingWhere: Prisma.CrmCalendarEventWhereInput = {
+      isActive: 1,
+      OR: [
+        { contactId: id },
+        ...(enquiryIds.length ? [{ enquiryId: { in: enquiryIds } }] : []),
+      ],
+    };
+    const bookingRows = await this.events.read(bookingWhere);
+    const uniqueBookings = new Map<string, CrmCalendarEvent>();
+    for (const booking of bookingRows) {
+      uniqueBookings.set(booking.id, booking);
+    }
+    const bookings = [...uniqueBookings.values()].sort((left, right) => {
+      const start = sortTime(left.startsAt) - sortTime(right.startsAt);
+      if (start !== 0) return start;
+      return sortTime(right.createdAt) - sortTime(left.createdAt);
+    });
+
     return {
       contact,
       enquiries: enquiryList.map((enquiry) => ({
@@ -99,6 +121,7 @@ export class ContactService {
         followUps: followUpList.filter((followUp) => followUp.enquiryId === enquiry.id),
       })),
       payments,
+      bookings,
     };
   }
 

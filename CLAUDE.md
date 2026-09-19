@@ -581,7 +581,7 @@ Do not use `--no-verify` as normal workflow if hooks are added later.
 
 Keep production images lean. Do not run as root in production images when changing Dockerfiles, where practical.
 
-Local Postgres is **5433** on the host. Redis **6379**. API **5001**. Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**.
+Local Postgres is **5433** on the host (**5432** in `docker-compose.dev.yml`). Redis **6379**. API **5001** (travel CRM API **5002**, banquet CRM API **5003**). Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**. Travel CRM **8083**. Banquet CRM **8084**. Extra CRM instances reuse `apps/crm` and a second API process against a separate Postgres database; do not add `tenantId` or copy the CRM app.
 
 ---
 

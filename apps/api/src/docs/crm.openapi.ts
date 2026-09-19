@@ -125,6 +125,23 @@ export const crmOpenApiSchemas = {
     type: "object",
     properties: {
       billingName: { type: "string" },
+      startsAt: {
+        type: "string",
+        format: "date-time",
+        description: "Required on first convert. Event start datetime.",
+      },
+      endsAt: {
+        type: "string",
+        format: "date-time",
+        nullable: true,
+        description: "Event end datetime. Required when slot is omitted.",
+      },
+      slot: {
+        type: "string",
+        enum: ["morning", "evening", "full_day"],
+        nullable: true,
+        description: "Optional banquet slot. Required when endsAt is omitted. Morning 08:00–16:00 IST, evening 16:00–23:00 IST, full day 08:00–23:00 IST.",
+      },
     },
   },
   CreateCrmFollowUpRequest: {
@@ -205,6 +222,7 @@ export const crmOpenApiSchemas = {
       title: { type: "string" },
       startsAt: { type: "string", format: "date-time" },
       endsAt: { type: "string", format: "date-time" },
+      slot: { type: "string", enum: ["morning", "evening", "full_day"], nullable: true },
       contactId: { type: "string", format: "uuid", nullable: true },
       enquiryId: { type: "string", format: "uuid", nullable: true },
       assigneeId: { type: "string", format: "uuid", nullable: true },
@@ -405,7 +423,7 @@ export const crmOpenApiPaths = {
       tags: ["CRM Enquiries"],
       summary: "Convert an enquiry to a client",
       description:
-        "Runs in a short transaction: sets enquiry closed, contact type=client, creates CrmClient if missing. Idempotent when already closed and a client exists.",
+        "Runs in a short transaction: sets enquiry closed (Booked), contact type=client, creates CrmClient if missing, and creates a calendar event linked to the enquiry. First convert requires startsAt and either endsAt or slot (morning / evening / full_day). Idempotent when already closed, a client exists, and a booking event is present.",
       security: [{ bearerAuth: [] }],
       parameters: [requestId, idParam],
       requestBody: jsonBody("ConvertCrmEnquiryRequest"),

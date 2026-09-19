@@ -1,18 +1,21 @@
-import type { CrmClient, CrmContact, CrmEnquiry } from "@prisma/client";
+import type { CrmCalendarEvent, CrmClient, CrmContact, CrmEnquiry } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import { prisma } from "../../../utils/prisma.util";
 import {
+  crmCalendarEventModel,
   crmClientModel,
   crmContactModel,
   crmEnquiryModel,
   crmFollowUpModel,
+  type CrmCalendarEventModel,
   type CrmClientModel,
   type CrmContactModel,
   type CrmEnquiryModel,
   type CrmFollowUpModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
+import { resolveEventRange } from "../calendar/event-slot";
 import { endOfLocalDay } from "./enquiry-due-date";
 import type {
   ConvertEnquiryBody,
@@ -26,6 +29,7 @@ export type ConvertedEnquiry = {
   enquiry: CrmEnquiry;
   contact: CrmContact;
   client: CrmClient;
+  event: CrmCalendarEvent;
 };
 
 export type PersistEnquiryConversion = (input: {
@@ -35,6 +39,12 @@ export type PersistEnquiryConversion = (input: {
   billingName: string;
   existingClientId: string | null;
   convertedFromEnquiryId: string;
+  booking: {
+    title: string;
+    startsAt: Date;
+    endsAt: Date;
+    slot: CrmCalendarEvent["slot"];
+  };
 }) => Promise<ConvertedEnquiry>;
 
 export async function persistEnquiryConversion(input: {
@@ -44,6 +54,12 @@ export async function persistEnquiryConversion(input: {
   billingName: string;
   existingClientId: string | null;
   convertedFromEnquiryId: string;
+  booking: {
+    title: string;
+    startsAt: Date;
+    endsAt: Date;
+    slot: CrmCalendarEvent["slot"];
+  };
 }): Promise<ConvertedEnquiry> {
   return prisma.$transaction(async (tx) => {
     const enquiry = await tx.crmEnquiry.update({
@@ -75,7 +91,19 @@ export async function persistEnquiryConversion(input: {
             updatedBy: input.actorId,
           },
         });
-    return { enquiry, contact, client };
+    const event = await tx.crmCalendarEvent.create({
+      data: {
+        title: input.booking.title,
+        startsAt: input.booking.startsAt,
+        endsAt: input.booking.endsAt,
+        slot: input.booking.slot,
+        contactId: input.contactId,
+        enquiryId: input.enquiryId,
+        createdBy: input.actorId,
+        updatedBy: input.actorId,
+      },
+    });
+    return { enquiry, contact, client, event };
   });
 }
 
@@ -86,6 +114,7 @@ export class EnquiryService {
     private readonly clients: CrmClientModel = crmClientModel,
     private readonly persistConvert: PersistEnquiryConversion = persistEnquiryConversion,
     private readonly followUps: CrmFollowUpModel = crmFollowUpModel,
+    private readonly events: CrmCalendarEventModel = crmCalendarEventModel,
   ) {}
 
   list(query: ListEnquiriesQuery) {
@@ -179,9 +208,35 @@ export class EnquiryService {
     const existingClient = await this.clients.findOne({ contactId: contact.id });
     const activeClient =
       existingClient && existingClient.isActive === 1 ? existingClient : null;
+    const existingEvent = await this.events.findOne({
+      enquiryId: enquiry.id,
+      isActive: 1,
+    });
 
-    if (enquiry.status === "closed" && activeClient) {
-      return { enquiry, contact, client: activeClient };
+    if (enquiry.status === "closed" && activeClient && existingEvent) {
+      return { enquiry, contact, client: activeClient, event: existingEvent };
+    }
+
+    if (!input.startsAt) {
+      throw new HttpError(422, "Event start datetime is required");
+    }
+    const booking = resolveEventRange({
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      slot: input.slot,
+    });
+
+    if (enquiry.status === "closed" && activeClient && !existingEvent) {
+      const event = await this.events.create({
+        title: enquiry.title,
+        startsAt: booking.startsAt,
+        endsAt: booking.endsAt,
+        slot: booking.slot,
+        contactId: contact.id,
+        enquiryId: enquiry.id,
+        ...actorCreate(actorId),
+      });
+      return { enquiry, contact, client: activeClient, event };
     }
 
     const billingName = input.billingName?.trim() || contact.name;
@@ -192,6 +247,12 @@ export class EnquiryService {
       billingName,
       existingClientId: existingClient?.id ?? null,
       convertedFromEnquiryId: enquiry.id,
+      booking: {
+        title: enquiry.title,
+        startsAt: booking.startsAt,
+        endsAt: booking.endsAt,
+        slot: booking.slot,
+      },
     });
   }
 

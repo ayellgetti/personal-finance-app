@@ -9,7 +9,29 @@
       "Username": "example",
       "Password": "example",
       "SSLMode": "prefer",
-      "Comment": "Docker Postgres — example"
+      "Comment": "Docker Postgres — finance + myfinancefreedom CRM"
+    },
+    "2": {
+      "Name": "travel_crm",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "travel_crm",
+      "Username": "example",
+      "Password": "example",
+      "SSLMode": "prefer",
+      "Comment": "Docker Postgres — travel CRM (isolated)"
+    },
+    "3": {
+      "Name": "banque_crm",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "banque_crm",
+      "Username": "example",
+      "Password": "example",
+      "SSLMode": "prefer",
+      "Comment": "Docker Postgres — banquet CRM (isolated)"
     }
   }
 }

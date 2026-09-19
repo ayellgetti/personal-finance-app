@@ -355,6 +355,9 @@ const STATUS_STYLES: Record<string, string> = {
   in_progress: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   in_review: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
   done: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  morning: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+  evening: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+  full_day: "bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300",
 };
 
 export function StatusBadge({ status, label }: { status: string; label: string }) {
@@ -439,5 +442,46 @@ export function ModulePage({
       {/* content */}
       {children}
     </div>
+  );
+}
+
+export function SheetTabList({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex gap-1 rounded-lg border p-1" role="tablist" aria-label={label}>
+      {children}
+    </div>
+  );
+}
+
+export function SheetTabButton<T extends string>({
+  id,
+  selected,
+  onSelect,
+  children,
+}: {
+  id: T;
+  selected: boolean;
+  onSelect: (id: T) => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      className={cn(
+        "flex-1 rounded-md px-3 py-1.5 text-sm font-medium",
+        selected ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground",
+      )}
+      onClick={() => onSelect(id)}
+    >
+      {children}
+    </button>
   );
 }

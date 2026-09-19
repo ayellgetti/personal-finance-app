@@ -352,7 +352,9 @@ Express API (:5001)
 
 Shared today: `packages/tsconfig` only.
 
-Do not add `tenantId`, a second Prisma schema, a second API, `/api/v1`, or a new JSON envelope. The unused `Contact` stub stays unused; CRM parties are `Crm*` models.
+Do not add `tenantId`, a second Prisma schema, a second API codebase, `/api/v1`, or a new JSON envelope. The unused `Contact` stub stays unused; CRM parties are `Crm*` models.
+
+Local Compose (`docker-compose.dev.yml`) may run extra copies of the same API image against extra Postgres databases (`travel_crm`, `banque_crm`) so banquet and travel CRM data stay isolated. That is process isolation, not multi-tenancy and not a second API codebase.
 
 The system should stay modular without extra packages or an admin app until Track C is approved.
 
@@ -368,8 +370,8 @@ Second product on the same Express/Prisma API. Frontend is `apps/crm`. Backend m
 - RBAC is CRM-only. Finance routes stay `requireAuth` + `userId` ownership.
 - Unused Prisma `Contact` stub stays unused. New tables are `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent` plus `Role` / `Permission` / `RolePermission` / `UserRole`.
 - No `tenantId`. All CRM rows are company-wide; access is Role + Permission.
-- No second Prisma client, no second API process, no `/api/v1`, no envelope change.
-- Do not fold CRM into `apps/web`. Do not scaffold banquet entities.
+- No second Prisma client, no second API codebase, no `/api/v1`, no envelope change. Extra Compose API containers (`api-travel`, `api-banque`) are the same image pointed at different databases.
+- Do not fold CRM into `apps/web`. Do not copy `apps/crm` into `apps/travel-crm` / `apps/banque-crm`. Do not scaffold banquet-specific entities.
 
 **RBAC bootstrap (no seed script):** if `Permission` is empty, insert the catalog and four roles (`admin`, `manager`, `sales`, `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`. Later authenticated users with no CRM role get `403` on `/api/crm/*` (they can still use `/api/auth` and finance). Permissions are loaded per request, not stored in the JWT.
 
@@ -401,7 +403,7 @@ Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`
 
 **Status: COMPLETED**
 
-`apps/crm` Contacts module: table, type filter, search, create/edit sheet (name, mobile, type, email, company), remove confirm, and a View sheet with Enquiries (each enquiry lists its follow-ups) and Payments tabs. Client: `lib/crm/remote.ts` + list cache in `CrmProvider`. Backend contacts API was already in `/api/crm/contacts`; `GET /api/crm/contacts/:id` returns the contact plus related enquiries (nested follow-ups) and payments.
+`apps/crm` Contacts module: table, type filter, search, create/edit sheet (name, mobile, type, email, company), remove confirm, and a View sheet with Enquiries (each enquiry lists its follow-ups), Payments, and Current booking tabs. Client: `lib/crm/remote.ts` + list cache in `CrmProvider`. Backend contacts API was already in `/api/crm/contacts`; `GET /api/crm/contacts/:id` returns the contact plus related enquiries (nested follow-ups), payments, and bookings.
 
 ### Phase D4 — Enquiry + follow-up
 
@@ -417,7 +419,7 @@ Enquiry create requires an exact `dueDate`. The CRM form uses a calendar with sh
 
 **Status: COMPLETED**
 
-Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in the CRM store. Clients table links to the contact and payments views. Payments table records amount, `PaymentType` (INCOME / EXPENSE), `PaymentMode` (CASH / UPI / CARD / BANK_TRANSFER / CHEQUE), and status (no gateway).
+Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in the CRM store and creates a `CrmCalendarEvent` linked to the enquiry. First convert requires `startsAt` and either `endsAt` or `slot` (`morning` / `evening` / `full_day`; slot windows are IST). Contact and client view sheets show Current booking, Enquiries, and Payments tabs. Payments table records amount, `PaymentType` (INCOME / EXPENSE), `PaymentMode` (CASH / UPI / CARD / BANK_TRANSFER / CHEQUE), and status (no gateway).
 
 `$transaction` on convert. No OpenAI/Redis inside the transaction.
 

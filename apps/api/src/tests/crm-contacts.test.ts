@@ -4,6 +4,7 @@ import { HttpError } from "../utils/http-error.util";
 import { ContactService } from "../modules/sales-crm/contacts/contact.service";
 import { createContactBodySchema } from "../modules/sales-crm/contacts/contact.request";
 import type {
+  CrmCalendarEventModel,
   CrmClientModel,
   CrmContactModel,
   CrmEnquiryModel,
@@ -216,12 +217,35 @@ test("contact detail groups follow-ups under each enquiry and lists related paym
       isActive: 1,
     },
   ]);
+  const events = fakeCrud("event", [
+    {
+      id: "evt-1",
+      title: "Wedding — 12 Dec",
+      startsAt: new Date("2026-12-12T10:30:00.000Z"),
+      endsAt: new Date("2026-12-12T17:30:00.000Z"),
+      slot: "evening",
+      contactId: "c-1",
+      enquiryId: "e-old",
+      isActive: 1,
+    },
+    {
+      id: "evt-other",
+      title: "Someone else",
+      startsAt: new Date("2026-12-20T10:30:00.000Z"),
+      endsAt: new Date("2026-12-20T17:30:00.000Z"),
+      slot: null,
+      contactId: "c-other",
+      enquiryId: "e-other",
+      isActive: 1,
+    },
+  ]);
   const contactsService = new ContactService(
     contacts.model as unknown as CrmContactModel,
     enquiries.model as unknown as CrmEnquiryModel,
     followUps.model as unknown as CrmFollowUpModel,
     clients.model as unknown as CrmClientModel,
     payments.model as unknown as CrmPaymentModel,
+    events.model as unknown as CrmCalendarEventModel,
   );
 
   const detail = await contactsService.getDetail("c-1");
@@ -234,6 +258,9 @@ test("contact detail groups follow-ups under each enquiry and lists related paym
   assert.equal(detail.enquiries[1]?.followUps[0]?.notes, "Called about catering");
   assert.equal(detail.payments.length, 1);
   assert.equal(detail.payments[0]?.id, "pay-client");
+  assert.equal(detail.bookings.length, 1);
+  assert.equal(detail.bookings[0]?.id, "evt-1");
+  assert.equal(detail.bookings[0]?.enquiryId, "e-old");
 });
 
 test("contact create rejects empty name and invalid mobile", () => {

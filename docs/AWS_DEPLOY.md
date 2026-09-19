@@ -53,6 +53,8 @@ Terminate TLS in the production web container. `www` redirects to the apex host 
 2. At your DNS host, create:
    - `A` `myfinancefreedom.com` → Elastic IP
    - `A` `www.myfinancefreedom.com` → Elastic IP (or `CNAME` `www` → `myfinancefreedom.com`)
+   - `A` `web.myfinancefreedom.com`, `api.myfinancefreedom.com`, `crm.myfinancefreedom.com` → Elastic IP
+   - `A` `travel.myfinancefreedom.com` (travel CRM) and `banquet.myfinancefreedom.com` (banquet CRM) → Elastic IP
 3. Security group: inbound **80** and **443** from `0.0.0.0/0`.
 4. Wait until both names resolve to this host (`dig +short myfinancefreedom.com`).
 5. On the instance:

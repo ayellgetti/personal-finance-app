@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   crmEnquiryStatusSchema,
+  crmEventSlotSchema,
   crmIdParamsSchema,
   crmListQuerySchema,
   crmRemoveBodySchema,
@@ -42,8 +43,34 @@ export const updateEnquiryBodySchema = createEnquiryBodySchema
 export const convertEnquiryBodySchema = z
   .object({
     billingName: z.string().trim().min(1).max(200).optional(),
+    startsAt: z.coerce.date().optional(),
+    endsAt: z.coerce.date().nullable().optional(),
+    slot: crmEventSlotSchema.nullable().optional(),
   })
-  .default({});
+  .default({})
+  .superRefine((value, ctx) => {
+    if (value.startsAt && !value.endsAt && !value.slot) {
+      ctx.addIssue({
+        code: "custom",
+        message: "End datetime or slot is required",
+        path: ["endsAt"],
+      });
+    }
+    if (!value.startsAt && (Boolean(value.endsAt) || Boolean(value.slot))) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Start datetime is required",
+        path: ["startsAt"],
+      });
+    }
+    if (value.startsAt && value.endsAt && value.endsAt.getTime() <= value.startsAt.getTime()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "endsAt must be after startsAt",
+        path: ["endsAt"],
+      });
+    }
+  });
 
 export type EnquiryIdParams = z.infer<typeof enquiryIdParamsSchema>;
 export type ListEnquiriesQuery = z.infer<typeof listEnquiriesQuerySchema>;

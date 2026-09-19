@@ -118,6 +118,9 @@ export type CrmPaymentReferenceType = (typeof CRM_PAYMENT_REFERENCE_TYPES)[numbe
 export const CRM_TASK_STATUSES = ["todo", "in_progress", "in_review", "done"] as const;
 export type CrmTaskStatus = (typeof CRM_TASK_STATUSES)[number];
 
+export const CRM_EVENT_SLOTS = ["morning", "evening", "full_day"] as const;
+export type CrmEventSlot = (typeof CRM_EVENT_SLOTS)[number];
+
 export type CrmContact = {
   id: string;
   name: string;
@@ -186,6 +189,7 @@ export type CrmContactDetail = {
   contact: CrmContact;
   enquiries: CrmEnquiryWithFollowUps[];
   payments: CrmPayment[];
+  bookings: CrmCalendarEvent[];
 };
 
 export type CrmTask = {
@@ -214,6 +218,7 @@ export type CrmCalendarEvent = {
   title: string;
   startsAt: string;
   endsAt: string;
+  slot: CrmEventSlot | null;
   contactId: string | null;
   enquiryId: string | null;
   assigneeId: string | null;
@@ -305,6 +310,14 @@ export type ConvertedEnquiry = {
   enquiry: CrmEnquiry;
   contact: CrmContact;
   client: CrmClient;
+  event: CrmCalendarEvent;
+};
+
+export type ConvertEnquiryInput = {
+  billingName?: string;
+  startsAt: string;
+  endsAt?: string | null;
+  slot?: CrmEventSlot | null;
 };
 
 export type CreateContactInput = {
@@ -371,6 +384,7 @@ export type CreateCalendarEventInput = {
   title: string;
   startsAt: string;
   endsAt: string;
+  slot?: CrmEventSlot | null;
   contactId?: string | null;
   enquiryId?: string | null;
   assigneeId?: string | null;

@@ -35,6 +35,8 @@ import {
 } from "@/components/modules/shared";
 import { DatePicker } from "@/components/modules/DatePicker";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
+import { BookingFields, ConvertToBookedSheet } from "@/components/modules/ConvertToBookedSheet";
+import { EMPTY_BOOKING, toBookingInput, validateBooking, type BookingFormState } from "@/lib/crm/booking";
 import {
   ENQUIRY_STATUS_LABELS,
   contactTypeOptions,
@@ -52,6 +54,7 @@ import { useCrm } from "@/lib/crm/store";
 import {
   CRM_ENQUIRY_STATUSES,
   CRM_PERMISSIONS,
+  type ConvertEnquiryInput,
   type CreateEnquiryInput,
   type CrmContactType,
   type CrmEnquiry,
@@ -123,12 +126,17 @@ function StageMoveDialog({
   enquiry: CrmEnquiry;
   newStage: CrmEnquiryStatus;
   onCancel: () => void;
-  onConfirm: (closedReason?: string) => Promise<void>;
+  onConfirm: (closedReason?: string, booking?: ConvertEnquiryInput) => Promise<void>;
 }) {
+  const crm = useCrm();
   const [busy, setBusy] = useState(false);
   const isClosing = newStage === "closed";
   const [closedMode, setClosedMode] = useState<ClosedReasonMode>("booked");
   const [lostText, setLostText] = useState("");
+  const [booking, setBooking] = useState<BookingFormState>(EMPTY_BOOKING);
+  const [bookingErrors, setBookingErrors] = useState<Record<string, string>>({});
+  const canConvert = crm.hasPermission(CRM_PERMISSIONS.enquiriesConvert);
+  const bookedConvert = isClosing && closedMode === "booked" && canConvert;
 
   const closedReason = isClosing
     ? closedMode === "booked" ? "Booked" : `Lost: ${lostText.trim()}`
@@ -136,9 +144,14 @@ function StageMoveDialog({
   const canConfirm = !isClosing || closedMode === "booked" || lostText.trim().length > 0;
 
   const handle = async () => {
+    if (bookedConvert) {
+      const nextErrors = validateBooking(booking);
+      setBookingErrors(nextErrors);
+      if (Object.keys(nextErrors).length) return;
+    }
     setBusy(true);
     try {
-      await onConfirm(closedReason);
+      await onConfirm(closedReason, bookedConvert ? toBookingInput(booking) : undefined);
     } finally {
       setBusy(false);
     }
@@ -164,6 +177,9 @@ function StageMoveDialog({
             onLostTextChange={setLostText}
           />
         ) : null}
+        {bookedConvert ? (
+          <BookingFields form={booking} errors={bookingErrors} onChange={setBooking} />
+        ) : null}
         <DialogFooter>
           <Button type="button" variant="outline" className="rounded-xl" onClick={onCancel} disabled={busy}>
             Cancel
@@ -174,7 +190,7 @@ function StageMoveDialog({
             disabled={busy || !canConfirm}
             onClick={handle}
           >
-            {isClosing ? "Close Enquiry" : "Move"}
+            {isClosing ? (bookedConvert ? "Convert to booked" : "Close Enquiry") : "Move"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -273,6 +289,7 @@ function EnquiryDetailSheet({
   onMove,
   onRemove,
   onFollow,
+  onConvert,
 }: {
   enquiry: CrmEnquiry | null;
   contactName: (id: string) => string;
@@ -281,6 +298,7 @@ function EnquiryDetailSheet({
   onMove: (enquiry: CrmEnquiry, stage: CrmEnquiryStatus) => void;
   onRemove: (id: string) => void;
   onFollow: (enquiry: CrmEnquiry) => void;
+  onConvert: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   const [followUps, setFollowUps] = useState<CrmFollowUp[]>([]);
@@ -382,7 +400,7 @@ function EnquiryDetailSheet({
                     type="button"
                     size="sm"
                     className="rounded-xl"
-                    onClick={() => { void crm.convertEnquiry(enquiry.id); onClose(); }}
+                    onClick={() => { onConvert(enquiry); onClose(); }}
                   >
                     <CheckCircle2 className="mr-1 h-4 w-4" /> Convert
                   </Button>
@@ -489,6 +507,7 @@ function EnquiryTable({
   onEdit,
   onRemove,
   onFollow,
+  onConvert,
 }: {
   items: CrmEnquiry[];
   contactName: (id: string) => string;
@@ -496,6 +515,7 @@ function EnquiryTable({
   onEdit: (enquiry: CrmEnquiry) => void;
   onRemove: (id: string) => void;
   onFollow: (enquiry: CrmEnquiry) => void;
+  onConvert: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   return (
@@ -540,7 +560,7 @@ function EnquiryTable({
                   <IconAction
                     label="Convert"
                     className="text-primary hover:text-primary"
-                    onClick={() => void crm.convertEnquiry(enquiry.id)}
+                    onClick={() => onConvert(enquiry)}
                   >
                     <CheckCircle2 className="h-4 w-4" />
                   </IconAction>
@@ -569,6 +589,7 @@ function EnquiryCards({
   onEdit,
   onRemove,
   onFollow,
+  onConvert,
 }: {
   items: CrmEnquiry[];
   contactName: (id: string) => string;
@@ -576,6 +597,7 @@ function EnquiryCards({
   onEdit: (enquiry: CrmEnquiry) => void;
   onRemove: (id: string) => void;
   onFollow: (enquiry: CrmEnquiry) => void;
+  onConvert: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   return (
@@ -619,7 +641,7 @@ function EnquiryCards({
                 <IconAction
                   label="Convert"
                   className="text-primary hover:text-primary"
-                  onClick={() => void crm.convertEnquiry(enquiry.id)}
+                  onClick={() => onConvert(enquiry)}
                 >
                   <CheckCircle2 className="h-4 w-4" />
                 </IconAction>
@@ -649,6 +671,7 @@ function EnquiryKanban({
   onRemove,
   onMove,
   onFollow,
+  onConvert,
 }: {
   items: CrmEnquiry[];
   contactName: (id: string) => string;
@@ -657,6 +680,7 @@ function EnquiryKanban({
   onRemove: (id: string) => void;
   onMove: (enquiry: CrmEnquiry, stage: CrmEnquiryStatus) => void;
   onFollow: (enquiry: CrmEnquiry) => void;
+  onConvert: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
   const [dragId, setDragId] = useState<string | null>(null);
@@ -776,7 +800,7 @@ function EnquiryKanban({
                         <IconAction
                           className="h-7 w-7 text-primary hover:text-primary"
                           label="Convert"
-                          onClick={() => void crm.convertEnquiry(enquiry.id)}
+                          onClick={() => onConvert(enquiry)}
                         >
                           <CheckCircle2 className="h-4 w-4" />
                         </IconAction>
@@ -823,6 +847,7 @@ export function EnquiriesModule() {
     newStage: CrmEnquiryStatus;
   } | null>(null);
   const [followingEnquiry, setFollowingEnquiry] = useState<CrmEnquiry | null>(null);
+  const [convertingEnquiry, setConvertingEnquiry] = useState<CrmEnquiry | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = () => {
@@ -890,17 +915,21 @@ export function EnquiriesModule() {
     setPendingMove({ enquiry, newStage });
   };
 
-  const confirmMove = async (closedReason?: string) => {
+  const confirmMove = async (closedReason?: string, booking?: ConvertEnquiryInput) => {
     if (!pendingMove) return;
     const { enquiry, newStage } = pendingMove;
     setPendingMove(null);
     try {
-      await crm.updateEnquiry(enquiry.id, {
-        status: newStage,
-        ...(closedReason ? { closedReason } : {}),
-      });
+      if (closedReason === "Booked" && booking) {
+        await crm.convertEnquiry(enquiry.id, booking);
+      } else {
+        await crm.updateEnquiry(enquiry.id, {
+          status: newStage,
+          ...(closedReason ? { closedReason } : {}),
+        });
+      }
       if (viewingEnquiry?.id === enquiry.id) {
-        setViewingEnquiry((prev) => prev ? { ...prev, status: newStage, closedReason: closedReason ?? prev.closedReason } : null);
+        setViewingEnquiry((prev) => prev ? { ...prev, status: closedReason === "Booked" ? "closed" : newStage, closedReason: closedReason ?? prev.closedReason } : null);
       }
     } catch {
       // errors toasted in store
@@ -1013,6 +1042,7 @@ export function EnquiriesModule() {
             onEdit={openEdit}
             onRemove={setRemoveId}
             onFollow={setFollowingEnquiry}
+            onConvert={setConvertingEnquiry}
           />
         ) : view === "card" ? (
           <EnquiryCards
@@ -1022,6 +1052,7 @@ export function EnquiriesModule() {
             onEdit={openEdit}
             onRemove={setRemoveId}
             onFollow={setFollowingEnquiry}
+            onConvert={setConvertingEnquiry}
           />
         ) : (
           <EnquiryKanban
@@ -1032,6 +1063,7 @@ export function EnquiriesModule() {
             onRemove={(id) => setRemoveId(id)}
             onMove={requestMove}
             onFollow={setFollowingEnquiry}
+            onConvert={setConvertingEnquiry}
           />
         )}
       </ModuleStatus>
@@ -1045,6 +1077,7 @@ export function EnquiriesModule() {
         onMove={requestMove}
         onRemove={setRemoveId}
         onFollow={setFollowingEnquiry}
+        onConvert={setConvertingEnquiry}
       />
 
       {/* Stage-move confirmation dialog */}
@@ -1066,6 +1099,11 @@ export function EnquiriesModule() {
           onConfirm={confirmFollowUp}
         />
       ) : null}
+
+      <ConvertToBookedSheet
+        enquiry={convertingEnquiry}
+        onClose={() => setConvertingEnquiry(null)}
+      />
 
       {/* Create / Edit sheet */}
       <SideSheet

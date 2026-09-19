@@ -1,7 +1,19 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  BookingsTab,
+  EnquiriesTab,
+  PaymentsTab,
+} from "@/components/modules/ContactViewSheet";
 import {
   ConfirmRemoveDialog,
   EditAction,
@@ -11,13 +23,23 @@ import {
   NativeSelect,
   RemoveAction,
   RowActions,
+  SheetTabButton,
+  SheetTabList,
   SideSheet,
   StatusBadge,
   ViewAction,
 } from "@/components/modules/shared";
 import { CLIENT_STATUS_LABELS, clientStatusOptions } from "@/lib/crm/display";
+import { fetchContactDetail } from "@/lib/crm/remote";
 import { useCrm } from "@/lib/crm/store";
-import { CRM_PERMISSIONS, type CreateClientInput, type CrmClient, type CrmClientStatus } from "@/types/crm";
+import {
+  CRM_PERMISSIONS,
+  type CreateClientInput,
+  type CrmClient,
+  type CrmClientStatus,
+  type CrmContact,
+  type CrmContactDetail,
+} from "@/types/crm";
 
 type FormState = {
   contactId: string;
@@ -289,101 +311,23 @@ export function ClientsModule({
         </Field>
       </SideSheet>
 
-      <SideSheet
-        open={Boolean(viewing)}
-        onOpenChange={(open) => {
-          if (!open) setViewing(null);
+      <ClientViewSheet
+        client={viewing}
+        contact={viewingContact}
+        onClose={() => setViewing(null)}
+        onOpenContact={(contactId) => {
+          setViewing(null);
+          onOpenContact(contactId);
         }}
-        title="View client"
-        description="Billing, contact, and GSTIN details"
-        footer={
-          <>
-            {viewing ? (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => {
-                    const contactId = viewing.contactId;
-                    setViewing(null);
-                    onOpenContact(contactId);
-                  }}
-                >
-                  Contact
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="rounded-xl"
-                  onClick={() => {
-                    const clientId = viewing.id;
-                    setViewing(null);
-                    onOpenPayments(clientId);
-                  }}
-                >
-                  Payments
-                </Button>
-                {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="rounded-xl"
-                    onClick={() => {
-                      const client = viewing;
-                      setViewing(null);
-                      openEdit(client);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                ) : null}
-              </>
-            ) : null}
-            <Button type="button" className="rounded-xl" onClick={() => setViewing(null)}>
-              Close
-            </Button>
-          </>
-        }
-      >
-        {viewing ? (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <div>
-              <dt className="text-xs text-muted-foreground">Billing name</dt>
-              <dd className="mt-0.5 font-medium">{viewing.billingName}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Status</dt>
-              <dd className="mt-0.5">
-                <StatusBadge status={viewing.status} label={CLIENT_STATUS_LABELS[viewing.status]} />
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Contact</dt>
-              <dd className="mt-0.5 font-medium">{contactName(viewing.contactId)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Mobile</dt>
-              <dd className="mt-0.5 font-medium">{viewingContact?.mobile ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Email</dt>
-              <dd className="mt-0.5 font-medium">{viewingContact?.email ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Company</dt>
-              <dd className="mt-0.5 font-medium">{viewingContact?.companyName ?? "—"}</dd>
-            </div>
-            <div className="col-span-2">
-              <dt className="text-xs text-muted-foreground">GSTIN</dt>
-              <dd className="mt-0.5 font-medium">{viewing.gstin ?? "—"}</dd>
-            </div>
-          </dl>
-        ) : null}
-      </SideSheet>
+        onOpenPayments={(clientId) => {
+          setViewing(null);
+          onOpenPayments(clientId);
+        }}
+        onEdit={(client) => {
+          setViewing(null);
+          openEdit(client);
+        }}
+      />
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}
@@ -396,5 +340,149 @@ export function ClientsModule({
         }}
       />
     </ModulePage>
+  );
+}
+
+type ClientViewTab = "booking" | "enquiries" | "payments";
+
+function ClientViewSheet({
+  client,
+  contact,
+  onClose,
+  onOpenContact,
+  onOpenPayments,
+  onEdit,
+}: {
+  client: CrmClient | null;
+  contact: CrmContact | null;
+  onClose: () => void;
+  onOpenContact: (contactId: string) => void;
+  onOpenPayments: (clientId: string) => void;
+  onEdit: (client: CrmClient) => void;
+}) {
+  const crm = useCrm();
+  const [tab, setTab] = useState<ClientViewTab>("booking");
+  const [detail, setDetail] = useState<CrmContactDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!client) {
+      setDetail(null);
+      setError(null);
+      setTab("booking");
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setTab("booking");
+    void fetchContactDetail(client.contactId)
+      .then((next) => {
+        if (cancelled) return;
+        setDetail(next);
+      })
+      .catch((caught: unknown) => {
+        if (cancelled) return;
+        setDetail(null);
+        setError(caught instanceof Error ? caught.message : "Unable to load client");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  const bookings = detail?.bookings ?? [];
+  const enquiries = (detail?.enquiries ?? []).filter(
+    (enquiry) => !client?.convertedFromEnquiryId || enquiry.id === client.convertedFromEnquiryId,
+  );
+  const enquiryList = enquiries.length > 0 ? enquiries : (detail?.enquiries ?? []);
+  const payments = (detail?.payments ?? []).filter(
+    (payment) => payment.referenceType === "client" && payment.referenceId === client?.id,
+  );
+
+  return (
+    <Sheet open={Boolean(client)} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-xl">
+        {client ? (
+          <>
+            <SheetHeader className="border-b px-6 py-5">
+              <div className="flex items-start justify-between gap-3 pr-6">
+                <div className="min-w-0 space-y-1">
+                  <SheetTitle className="truncate text-lg leading-snug">{client.billingName}</SheetTitle>
+                  <SheetDescription className="text-sm">{contact?.name ?? "Client"}</SheetDescription>
+                </div>
+                <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
+              </div>
+            </SheetHeader>
+            <div className="flex-1 space-y-5 px-6 py-5">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Contact</dt>
+                  <dd className="mt-0.5 font-medium">{contact?.name ?? client.contactId}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Mobile</dt>
+                  <dd className="mt-0.5 font-medium">{contact?.mobile ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">GSTIN</dt>
+                  <dd className="mt-0.5 font-medium">{client.gstin ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Email</dt>
+                  <dd className="mt-0.5 font-medium">{contact?.email ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Company</dt>
+                  <dd className="mt-0.5 font-medium">{contact?.companyName ?? "—"}</dd>
+                </div>
+              </dl>
+
+              <SheetTabList label="Client records">
+                <SheetTabButton id="booking" selected={tab === "booking"} onSelect={setTab}>
+                  Current booking{!loading ? ` (${bookings.length})` : ""}
+                </SheetTabButton>
+                <SheetTabButton id="enquiries" selected={tab === "enquiries"} onSelect={setTab}>
+                  Enquiry{!loading ? ` (${enquiryList.length})` : ""}
+                </SheetTabButton>
+                <SheetTabButton id="payments" selected={tab === "payments"} onSelect={setTab}>
+                  Payments{!loading ? ` (${payments.length})` : ""}
+                </SheetTabButton>
+              </SheetTabList>
+
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : tab === "booking" ? (
+                <BookingsTab bookings={bookings} enquiries={detail?.enquiries ?? []} />
+              ) : tab === "enquiries" ? (
+                <EnquiriesTab enquiries={enquiryList} />
+              ) : (
+                <PaymentsTab payments={payments} />
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onOpenContact(client.contactId)}>
+                  Contact
+                </Button>
+                <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onOpenPayments(client.id)}>
+                  Payments
+                </Button>
+                {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? (
+                  <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onEdit(client)}>
+                    Edit
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </>
+        ) : null}
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -22,6 +22,10 @@ docker compose --env-file .env.dev -f docker-compose.dev.yml up -d --force-recre
 Pair `.env.dev` with `docker-compose.dev.yml` and `.env.prod` with
 `docker-compose.prod.yml`. Do not mix them.
 
+Dev Compose runs three isolated CRM datasets on one Postgres server: `${POSTGRES_DB}` (finance + myfinancefreedom CRM), `${POSTGRES_TRAVEL_CRM_DB}` (travel), and `${POSTGRES_BANQUE_CRM_DB}` (banquet). Each extra CRM has its own API container (`api-travel` on 5002, `api-banque` on 5003) and reuses `apps/crm` (ports 8083 / 8084 internally still listen on 8082).
+
+Prod Compose uses the same databases and API split. Hosts: `crm.myfinancefreedom.com`, `travel.myfinancefreedom.com`, `banquet.myfinancefreedom.com`. Extra API ports are not published; nginx reaches them on the Compose network. Do not start prod while the dev nginx holds port 80.
+
 ## Dev
 
 ```bash

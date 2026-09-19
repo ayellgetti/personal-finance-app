@@ -8,7 +8,7 @@ Local setup: `README.md`.
 
 Existing implementation wins over generic platform boilerplate. Do not create `apps/admin`, empty `@repo/*` packages, or move Prisma until that work is approved in the development plan.
 
-Sales CRM (Track D) is an approved second product: `apps/crm` UI and `modules/sales-crm` in the existing `apps/api`. CRM-only Role/Permission RBAC is approved. Finance stays `userId` ownership. Do not add `tenantId`, a second Prisma schema, a second API, `/api/v1`, or a new JSON envelope. The unused `Contact` stub stays unused; CRM parties use `Crm*` models.
+Sales CRM (Track D) is an approved second product: `apps/crm` UI and `modules/sales-crm` in the existing `apps/api`. CRM-only Role/Permission RBAC is approved. Finance stays `userId` ownership. Do not add `tenantId`, a second Prisma schema, a second API codebase, `/api/v1`, or a new JSON envelope. Local Compose may run extra copies of the same API image against extra Postgres databases so banquet and travel CRM stay isolated. The unused `Contact` stub stays unused; CRM parties use `Crm*` models.
 
 ---
 
@@ -18,7 +18,7 @@ Build a **production-ready TypeScript monorepo** that hosts a personal-finance p
 
 The running finance product: an **India-first personal finance web app** — capture a household’s money, project cash flow and net worth, and turn that into an AI advisor report.
 
-The Sales CRM (same login `User`, company-wide data, CRM-only RBAC) is specified in `docs/DEVELOPMENT_PLAN.md` Track D. `apps/crm` is the CRM UI. CRM HTTP lives under `/api/crm` (session, contacts, enquiries, follow-ups, clients, payments, tasks, calendar, users, roles, dashboard). Contact view (`GET /api/crm/contacts/:id`) includes that party’s enquiries with follow-ups and related payments. Add, edit, and record-view screens open in a right-side sheet; remove and stage-move confirmations stay centered dialogs.
+The Sales CRM (same login `User`, company-wide data, CRM-only RBAC) is specified in `docs/DEVELOPMENT_PLAN.md` Track D. `apps/crm` is the CRM UI. CRM HTTP lives under `/api/crm` (session, contacts, enquiries, follow-ups, clients, payments, tasks, calendar, users, roles, dashboard). Contact and client views (`GET /api/crm/contacts/:id`) include that party’s enquiries with follow-ups, related payments, and current bookings (calendar events linked to the enquiry). Convert-to-booked requires an event start datetime and either an end datetime or a slot (morning / evening / full day). Add, edit, and record-view screens open in a right-side sheet; remove and stage-move confirmations stay centered dialogs.
 
 The system must be scalable, maintainable, secure, testable, modular, developer-friendly, and AI-agent friendly.
 
@@ -111,7 +111,7 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 | --- | --- | --- |
 | Web | `apps/web` | Authenticated Freedom Planner UI (`8080` in Compose) |
 | Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
-| CRM | `apps/crm` | Sales CRM UI (`8082`); dashboard, pipeline, tasks, calendar, users/roles. Public walkthroughs (no auth): `/banquet`, `/real-estate`, `/freedom`. |
+| CRM | `apps/crm` | Sales CRM UI (`8082`); extra Compose copies on `8083` (travel) and `8084` (banquet). Dashboard, pipeline, tasks, calendar, users/roles. Public walkthroughs (no auth): `/banquet`, `/real-estate`, `/freedom`. |
 | API | `apps/api` | Express backend (`5001`), Swagger `/docs`; finance + `/api/crm` |
 
 Do not import `apps/web` source from `apps/website`, `apps/crm`, or the reverse.
@@ -547,6 +547,10 @@ Express (:5001)
 ```
 
 AWS (`docker-compose.prod.yml`): nginx serves the built SPA and proxies `/api` to Express (port 80, and 443 when `TLS_DOMAIN` is set). Postgres and Redis stay on the Compose network. See `docs/AWS_DEPLOY.md`.
+
+Local `docker-compose.dev.yml` can also run two extra CRM instances (same `apps/crm` UI, extra API processes): travel on `8083` / `travel.local.uat` (`travel_crm` database) and banquet on `8084` / `banquet.local.uat` (`banque_crm` database). The original CRM stays on `8082` / `crm.local.uat` and shares `${POSTGRES_DB}` with finance.
+
+Production (`docker-compose.prod.yml`) uses the same split: `https://crm.myfinancefreedom.com` (shared finance DB), `https://travel.myfinancefreedom.com` (`travel_crm`), `https://banquet.myfinancefreedom.com` (`banque_crm`). Point those hostnames at the Elastic IP and expand the Let's Encrypt cert (`./docker-certbot.sh`) before nginx will serve HTTPS for the new names.
 
 Planner output is computed, not the source of truth. Advisor JSON lives in Redis, not a durable advice table.
 

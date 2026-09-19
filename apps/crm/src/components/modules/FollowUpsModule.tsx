@@ -26,6 +26,7 @@ import {
   localInputToIso,
 } from "@/lib/crm/display";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
+import { ConvertToBookedSheet } from "@/components/modules/ConvertToBookedSheet";
 import { listFollowUpCalendar } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
 import { useCrm } from "@/lib/crm/store";
@@ -345,13 +346,17 @@ function FollowUpTimelines({
   followUps,
   contactName,
   canCreate,
+  canConvert,
   onFollow,
+  onConvert,
 }: {
   enquiries: CrmEnquiry[];
   followUps: CrmFollowUp[];
   contactName: (id: string) => string;
   canCreate: boolean;
+  canConvert: boolean;
   onFollow: (enquiry: CrmEnquiry) => void;
+  onConvert: (enquiry: CrmEnquiry) => void;
 }) {
   if (enquiries.length === 0) {
     return <p className="text-sm text-muted-foreground">No leads to track</p>;
@@ -389,6 +394,17 @@ function FollowUpTimelines({
                       Add followup
                     </Button>
                   ) : null}
+                  {canConvert && enquiry.status !== "closed" ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 rounded-lg px-2"
+                      onClick={() => onConvert(enquiry)}
+                    >
+                      Convert
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </CardHeader>
@@ -420,6 +436,7 @@ export function FollowUpsModule({
   const [editing, setEditing] = useState<CrmFollowUp | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [convertingEnquiry, setConvertingEnquiry] = useState<CrmEnquiry | null>(null);
   const [busy, setBusy] = useState(false);
   const [cursor, setCursor] = useState(() => new Date());
   const [calendarItems, setCalendarItems] = useState<CrmFollowUpCalendarItem[]>([]);
@@ -751,7 +768,9 @@ export function FollowUpsModule({
             followUps={crm.followUps.items}
             contactName={contactName}
             canCreate={crm.hasPermission(CRM_PERMISSIONS.followUpsCreate)}
+            canConvert={crm.hasPermission(CRM_PERMISSIONS.enquiriesConvert)}
             onFollow={openCreate}
+            onConvert={setConvertingEnquiry}
           />
         ) : (
           <FollowUpCalendarView
@@ -881,6 +900,11 @@ export function FollowUpsModule({
           if (!removeId) return;
           void crm.removeFollowUp(removeId).finally(() => setRemoveId(null));
         }}
+      />
+
+      <ConvertToBookedSheet
+        enquiry={convertingEnquiry}
+        onClose={() => setConvertingEnquiry(null)}
       />
     </ModulePage>
   );

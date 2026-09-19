@@ -2,6 +2,7 @@ import {
   CRM_CLIENT_STATUSES,
   CRM_CONTACT_TYPES,
   CRM_ENQUIRY_STATUSES,
+  CRM_EVENT_SLOTS,
   CRM_PAYMENT_MODES,
   CRM_PAYMENT_STATUSES,
   CRM_PAYMENT_TYPES,
@@ -9,6 +10,7 @@ import {
   type CrmClientStatus,
   type CrmContactType,
   type CrmEnquiryStatus,
+  type CrmEventSlot,
   type CrmPaymentMode,
   type CrmPaymentStatus,
   type CrmPaymentType,
@@ -64,6 +66,45 @@ export const TASK_STATUS_LABELS: Record<CrmTaskStatus, string> = {
   in_review: "In-Review",
   done: "Done",
 };
+
+export const EVENT_SLOT_LABELS: Record<CrmEventSlot, string> = {
+  morning: "Morning",
+  evening: "Evening",
+  full_day: "Full day",
+};
+
+const SLOT_END_IST: Record<CrmEventSlot, { hour: number; minute: number }> = {
+  morning: { hour: 16, minute: 0 },
+  evening: { hour: 23, minute: 0 },
+  full_day: { hour: 23, minute: 0 },
+};
+
+export function endsAtFromSlot(startsAtIsoOrLocal: string, slot: CrmEventSlot): string {
+  const startsAt = new Date(startsAtIsoOrLocal);
+  if (Number.isNaN(startsAt.getTime())) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(startsAt);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const end = SLOT_END_IST[slot];
+  return isoToLocalInput(
+    new Date(`${year}-${pad(month)}-${pad(day)}T${pad(end.hour)}:${pad(end.minute)}:00+05:30`).toISOString(),
+  );
+}
+
+export function eventSlotOptions() {
+  return CRM_EVENT_SLOTS.map((slot) => (
+    <option key={slot} value={slot}>
+      {EVENT_SLOT_LABELS[slot]}
+    </option>
+  ));
+}
 
 export function paymentTypeOptions() {
   return CRM_PAYMENT_TYPES.map((type) => (

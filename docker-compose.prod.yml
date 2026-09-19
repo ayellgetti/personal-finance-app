@@ -1,6 +1,27 @@
-# Local development stack (Vite on 5173, bind mounts, admin UIs).
-# nginx also fronts the stack on http://localhost so /api is same-origin.
-# AWS / public hosts: docker-compose.prod.yml — see docs/AWS_DEPLOY.md.
+# Production stack (built images, no Vite bind mounts).
+# Run with: docker compose -p personal-finance-prod --env-file .env.prod -f docker-compose.prod.yml
+# Do not start this file while docker-compose.dev.yml holds ports 80/443.
+# See docs/AWS_DEPLOY.md.
+
+x-api-healthcheck: &api-healthcheck
+  test:
+    [
+      "CMD",
+      "node",
+      "-e",
+      "fetch('http://127.0.0.1:5001/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+    ]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 20s
+
+x-crm-prod-healthcheck: &crm-prod-healthcheck
+  test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
 
 services:
   nginx:
@@ -11,10 +32,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # conf.d, not nginx.conf: these files are server blocks, not a main config.
-      # nginx.dev.conf proxies to Vite; nginx.conf serves a built dist in prod.
-      # - ./deploy/nginx.dev.conf:/etc/nginx/conf.d/default.conf:ro
-      # - ./deploy/snippets:/etc/nginx/snippets:ro
       - ./containers/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
       - ./containers/nginx/ssl:/etc/nginx/ssl:ro
       - ./containers/certbot/letsencrypt:/etc/letsencrypt
@@ -22,11 +39,19 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      api-travel:
+        condition: service_healthy
+      api-banque:
+        condition: service_healthy
       web:
         condition: service_healthy
       website:
         condition: service_healthy
       crm:
+        condition: service_healthy
+      travel-crm:
+        condition: service_healthy
+      banque-crm:
         condition: service_healthy
 
   certbot:
@@ -68,6 +93,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  postgres-init-crm-dbs:
+    image: postgres:16-alpine
+    container_name: docker-postgres-init-crm-dbs
+    restart: "no"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_TRAVEL_CRM_DB: ${POSTGRES_TRAVEL_CRM_DB}
+      POSTGRES_BANQUE_CRM_DB: ${POSTGRES_BANQUE_CRM_DB}
+    volumes:
+      - ./containers/postgres/init-crm-databases.sh:/init-crm-databases.sh:ro
+    command: ["sh", "/init-crm-databases.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -133,18 +174,53 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck: *api-healthcheck
+
+  api-travel:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: docker-api-travel
+    restart: unless-stopped
+    env_file:
+      - ./.env.prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_TRAVEL_CRM_DB}
+      REDIS_URL: redis://redis:6379/1
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}-travel
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}-travel
+      CORS_ORIGIN: ${TRAVEL_CRM_ORIGIN:-https://travel.myfinancefreedom.com}
+    depends_on:
+      postgres-init-crm-dbs:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:5001/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      <<: *api-healthcheck
+      start_period: 60s
+
+  api-banque:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: docker-api-banque
+    restart: unless-stopped
+    env_file:
+      - ./.env.prod
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_BANQUE_CRM_DB}
+      REDIS_URL: redis://redis:6379/2
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}-banque
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}-banque
+      CORS_ORIGIN: ${BANQUE_CRM_ORIGIN:-https://banquet.myfinancefreedom.com}
+    depends_on:
+      postgres-init-crm-dbs:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      <<: *api-healthcheck
+      start_period: 60s
 
   web:
     build:
@@ -196,10 +272,34 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    healthcheck: *crm-prod-healthcheck
 
+  travel-crm:
+    build:
+      context: .
+      dockerfile: apps/crm/Dockerfile.prod
+    container_name: docker-travel-crm
+    restart: unless-stopped
+    env_file:
+      - ./.env.prod
+    ports:
+      - "8083:80"
+    depends_on:
+      api-travel:
+        condition: service_healthy
+    healthcheck: *crm-prod-healthcheck
+
+  banque-crm:
+    build:
+      context: .
+      dockerfile: apps/crm/Dockerfile.prod
+    container_name: docker-banque-crm
+    restart: unless-stopped
+    env_file:
+      - ./.env.prod
+    ports:
+      - "8084:80"
+    depends_on:
+      api-banque:
+        condition: service_healthy
+    healthcheck: *crm-prod-healthcheck

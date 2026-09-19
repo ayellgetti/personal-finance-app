@@ -40,6 +40,7 @@ export const CRM_PAYMENT_MODES = ["CASH", "UPI", "CARD", "BANK_TRANSFER", "CHEQU
 export const CRM_PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export const CRM_PAYMENT_REFERENCE_TYPES = ["client", "vendor"] as const;
 export const CRM_TASK_STATUSES = ["todo", "in_progress", "in_review", "done"] as const;
+export const CRM_EVENT_SLOTS = ["morning", "evening", "full_day"] as const;
 
 export const crmContactTypeSchema = z.enum(CRM_CONTACT_TYPES);
 export const crmEnquiryStatusSchema = z.enum(CRM_ENQUIRY_STATUSES);
@@ -49,6 +50,7 @@ export const crmPaymentModeSchema = z.enum(CRM_PAYMENT_MODES);
 export const crmPaymentStatusSchema = z.enum(CRM_PAYMENT_STATUSES);
 export const crmPaymentReferenceTypeSchema = z.enum(CRM_PAYMENT_REFERENCE_TYPES);
 export const crmTaskStatusSchema = z.enum(CRM_TASK_STATUSES);
+export const crmEventSlotSchema = z.enum(CRM_EVENT_SLOTS);
 
 export type CrmIdParams = z.infer<typeof crmIdParamsSchema>;
 export type CrmListQuery = z.infer<typeof crmListQuerySchema>;

@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import type {
   ConvertedEnquiry,
+  ConvertEnquiryInput,
   CreateCalendarEventInput,
   CreateClientInput,
   CreateContactInput,
@@ -194,10 +195,14 @@ function mapContactDetail(row: Record<string, unknown>): CrmContactDetail {
   const payments = Array.isArray(row.payments)
     ? row.payments.map((item) => mapPayment(asRecord(item)))
     : [];
+  const bookings = Array.isArray(row.bookings)
+    ? row.bookings.map((item) => mapCalendarEvent(asRecord(item)))
+    : [];
   return {
     contact: mapContact(asRecord(row.contact)),
     enquiries,
     payments,
+    bookings,
   };
 }
 
@@ -259,6 +264,7 @@ function mapCalendarEvent(row: Record<string, unknown>): CrmCalendarEvent {
     title: String(row.title ?? ""),
     startsAt: asIso(row.startsAt),
     endsAt: asIso(row.endsAt),
+    slot: (row.slot as CrmCalendarEvent["slot"]) ?? null,
     contactId: row.contactId == null ? null : String(row.contactId),
     enquiryId: row.enquiryId == null ? null : String(row.enquiryId),
     assigneeId: row.assigneeId == null ? null : String(row.assigneeId),
@@ -428,7 +434,7 @@ export async function removeEnquiry(id: string): Promise<void> {
   await api("/api/crm/enquiries/remove", { method: "POST", body: { id } });
 }
 
-export async function convertEnquiry(id: string, body: { billingName?: string } = {}): Promise<ConvertedEnquiry> {
+export async function convertEnquiry(id: string, body: ConvertEnquiryInput): Promise<ConvertedEnquiry> {
   const data = await api<Record<string, unknown>>(`/api/crm/enquiries/${id}/convert`, {
     method: "POST",
     body,
@@ -437,6 +443,7 @@ export async function convertEnquiry(id: string, body: { billingName?: string } 
     enquiry: mapEnquiry(asRecord(requireField(data, "enquiry"))),
     contact: mapContact(asRecord(requireField(data, "contact"))),
     client: mapClient(asRecord(requireField(data, "client"))),
+    event: mapCalendarEvent(asRecord(requireField(data, "event"))),
   };
 }
 

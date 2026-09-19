@@ -117,6 +117,7 @@ export class CalendarService {
       enquiryId: input.enquiryId ?? null,
       assigneeId: input.assigneeId ?? null,
       notes: input.notes ?? null,
+      slot: input.slot ?? null,
       ...actorCreate(actorId),
     });
   }

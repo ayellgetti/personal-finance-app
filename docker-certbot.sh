@@ -20,4 +20,7 @@ docker run --rm \
   -d myfinancefreedom.com \
   -d www.myfinancefreedom.com \
   -d api.myfinancefreedom.com \
-  -d web.myfinancefreedom.com
+  -d web.myfinancefreedom.com \
+  -d crm.myfinancefreedom.com \
+  -d travel.myfinancefreedom.com \
+  -d banquet.myfinancefreedom.com

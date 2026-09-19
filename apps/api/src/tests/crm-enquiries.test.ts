@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { HttpError } from "../utils/http-error.util";
 import { EnquiryService, type ConvertedEnquiry } from "../modules/sales-crm/enquiries/enquiry.service";
-import { createEnquiryBodySchema } from "../modules/sales-crm/enquiries/enquiry.request";
+import { convertEnquiryBodySchema, createEnquiryBodySchema } from "../modules/sales-crm/enquiries/enquiry.request";
 import type {
+  CrmCalendarEventModel,
   CrmClientModel,
   CrmContactModel,
   CrmEnquiryModel,
@@ -61,6 +62,9 @@ type FakeClient = {
   updatedBy?: string;
 };
 
+const BOOKING_START = new Date("2026-12-12T10:30:00.000Z");
+const BOOKING_END = new Date("2026-12-12T17:30:00.000Z");
+
 function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = []) {
   const contacts = fakeCrud("contact", contactSeed);
   const enquiries = fakeCrud("enquiry", enquirySeed);
@@ -71,6 +75,16 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
     notes: string | null;
     stage: string;
   }>("followup", []);
+  const events = fakeCrud<{
+    id: string;
+    title: string;
+    startsAt: Date;
+    endsAt: Date;
+    slot: "morning" | "evening" | "full_day" | null;
+    contactId: string | null;
+    enquiryId: string | null;
+    isActive: number;
+  }>("event", []);
   const service = new EnquiryService(
     enquiries.model as unknown as CrmEnquiryModel,
     contacts.model as unknown as CrmContactModel,
@@ -102,11 +116,21 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
             createdBy: input.actorId,
             updatedBy: input.actorId,
           });
-      return { enquiry, contact, client: existing } as ConvertedEnquiry;
+      const event = await events.model.create({
+        title: input.booking.title,
+        startsAt: input.booking.startsAt,
+        endsAt: input.booking.endsAt,
+        slot: input.booking.slot,
+        contactId: input.contactId,
+        enquiryId: input.enquiryId,
+        isActive: 1,
+      });
+      return { enquiry, contact, client: existing, event } as ConvertedEnquiry;
     },
     followUps.model as unknown as CrmFollowUpModel,
+    events.model as unknown as CrmCalendarEventModel,
   );
-  return { service, contacts, enquiries, clients, followUps };
+  return { service, contacts, enquiries, clients, followUps, events };
 }
 
 test("enquiry create, list, update, and soft-delete hide the row", async () => {
@@ -166,8 +190,8 @@ test("closing an enquiry without a reason is 422", async () => {
   assert.equal(updated.status, "closed");
 });
 
-test("convert sets closed + client type and creates a client; second convert is idempotent", async () => {
-  const { service, contacts, clients } = setup([
+test("convert sets closed + client type and creates a linked booking event; second convert is idempotent", async () => {
+  const { service, contacts, clients, events } = setup([
     { id: "c-1", name: "Ada Lovelace", mobile: "111", type: "lead", isActive: 1 },
   ]);
   const enquiry = await service.create("user-1", {
@@ -176,7 +200,15 @@ test("convert sets closed + client type and creates a client; second convert is 
     source: "web",
     dueDate: DUE_DATE,
   });
-  const first = await service.convert("user-1", enquiry.id, { billingName: "Ada LLC" });
+  await assert.rejects(
+    () => service.convert("user-1", enquiry.id, { billingName: "Ada LLC" }),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
+  );
+  const first = await service.convert("user-1", enquiry.id, {
+    billingName: "Ada LLC",
+    startsAt: BOOKING_START,
+    endsAt: BOOKING_END,
+  });
   assert.equal(first.enquiry.status, "closed");
   assert.equal((first.enquiry as FakeEnquiry).closedReason, "Booked");
   assert.equal(first.contact.type, "client");
@@ -184,10 +216,58 @@ test("convert sets closed + client type and creates a client; second convert is 
   assert.equal(first.client.contactId, "c-1");
   assert.equal(contacts.rows[0]?.type, "client");
   assert.equal(clients.rows.length, 1);
+  assert.equal(first.event.enquiryId, enquiry.id);
+  assert.equal(first.event.contactId, "c-1");
+  assert.equal(first.event.startsAt.getTime(), BOOKING_START.getTime());
+  assert.equal(events.rows.length, 1);
 
   const second = await service.convert("user-1", enquiry.id, {});
   assert.equal(second.client.id, first.client.id);
+  assert.equal(second.event.id, first.event.id);
   assert.equal(clients.rows.length, 1);
+  assert.equal(events.rows.length, 1);
+});
+
+test("convert accepts a slot instead of an end datetime", async () => {
+  const { service } = setup([
+    { id: "c-1", name: "Ada Lovelace", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const enquiry = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Wedding",
+    source: "web",
+    dueDate: DUE_DATE,
+  });
+  const converted = await service.convert("user-1", enquiry.id, {
+    startsAt: new Date("2026-12-12T03:00:00.000Z"),
+    slot: "evening",
+  });
+  assert.equal(converted.event.slot, "evening");
+  assert.ok(converted.event.endsAt.getTime() > converted.event.startsAt.getTime());
+});
+
+test("convert body requires start plus end datetime or slot", () => {
+  assert.equal(convertEnquiryBodySchema.safeParse({}).success, true);
+  assert.equal(
+    convertEnquiryBodySchema.safeParse({
+      startsAt: BOOKING_START.toISOString(),
+    }).success,
+    false,
+  );
+  assert.equal(
+    convertEnquiryBodySchema.safeParse({
+      startsAt: BOOKING_START.toISOString(),
+      slot: "morning",
+    }).success,
+    true,
+  );
+  assert.equal(
+    convertEnquiryBodySchema.safeParse({
+      startsAt: BOOKING_START.toISOString(),
+      endsAt: BOOKING_END.toISOString(),
+    }).success,
+    true,
+  );
 });
 
 test("enquiry create rejects empty title", () => {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  crmEventSlotSchema,
   crmIdParamsSchema,
   crmListQuerySchema,
   crmRemoveBodySchema,
@@ -41,6 +42,7 @@ export const createCalendarEventBodySchema = z
     enquiryId: z.string().uuid().nullable().optional(),
     assigneeId: z.string().uuid().nullable().optional(),
     notes: z.string().trim().max(4000).nullable().optional(),
+    slot: crmEventSlotSchema.nullable().optional(),
   })
   .refine((value) => value.endsAt.getTime() > value.startsAt.getTime(), {
     message: "endsAt must be after startsAt",
@@ -56,6 +58,7 @@ export const updateCalendarEventBodySchema = z
     enquiryId: z.string().uuid().nullable().optional(),
     assigneeId: z.string().uuid().nullable().optional(),
     notes: z.string().trim().max(4000).nullable().optional(),
+    slot: crmEventSlotSchema.nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field is required",

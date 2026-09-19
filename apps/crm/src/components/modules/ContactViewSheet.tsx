@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
-import { StatusBadge } from "@/components/modules/shared";
+import { SheetTabButton, SheetTabList, StatusBadge } from "@/components/modules/shared";
 import {
   CONTACT_TYPE_LABELS,
   ENQUIRY_STATUS_LABELS,
+  EVENT_SLOT_LABELS,
   PAYMENT_MODE_LABELS,
   PAYMENT_STATUS_LABELS,
   PAYMENT_TYPE_LABELS,
@@ -23,14 +24,21 @@ import {
 } from "@/lib/crm/display";
 import { fetchContactDetail, listClients, listEnquiries, listFollowUps, listPayments } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
-import type { CrmContact, CrmContactDetail, CrmEnquiryWithFollowUps, CrmPayment } from "@/types/crm";
+import type {
+  CrmCalendarEvent,
+  CrmContact,
+  CrmContactDetail,
+  CrmEnquiry,
+  CrmEnquiryWithFollowUps,
+  CrmPayment,
+} from "@/types/crm";
 
-type TabId = "enquiries" | "payments";
+type TabId = "booking" | "enquiries" | "payments";
 
 async function loadContactDetail(contact: CrmContact): Promise<CrmContactDetail> {
   const detail = await fetchContactDetail(contact.id);
-  if (detail.enquiries.length > 0 || detail.payments.length > 0) {
-    return { ...detail, contact: detail.contact.id ? detail.contact : contact };
+  if (detail.enquiries.length > 0 || detail.payments.length > 0 || detail.bookings.length > 0) {
+    return { ...detail, contact: detail.contact.id ? detail.contact : contact, bookings: detail.bookings ?? [] };
   }
 
   const [enquiriesPage, followUpsPage] = await Promise.all([
@@ -53,7 +61,7 @@ async function loadContactDetail(contact: CrmContact): Promise<CrmContactDetail>
     }
   }
 
-  return { contact: detail.contact.id ? detail.contact : contact, enquiries, payments };
+  return { contact: detail.contact.id ? detail.contact : contact, enquiries, payments, bookings: detail.bookings ?? [] };
 }
 
 export function ContactViewSheet({
@@ -83,6 +91,7 @@ export function ContactViewSheet({
       .then((next) => {
         if (cancelled) return;
         setDetail(next);
+        setTab(next.bookings.length > 0 ? "booking" : "enquiries");
       })
       .catch((caught: unknown) => {
         if (cancelled) return;
@@ -100,6 +109,7 @@ export function ContactViewSheet({
   const viewing = detail?.contact ?? contact;
   const enquiries = detail?.enquiries ?? [];
   const payments = detail?.payments ?? [];
+  const bookings = detail?.bookings ?? [];
 
   return (
     <Sheet open={Boolean(contact)} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -137,14 +147,17 @@ export function ContactViewSheet({
                 ) : null}
               </dl>
 
-              <div className="flex gap-1 rounded-lg border p-1" role="tablist" aria-label="Contact records">
-                <TabButton id="enquiries" selected={tab === "enquiries"} onSelect={setTab}>
+              <SheetTabList label="Contact records">
+                <SheetTabButton id="booking" selected={tab === "booking"} onSelect={setTab}>
+                  Current booking{!loading ? ` (${bookings.length})` : ""}
+                </SheetTabButton>
+                <SheetTabButton id="enquiries" selected={tab === "enquiries"} onSelect={setTab}>
                   Enquiries{!loading ? ` (${enquiries.length})` : ""}
-                </TabButton>
-                <TabButton id="payments" selected={tab === "payments"} onSelect={setTab}>
+                </SheetTabButton>
+                <SheetTabButton id="payments" selected={tab === "payments"} onSelect={setTab}>
                   Payments{!loading ? ` (${payments.length})` : ""}
-                </TabButton>
-              </div>
+                </SheetTabButton>
+              </SheetTabList>
 
               {loading ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
@@ -170,6 +183,8 @@ export function ContactViewSheet({
                     Try again
                   </Button>
                 </div>
+              ) : tab === "booking" ? (
+                <BookingsTab bookings={bookings} enquiries={enquiries} />
               ) : tab === "enquiries" ? (
                 <EnquiriesTab enquiries={enquiries} />
               ) : (
@@ -183,34 +198,70 @@ export function ContactViewSheet({
   );
 }
 
-function TabButton({
-  id,
-  selected,
-  onSelect,
-  children,
+function currentBooking(bookings: CrmCalendarEvent[]): CrmCalendarEvent | null {
+  if (bookings.length === 0) return null;
+  const now = Date.now();
+  const upcoming = bookings
+    .filter((booking) => new Date(booking.endsAt).getTime() >= now)
+    .sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime());
+  return upcoming[0] ?? bookings[bookings.length - 1] ?? null;
+}
+
+export function BookingsTab({
+  bookings,
+  enquiries,
 }: {
-  id: TabId;
-  selected: boolean;
-  onSelect: (id: TabId) => void;
-  children: ReactNode;
+  bookings: CrmCalendarEvent[];
+  enquiries: CrmEnquiry[];
 }) {
+  if (bookings.length === 0) {
+    return <p className="text-sm text-muted-foreground">No booking yet.</p>;
+  }
+  const current = currentBooking(bookings);
+  const enquiryById = (id: string | null) => enquiries.find((enquiry) => enquiry.id === id);
+
   return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={selected}
-      className={cn(
-        "flex-1 rounded-md px-3 py-1.5 text-sm font-medium",
-        selected ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground",
-      )}
-      onClick={() => onSelect(id)}
-    >
-      {children}
-    </button>
+    <div className="space-y-3" role="tabpanel" aria-label="Current booking">
+      {bookings.map((booking) => {
+        const enquiry = enquiryById(booking.enquiryId);
+        const isCurrent = current?.id === booking.id;
+        return (
+          <article key={booking.id} className="rounded-2xl border px-4 py-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-medium leading-snug">{booking.title}</p>
+              {isCurrent ? <StatusBadge status="booked" label="Current" /> : null}
+              {booking.slot ? (
+                <StatusBadge status={booking.slot} label={EVENT_SLOT_LABELS[booking.slot]} />
+              ) : null}
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Starts</dt>
+                <dd className="mt-0.5 font-medium">{formatDateTime(booking.startsAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Ends</dt>
+                <dd className="mt-0.5 font-medium">{formatDateTime(booking.endsAt)}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs text-muted-foreground">Linked enquiry</dt>
+                <dd className="mt-0.5 font-medium">{enquiry?.title ?? booking.enquiryId ?? "—"}</dd>
+              </div>
+              {booking.notes ? (
+                <div className="col-span-2">
+                  <dt className="text-xs text-muted-foreground">Notes</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap text-muted-foreground">{booking.notes}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 
-function EnquiriesTab({ enquiries }: { enquiries: CrmEnquiryWithFollowUps[] }) {
+export function EnquiriesTab({ enquiries }: { enquiries: CrmEnquiryWithFollowUps[] }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
 
   if (enquiries.length === 0) {
@@ -282,7 +333,7 @@ function EnquiriesTab({ enquiries }: { enquiries: CrmEnquiryWithFollowUps[] }) {
   );
 }
 
-function PaymentsTab({ payments }: { payments: CrmPayment[] }) {
+export function PaymentsTab({ payments }: { payments: CrmPayment[] }) {
   if (payments.length === 0) {
     return <p className="text-sm text-muted-foreground">No payments yet.</p>;
   }

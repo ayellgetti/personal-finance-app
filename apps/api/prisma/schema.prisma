@@ -727,6 +727,12 @@ enum CrmTaskStatus {
   done
 }
 
+enum CrmEventSlot {
+  morning
+  evening
+  full_day
+}
+
 model Role {
   id        String    @id @default(uuid())
   name      String    @unique
@@ -963,10 +969,11 @@ model CrmTask {
 }
 
 model CrmCalendarEvent {
-  id         String    @id @default(uuid())
+  id         String        @id @default(uuid())
   title      String
   startsAt   DateTime
   endsAt     DateTime
+  slot       CrmEventSlot?
   contactId  String?
   enquiryId  String?
   assigneeId String?

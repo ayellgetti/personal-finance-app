@@ -146,6 +146,7 @@ describe("CRM modules", () => {
       },
       enquiries: [],
       payments: [],
+      bookings: [],
     }));
   });
 
@@ -236,11 +237,12 @@ describe("CRM modules", () => {
         },
       ],
       payments: [payment],
+      bookings: [],
     });
     renderCrm(<ContactsModule />);
     fireEvent.click(await screen.findByRole("button", { name: "View" }));
 
-    expect(await screen.findByRole("heading", { name: "Priya Shah" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Current booking (0)" })).toBeInTheDocument();
     expect(await screen.findByRole("tab", { name: "Enquiries (2)" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Payments (1)" })).toBeInTheDocument();
     expect(screen.getByText("Banquet inquiry")).toBeInTheDocument();
@@ -250,6 +252,33 @@ describe("CRM modules", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Payments (1)" }));
     expect(await screen.findByText("Paid")).toBeInTheDocument();
     expect(screen.getByText("Income")).toBeInTheDocument();
+  });
+
+  it("shows the current booking tab on the contact view", async () => {
+    listContacts.mockResolvedValue(emptyPage([{ ...contact, type: "client" }]));
+    fetchContactDetail.mockResolvedValue({
+      contact: { ...contact, type: "client" },
+      enquiries: [{ ...enquiry, status: "closed", closedReason: "Booked", followUps: [] }],
+      payments: [],
+      bookings: [
+        {
+          id: "event-1",
+          title: "Banquet inquiry",
+          startsAt: "2026-12-12T10:30:00.000Z",
+          endsAt: "2026-12-12T17:30:00.000Z",
+          slot: "evening",
+          contactId: contact.id,
+          enquiryId: enquiry.id,
+          assigneeId: null,
+          notes: null,
+        },
+      ],
+    });
+    renderCrm(<ContactsModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+    expect(await screen.findByRole("tab", { name: "Current booking (1)" })).toBeInTheDocument();
+    expect(screen.getByText("Evening")).toBeInTheDocument();
+    expect(screen.getByText("Linked enquiry")).toBeInTheDocument();
   });
 
   it("shows an error state when the list fails", async () => {
@@ -312,13 +341,33 @@ describe("CRM modules", () => {
         enquiry: { ...enquiry, status: "closed" as const },
         contact: { ...contact, type: "client" as const },
         client,
+        event: {
+          id: "event-1",
+          title: enquiry.title,
+          startsAt: "2026-12-12T10:30:00.000Z",
+          endsAt: "2026-12-12T17:30:00.000Z",
+          slot: "evening" as const,
+          contactId: contact.id,
+          enquiryId: enquiry.id,
+          assigneeId: null,
+          notes: null,
+        },
       };
     });
 
     renderCrm(<ConvertFlow />);
     expect(await screen.findByText("Banquet inquiry")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Convert" }));
-    await waitFor(() => expect(convertEnquiry).toHaveBeenCalledWith("enquiry-1", {}));
+    expect(await screen.findByRole("heading", { name: "Convert to booked" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Event start date & time"), { target: { value: "2026-12-12T16:00" } });
+    fireEvent.change(screen.getByLabelText("Slot"), { target: { value: "evening" } });
+    fireEvent.click(screen.getByRole("button", { name: "Convert to booked" }));
+    await waitFor(() =>
+      expect(convertEnquiry).toHaveBeenCalledWith(
+        "enquiry-1",
+        expect.objectContaining({ slot: "evening" }),
+      ),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Go to clients" }));
     expect(await screen.findByText("Acme Events")).toBeInTheDocument();
@@ -488,7 +537,10 @@ describe("CRM modules", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "View" }));
 
-    expect(await screen.findByRole("heading", { name: "View client" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Acme Events" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Current booking/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Enquiry/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Payments/ })).toBeInTheDocument();
     expect(screen.getAllByText("27AAPFU0939F1ZV")).toHaveLength(2);
     expect(screen.getByText("+919888888888")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();

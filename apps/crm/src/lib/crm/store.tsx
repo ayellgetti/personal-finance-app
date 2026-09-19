@@ -60,6 +60,7 @@ import {
 } from "@/lib/crm/remote";
 import type {
   ConvertedEnquiry,
+  ConvertEnquiryInput,
   CreateCalendarEventInput,
   CreateClientInput,
   CreateContactInput,
@@ -141,7 +142,7 @@ type CrmContextValue = {
   createEnquiry: (input: CreateEnquiryInput) => Promise<CrmEnquiry>;
   updateEnquiry: (id: string, input: Partial<CreateEnquiryInput>) => Promise<CrmEnquiry>;
   removeEnquiry: (id: string) => Promise<void>;
-  convertEnquiry: (id: string, body?: { billingName?: string }) => Promise<ConvertedEnquiry>;
+  convertEnquiry: (id: string, body: ConvertEnquiryInput) => Promise<ConvertedEnquiry>;
   followUps: ListCache<CrmFollowUp>;
   loadFollowUps: (query?: ListFollowUpsQuery) => Promise<void>;
   createFollowUp: (input: CreateFollowUpInput) => Promise<CrmFollowUp>;
@@ -360,7 +361,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const convertEnquiry = useCallback(async (id: string, body: { billingName?: string } = {}) => {
+  const convertEnquiry = useCallback(async (id: string, body: ConvertEnquiryInput) => {
     try {
       const converted = await convertEnquiryRemote(id, body);
       setEnquiries((current) => ({
@@ -375,6 +376,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         status: current.status === "idle" ? "ready" : current.status,
         items: upsertById(current.items, converted.client),
         errorMessage: null,
+      }));
+      setCalendar((current) => ({
+        ...current,
+        items: upsertById(current.items, {
+          kind: "event",
+          id: converted.event.id,
+          title: converted.event.title,
+          at: converted.event.startsAt,
+          endsAt: converted.event.endsAt,
+        }),
       }));
       toast.success("Enquiry converted");
       return converted;
