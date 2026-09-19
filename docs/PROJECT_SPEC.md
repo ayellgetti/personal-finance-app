@@ -552,7 +552,7 @@ Local `docker-compose.dev.yml` can also run two extra CRM instances (same `apps/
 
 Production (`docker-compose.prod.yml`) uses the same split: `https://crm.myfinancefreedom.com` (shared finance DB), `https://travel.myfinancefreedom.com` (`travel_crm`), `https://banquet.myfinancefreedom.com` (`banque_crm`). Point those hostnames at the Elastic IP and expand the Let's Encrypt cert (`./docker-certbot.sh`) before nginx will serve HTTPS for the new names.
 
-Planner output is computed, not the source of truth. Advisor JSON lives in Redis, not a durable advice table.
+Planner output is computed, not the source of truth. Advisor JSON lives in Redis, not a durable advice table. AI Chat threads and messages are stored in `AdvisorChat` / `AdvisorChatMessage` (not the unused `Conversation` stubs) so a paid user can reopen earlier chats.
 
 ---
 

@@ -665,7 +665,7 @@ Statement parse: `apps/api/src/modules/personal-finance/statement/statement.pars
 
 Advisor: prompt + `advisor.schema.ts` together; cache in Redis.
 
-Schema stubs (chat, notifications, devices, TradingView, `Transaction`, the unused `Contact` stub) stay unused until the plan says otherwise. CRM parties are `Crm*` models — do not reuse `Contact`.
+Schema stubs (generic `Conversation*` chat, notifications, devices, TradingView, `Transaction`, the unused `Contact` stub) stay unused until the plan says otherwise. Paid AI Chat history uses `AdvisorChat` / `AdvisorChatMessage`. CRM parties are `Crm*` models — do not reuse `Contact`.
 
 ---
 

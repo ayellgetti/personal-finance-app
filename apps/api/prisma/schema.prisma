@@ -55,6 +55,8 @@ model User {
   statementLines             StatementLine[]
   taxScenarios               TaxScenario[]
   calculatorScenarios        CalculatorScenario[]
+  advisorChats               AdvisorChat[]
+  advisorChatMessages        AdvisorChatMessage[]
   userRoles                  UserRole[]
   assignedCrmEnquiries       CrmEnquiry[]       @relation("CrmEnquiryAssignedTo")
   assignedCrmTasks           CrmTask[]          @relation("CrmTaskAssignee")
@@ -493,6 +495,52 @@ model CalculatorScenario {
   @@index([userId])
   @@index([userId, isActive])
   @@index([userId, type, isActive])
+}
+
+enum AdvisorChatRole {
+  user
+  assistant
+}
+
+model AdvisorChat {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  isActive  Int       @default(1)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  user     User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AdvisorChatMessage[]
+
+  @@index([userId])
+  @@index([userId, isActive, updatedAt])
+}
+
+model AdvisorChatMessage {
+  id        String          @id @default(uuid())
+  chatId    String
+  userId    String
+  role      AdvisorChatRole
+  content   String
+  isActive  Int             @default(1)
+  createdBy String?
+  createdAt DateTime        @default(now())
+  updatedBy String?
+  updatedAt DateTime        @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  chat AdvisorChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+  @@index([userId])
+  @@index([chatId, isActive, createdAt])
 }
 
 model Device {

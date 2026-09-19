@@ -2608,12 +2608,78 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/advisor/chats": {
+      get: {
+        tags: ["Advisor"],
+        summary: "List saved AI advisor chats",
+        description:
+          "Returns the authenticated paid user's saved advisor conversations, newest first. Returns 402 when `isPaid` is false.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+        ],
+        responses: {
+          "200": {
+            description: "Saved chats.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Envelope" },
+              },
+            },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "402": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/advisor/chats/{id}": {
+      get: {
+        tags: ["Advisor"],
+        summary: "Load one saved AI advisor chat",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": { description: "Chat and messages.", content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } } },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "402": { $ref: "#/components/responses/EnvelopeError" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
+    "/api/advisor/chats/remove": {
+      post: {
+        tags: ["Advisor"],
+        summary: "Soft-delete a saved AI advisor chat",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["id"],
+                properties: { id: { type: "string", format: "uuid" } },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": { description: "Chat removed.", content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } } },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "402": { $ref: "#/components/responses/EnvelopeError" },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
+        },
+      },
+    },
     "/api/advisor/chat": {
       post: {
         tags: ["Advisor"],
         summary: "Send a message to the AI financial advisor chat",
         description:
-          "Conversational endpoint for paid subscribers. The client sends the current message plus recent history; the server grounds the response in the user's live financial data (planner context). Conversation state is maintained client-side — the server is stateless per request. Returns 402 when the authenticated user does not have `isPaid = true`.",
+          "Conversational endpoint for paid subscribers. The first message creates a saved chat; later messages include `conversationId` so the thread can be resumed. History for a saved chat is loaded from the database. Returns 402 when the authenticated user does not have `isPaid = true`.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -2629,10 +2695,15 @@ export const openApiDocument = {
                     maxLength: 2000,
                     description: "The user's current message.",
                   },
+                  conversationId: {
+                    type: "string",
+                    format: "uuid",
+                    description: "Existing saved chat. Omit to start a new conversation.",
+                  },
                   history: {
                     type: "array",
                     maxItems: 20,
-                    description: "Recent conversation turns for context continuity (client-managed).",
+                    description: "Optional turns for a brand-new chat only.",
                     items: {
                       type: "object",
                       required: ["role", "content"],
@@ -2649,7 +2720,7 @@ export const openApiDocument = {
         },
         responses: {
           "200": {
-            description: "AI advisor reply.",
+            description: "AI advisor reply and saved conversation id.",
             content: {
               "application/json": {
                 schema: {
@@ -2660,12 +2731,14 @@ export const openApiDocument = {
                       properties: {
                         data: {
                           type: "object",
-                          required: ["message"],
+                          required: ["message", "conversationId", "title"],
                           properties: {
                             message: {
                               type: "string",
                               description: "The assistant's reply.",
                             },
+                            conversationId: { type: "string", format: "uuid" },
+                            title: { type: "string" },
                           },
                         },
                       },
@@ -2685,6 +2758,7 @@ export const openApiDocument = {
               },
             },
           },
+          "404": { $ref: "#/components/responses/EnvelopeError" },
           "422": { $ref: "#/components/responses/ValidationError" },
           "502": { $ref: "#/components/responses/EnvelopeError" },
           "503": { $ref: "#/components/responses/EnvelopeError" },

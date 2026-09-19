@@ -41,10 +41,10 @@ const META: Record<ViewId, { title: string; description: string }> = {
   calculators: { title: "Financial Calculators", description: "Run, save and revisit financial what-if scenarios" },
   freedom: { title: "Financial Freedom Calculator", description: "When can you retire and live free?" },
   advisor: { title: "AI Financial Advisor", description: "Personalised, actionable recommendations" },
-  chat: { title: "AI Financial Chat", description: "Ask your advisor anything — powered by your live data" },
+  chat: { title: "AI Financial Chat", description: "Ask your advisor anything and reopen saved conversations" },
   learn: { title: "Financial Learning Hub", description: "Learn concepts, then apply them to your money" },
   course: { title: "Financial Freedom Journey", description: "30 lessons across 3 levels — quiz-gated progress tracking" },
-  report: { title: "Summary Report", description: "AI summary and a downloadable executive report" },
+  report: { title: "Summary Report", description: "Full household picture, AI summary, and a one-page PDF" },
 };
 
 const Index = () => {
