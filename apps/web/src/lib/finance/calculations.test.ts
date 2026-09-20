@@ -14,6 +14,12 @@ import {
   emiIncreaseInterestSaving,
   creditUtilization,
   totalLiabilities,
+  incomeDistribution,
+  expenseDistribution,
+  cashflowShareLabel,
+  coveragePercent,
+  positionSnapshot,
+  healthScore,
 } from "./calculations";
 import { sampleData } from "./sampleData";
 import type { FinanceData, Loan } from "@/types/finance";
@@ -191,6 +197,106 @@ describe("projection schedules", () => {
 
     expect(finalPoint?.target).toBeGreaterThan(2_000_000);
     expect(finalPoint?.projectedValue).toBeCloseTo(finalPoint?.target ?? 0, -1);
+  });
+});
+
+describe("income and expense distribution", () => {
+  it("splits income by source and expenses plus EMIs by share of the monthly total", () => {
+    const data: FinanceData = {
+      ...sampleData,
+      incomes: [
+        {
+          id: "salary",
+          name: "Take-home",
+          type: "Salary",
+          monthlyAmount: 1_50_000,
+          growthRate: 8,
+          startDate: "2024-01-01",
+        },
+        {
+          id: "rent",
+          name: "Flat rent",
+          type: "Rental Income",
+          monthlyAmount: 50_000,
+          growthRate: 5,
+          startDate: "2024-01-01",
+        },
+      ],
+      expenses: [
+        {
+          id: "food",
+          name: "Groceries",
+          category: "Groceries",
+          amount: 20_000,
+          recurring: true,
+          date: "2024-01-01",
+        },
+        {
+          id: "trip",
+          name: "Vacation",
+          category: "Travel",
+          amount: 80_000,
+          recurring: false,
+          date: "2024-06-01",
+        },
+      ],
+      loans: [personal],
+    };
+
+    const income = incomeDistribution(data);
+    expect(income.map((row) => row.name)).toEqual(["Take-home", "Flat rent"]);
+    expect(income[0]?.percent).toBe(75);
+    expect(income[1]?.percent).toBe(25);
+    expect(cashflowShareLabel(income)).toBe("Take-home 75.0%, Flat rent 25.0%");
+
+    const expenses = expenseDistribution(data);
+    expect(expenses.map((row) => row.name)).toEqual(["Groceries", "Personal"]);
+    expect(expenses[0]?.percent).toBe(62.5);
+    expect(expenses[1]?.extra).toBe("Personal Loan EMI");
+    expect(expenses.find((row) => row.name === "Vacation")).toBeUndefined();
+  });
+
+  it("reports how much of a target is already covered", () => {
+    expect(coveragePercent(62_00_000, 7_27_50_000)).toBeCloseTo(8.522, 2);
+    expect(coveragePercent(10, 0)).toBe(100);
+    expect(coveragePercent(0, 0)).toBe(0);
+    expect(positionSnapshot(sampleData).freedomCover).toBeGreaterThan(0);
+    expect(positionSnapshot(sampleData).termCover.name).toBe("Term cover");
+  });
+});
+
+describe("healthScore", () => {
+  it("keeps each component on a 0-100 scale and explains the score", () => {
+    const score = healthScore({
+      ...sampleData,
+      profile: { ...sampleData.profile, emergencyFund: 0 },
+      incomes: [
+        {
+          id: "salary",
+          name: "Salary",
+          type: "Salary",
+          monthlyAmount: 1_00_000,
+          growthRate: 0,
+          startDate: "2024-01-01",
+        },
+      ],
+      expenses: [
+        {
+          id: "rent",
+          name: "Rent",
+          category: "House Rent / EMI",
+          amount: 1_20_000,
+          recurring: true,
+          date: "2024-01-01",
+        },
+      ],
+    });
+    const savings = score.components.find((row) => row.label === "Savings Rate");
+    expect(savings?.score).toBeGreaterThanOrEqual(0);
+    expect(savings?.score).toBeLessThanOrEqual(100);
+    expect(savings?.detail).toMatch(/% of income saved/);
+    expect(score.total).toBeGreaterThanOrEqual(0);
+    expect(score.total).toBeLessThanOrEqual(100);
   });
 });
 

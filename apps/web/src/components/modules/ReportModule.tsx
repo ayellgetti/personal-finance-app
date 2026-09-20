@@ -22,22 +22,80 @@ import {
   financialFreedom,
   analyzeGoal,
   prepaymentStrategy,
+  incomeDistribution,
+  expenseDistribution,
+  cashflowShareLabel,
+  type CashflowShare,
 } from "@/lib/finance/calculations";
 import { generateReport } from "@/lib/finance/pdfReport";
 import { useAdvisorReport } from "@/lib/finance/advisor";
 import { AdvisorPlanOfAction, AdvisorSummary } from "./AdvisorOutput";
 import { AdvisorPaywallDialog } from "./AdvisorPaywallDialog";
+import { ReportPositionSnapshot } from "./ReportPositionSnapshot";
 import { Panel, Badge } from "./shared";
 import { Button } from "@/components/ui/button";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Download, CheckCircle2, AlertTriangle, RefreshCw, Lock } from "lucide-react";
 import { toast } from "sonner";
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-background/40 p-4">
+function Stat({
+  label,
+  value,
+  breakdown,
+  currency,
+}: {
+  label: string;
+  value: string;
+  breakdown?: CashflowShare[];
+  currency?: string;
+}) {
+  const card = (
+    <div className={`rounded-xl border border-border bg-background/40 p-4 ${breakdown ? "cursor-help" : ""}`}>
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-lg font-bold">{value}</p>
     </div>
+  );
+
+  if (!breakdown || !currency) return card;
+
+  return (
+    <HoverCard openDelay={120} closeDelay={80}>
+      <HoverCardTrigger asChild>
+        <button
+          type="button"
+          className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${label} breakdown: ${cashflowShareLabel(breakdown)}`}
+        >
+          {card}
+        </button>
+      </HoverCardTrigger>
+      <HoverCardContent align="start" className="w-80 p-3">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">{label} mix</p>
+        {breakdown.length ? (
+          <ul className="max-h-72 space-y-2 overflow-y-auto">
+            {breakdown.map((row) => (
+              <li key={row.id}>
+                <div className="flex items-start justify-between gap-3 text-sm">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{row.name}</span>
+                    {row.extra ? <span className="block truncate text-xs text-muted-foreground">{row.extra}</span> : null}
+                  </span>
+                  <span className="shrink-0 text-right font-semibold">
+                    {formatCurrency(row.amount, currency)}
+                    <span className="block text-xs font-normal text-muted-foreground">{formatPercent(row.percent)}</span>
+                  </span>
+                </div>
+                <div className="mt-1 h-1 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, row.percent)}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Nothing added yet.</p>
+        )}
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 
@@ -133,8 +191,18 @@ export function ReportModule() {
 
       <Panel title="Current Position">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Total Income (monthly)" value={formatCurrency(monthlyIncome(data), cur)} />
-          <Stat label="Total Expenses (monthly)" value={formatCurrency(monthlyExpenses(data) + monthlyEMI(data), cur)} />
+          <Stat
+            label="Total Income (monthly)"
+            value={formatCurrency(monthlyIncome(data), cur)}
+            breakdown={incomeDistribution(data)}
+            currency={cur}
+          />
+          <Stat
+            label="Total Expenses (monthly)"
+            value={formatCurrency(monthlyExpenses(data) + monthlyEMI(data), cur)}
+            breakdown={expenseDistribution(data)}
+            currency={cur}
+          />
           <Stat label="Monthly surplus" value={formatCurrency(monthlySavings(data), cur)} />
           <Stat label="Savings Rate" value={formatPercent(savingsRate(data))} />
           <Stat label="Total Investments" value={formatCurrency(totalInvestments(data), cur, true)} />
@@ -146,6 +214,7 @@ export function ReportModule() {
           <Stat label="Monthly SIPs" value={formatCurrency(monthlySIP(data), cur)} />
           <Stat label="Insurance (monthly)" value={formatCurrency(monthlyInsurancePremium(data), cur)} />
         </div>
+        <ReportPositionSnapshot data={data} currency={cur} fi={fi} hs={hs} goals={goals} />
       </Panel>
 
       <div className="grid gap-6 lg:grid-cols-2">

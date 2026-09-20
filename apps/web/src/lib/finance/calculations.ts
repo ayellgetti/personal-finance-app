@@ -255,6 +255,69 @@ export function oneTimeExpenses(d: FinanceData): number {
 export function monthlyEMI(d: FinanceData): number {
   return d.loans.reduce((s, l) => s + l.emi, 0);
 }
+
+export interface CashflowShare {
+  id: string;
+  name: string;
+  extra?: string;
+  amount: number;
+  percent: number;
+}
+
+function toCashflowShares(
+  rows: Array<{ id: string; name: string; extra?: string; amount: number }>,
+  total: number,
+): CashflowShare[] {
+  return [...rows]
+    .filter((row) => row.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .map((row) => ({
+      ...row,
+      percent: total > 0 ? (row.amount / total) * 100 : 0,
+    }));
+}
+
+export function incomeDistribution(d: FinanceData): CashflowShare[] {
+  return toCashflowShares(
+    d.incomes.map((item) => ({
+      id: item.id,
+      name: item.name,
+      extra: item.type,
+      amount: item.monthlyAmount,
+    })),
+    monthlyIncome(d),
+  );
+}
+
+export function expenseDistribution(d: FinanceData): CashflowShare[] {
+  const expenses = d.expenses
+    .filter((item) => item.recurring)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      extra: item.category,
+      amount: item.amount,
+    }));
+  const emis = d.loans.map((item) => ({
+    id: item.id,
+    name: item.name,
+    extra: `${item.type} EMI`,
+    amount: item.emi,
+  }));
+  return toCashflowShares([...expenses, ...emis], monthlyExpenses(d) + monthlyEMI(d));
+}
+
+export function cashflowShareLabel(shares: CashflowShare[]): string {
+  if (!shares.length) return "Nothing added yet";
+  return shares
+    .map((row) => `${row.name} ${formatPercent(row.percent)}`)
+    .join(", ");
+}
+
+export function coveragePercent(current: number, target: number): number {
+  if (target <= 0) return current > 0 ? 100 : 0;
+  return (current / target) * 100;
+}
 export function monthlyCreditCardDue(d: FinanceData): number {
   return d.creditCards.reduce((s, c) => s + c.minimumDue, 0);
 }
@@ -459,6 +522,76 @@ export function plannedMonthlyOutflow(d: FinanceData): number {
   return monthlyExpenses(d) + monthlyEMI(d) + monthlyInsurancePremium(d);
 }
 
+export interface CoverShare {
+  id: string;
+  name: string;
+  extra?: string;
+  percent: number;
+  funded: number;
+  target: number;
+}
+
+export interface PositionSnapshot {
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+  income: number;
+  spend: number;
+  surplus: number;
+  dti: number;
+  utilization: number;
+  corpus: number;
+  freedomTarget: number;
+  freedomCover: number;
+  goals: CoverShare[];
+  termCover: CoverShare;
+  healthCover: CoverShare;
+}
+
+export function positionSnapshot(d: FinanceData, goals?: GoalAnalysis[]): PositionSnapshot {
+  const analyzed = goals ?? d.goals.map((goal) => analyzeGoal(d, goal));
+  const ins = analyzeInsurance(d);
+  const freedomTarget = plannedMonthlyOutflow(d) * 12 * FIRE_POST_RETIREMENT_YEARS;
+  const corpus = totalInvestments(d);
+  return {
+    assets: totalAssets(d),
+    liabilities: totalLiabilities(d),
+    netWorth: netWorth(d),
+    income: monthlyIncome(d),
+    spend: monthlyExpenses(d) + monthlyEMI(d),
+    surplus: monthlySavings(d),
+    dti: debtToIncome(d),
+    utilization: creditUtilization(d),
+    corpus,
+    freedomTarget,
+    freedomCover: coveragePercent(corpus, freedomTarget),
+    goals: analyzed.map((row) => ({
+      id: row.goal.id,
+      name: row.goal.name,
+      extra: row.status,
+      percent: coveragePercent(row.goal.currentSaved, row.inflationAdjustedTarget),
+      funded: row.goal.currentSaved,
+      target: row.inflationAdjustedTarget,
+    })),
+    termCover: {
+      id: "term-cover",
+      name: "Term cover",
+      extra: ins.termGap > 0 ? "Below recommended" : "On target",
+      percent: coveragePercent(ins.currentTermCover, ins.recommendedTermCover),
+      funded: ins.currentTermCover,
+      target: ins.recommendedTermCover,
+    },
+    healthCover: {
+      id: "health-cover",
+      name: "Health cover",
+      extra: ins.healthGap > 0 ? "Below recommended" : "On target",
+      percent: coveragePercent(ins.currentHealthCover, ins.recommendedHealthCover),
+      funded: ins.currentHealthCover,
+      target: ins.recommendedHealthCover,
+    },
+  };
+}
+
 export function financialFreedom(d: FinanceData): FIResult {
   const currentAnnualExpenses = plannedMonthlyOutflow(d) * 12;
   const yearsToRetire = Math.max(1, d.profile.retirementAge - d.profile.age);
@@ -622,9 +755,9 @@ export function healthScore(d: FinanceData): HealthScore {
   const ins = analyzeInsurance(d);
   const insCover = ins.recommendedTermCover > 0 ? Math.min(1, ins.currentTermCover / ins.recommendedTermCover) : 0;
 
-  const srScore = Math.min(100, (sr / 30) * 100);
+  const srScore = Math.max(0, Math.min(100, (sr / 30) * 100));
   const dtiScore = Math.max(0, 100 - (dti / 40) * 100);
-  const efScore = Math.min(100, (emergencyMonths / ef.targetMonths) * 100);
+  const efScore = Math.min(100, (emergencyMonths / Math.max(ef.targetMonths, 1)) * 100);
   const divScore = Math.min(100, (diversification / 6) * 100);
   const insScore = insCover * 100;
 

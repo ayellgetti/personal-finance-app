@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Lock, Plus, Send, Sparkles, Trash2, User } from "lucide-react";
+import { Bot, Lock, Plus, Send, Sparkles, Square, Trash2, User, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/store";
+import { useFinance } from "@/lib/finance/store";
 import { ApiError } from "@/lib/api";
 import {
+  advisorChatStarters,
   getAdvisorChat,
   listAdvisorChats,
   messagesFromConversation,
@@ -51,7 +53,15 @@ function ChatPaywall() {
   );
 }
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+function MessageBubble({
+  msg,
+  speaking,
+  onRead,
+}: {
+  msg: ChatMessage;
+  speaking: boolean;
+  onRead: () => void;
+}) {
   const isUser = msg.role === "user";
   return (
     <div className={cn("flex items-end gap-3", isUser && "flex-row-reverse")}>
@@ -72,9 +82,24 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         )}
       >
         <p className="whitespace-pre-wrap">{msg.content}</p>
-        <p className={cn("mt-1 text-xs", isUser ? "text-primary-foreground/60" : "text-muted-foreground")}>
-          {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        </p>
+        <div className={cn("mt-2 flex items-center gap-2", isUser ? "justify-end" : "justify-start")}>
+          <p className={cn("text-xs", isUser ? "text-primary-foreground/60" : "text-muted-foreground")}>
+            {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </p>
+          <button
+            type="button"
+            onClick={onRead}
+            aria-label={speaking ? "Stop reading" : "Read message aloud"}
+            className={cn(
+              "inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+              isUser
+                ? "text-primary-foreground/70 hover:bg-background/15 hover:text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            {speaking ? <Square className="h-3 w-3" /> : <Volume2 className="h-3.5 w-3.5" />}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -101,20 +126,19 @@ function TypingIndicator() {
   );
 }
 
-const SUGGESTED_PROMPTS = [
-  "What should I focus on to improve my financial health?",
-  "How can I pay off my loans faster?",
-  "Am I on track for financial freedom?",
-  "Where should I invest my monthly surplus?",
-];
-
 function generateId() {
   return Math.random().toString(36).slice(2, 11);
 }
 
+function canSpeak() {
+  return typeof window !== "undefined" && "speechSynthesis" in window;
+}
+
 export function AdvisorChat() {
   const { user } = useAuth();
+  const { data } = useFinance();
   const isPaid = user?.isPaid === true;
+  const starters = advisorChatStarters(data);
 
   const [conversations, setConversations] = useState<AdvisorChatSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -122,12 +146,44 @@ export function AdvisorChat() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [selectedStarter, setSelectedStarter] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    return () => {
+      if (canSpeak()) window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  const stopReading = () => {
+    if (canSpeak()) window.speechSynthesis.cancel();
+    setSpeakingId(null);
+  };
+
+  const readMessage = (msg: ChatMessage) => {
+    if (!canSpeak()) {
+      toast.error("This browser cannot read messages aloud");
+      return;
+    }
+    if (speakingId === msg.id) {
+      stopReading();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(msg.content);
+    utterance.lang = "en-IN";
+    utterance.rate = 1;
+    utterance.onend = () => setSpeakingId((current) => (current === msg.id ? null : current));
+    utterance.onerror = () => setSpeakingId((current) => (current === msg.id ? null : current));
+    setSpeakingId(msg.id);
+    window.speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     if (!isPaid) return;
@@ -139,9 +195,21 @@ export function AdvisorChat() {
   }, [isPaid]);
 
   const startNewChat = () => {
+    stopReading();
     setActiveId(null);
     setMessages([]);
     setInput("");
+    setSelectedStarter(null);
+  };
+
+  const pickStarter = (prompt: string) => {
+    setSelectedStarter(prompt);
+    setInput(prompt);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+      textareaRef.current.focus();
+    }
   };
 
   const openConversation = async (id: string) => {
@@ -181,6 +249,7 @@ export function AdvisorChat() {
 
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setSelectedStarter(null);
     setIsLoading(true);
 
     if (textareaRef.current) {
@@ -229,6 +298,7 @@ export function AdvisorChat() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
+    setSelectedStarter((current) => (current === e.target.value ? current : null));
     e.target.style.height = "auto";
     e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
   };
@@ -306,34 +376,68 @@ export function AdvisorChat() {
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6">
               {messages.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-                    <Bot className="h-8 w-8 text-muted-foreground" />
+                <div className="mx-auto flex h-full w-full max-w-xl flex-col gap-4">
+                  <div className="flex shrink-0 flex-col items-center gap-3 pt-2 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+                      <Bot className="h-7 w-7 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold">How can I help you today?</p>
+                      <p className="text-sm text-muted-foreground">
+                        Pick a question from the list — it fills the box so you can edit it — then send. Or type your own.
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-semibold">How can I help you today?</p>
-                    <p className="text-sm text-muted-foreground">
-                      I have access to your financial data and can answer questions about your loans,
-                      goals, savings, and more.
-                    </p>
-                  </div>
-                  <div className="grid w-full max-w-lg gap-2 sm:grid-cols-2">
-                    {SUGGESTED_PROMPTS.map((prompt) => (
-                      <button
-                        key={prompt}
-                        onClick={() => void sendMessage(prompt)}
-                        disabled={isLoading}
-                        className="rounded-xl border bg-card px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground disabled:opacity-50"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
+                  <div
+                    className="min-h-0 flex-1 overflow-y-auto rounded-2xl border bg-card"
+                    role="listbox"
+                    aria-label="Suggested questions"
+                  >
+                    {starters.map((prompt) => {
+                      const selected = selectedStarter === prompt;
+                      return (
+                        <div
+                          key={prompt}
+                          className={cn(
+                            "flex items-start gap-2 border-b border-border/70 px-3 py-2 last:border-0",
+                            selected && "bg-primary/5",
+                          )}
+                        >
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            disabled={isLoading}
+                            onClick={() => pickStarter(prompt)}
+                            className="min-w-0 flex-1 py-1 text-left text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          >
+                            {prompt}
+                          </button>
+                          {selected ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="mt-0.5 h-7 shrink-0 rounded-lg px-2"
+                              disabled={isLoading}
+                              onClick={() => void sendMessage(prompt)}
+                            >
+                              Ask
+                            </Button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {messages.map((msg) => (
-                    <MessageBubble key={msg.id} msg={msg} />
+                    <MessageBubble
+                      key={msg.id}
+                      msg={msg}
+                      speaking={speakingId === msg.id}
+                      onRead={() => readMessage(msg)}
+                    />
                   ))}
                   {isLoading && <TypingIndicator />}
                   <div ref={bottomRef} />

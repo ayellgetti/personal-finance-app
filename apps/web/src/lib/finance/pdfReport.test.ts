@@ -74,10 +74,13 @@ describe("pdfSafe", () => {
 });
 
 describe("buildReport", () => {
-  it("keeps the summary on a single page", () => {
+  it("keeps the summary on a single page and draws the position snapshot", () => {
     const advice = buildLocalAdvisorReport(sample);
     const doc = buildReport(sample, { advice, source: "rules" });
+    const output = doc.output();
     expect(doc.getNumberOfPages()).toBe(1);
+    expect(output).toContain("Freedom cover");
+    expect(output).toContain("Assets vs liabilities");
   });
 });
 

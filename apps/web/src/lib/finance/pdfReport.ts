@@ -20,11 +20,16 @@ import {
   financialFreedom,
   analyzeGoal,
   prepaymentStrategy,
+  positionSnapshot,
+  type CoverShare,
 } from "./calculations";
 
 const GREEN: [number, number, number] = [16, 122, 87];
 const DARK: [number, number, number] = [22, 38, 44];
 const GOLD: [number, number, number] = [217, 152, 30];
+const RED: [number, number, number] = [185, 48, 48];
+const MUTED: [number, number, number] = [232, 236, 234];
+const AMBER: [number, number, number] = [196, 140, 32];
 const PAGE_MARGIN = 28;
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -63,6 +68,47 @@ function money(value: number): string {
 function lastTableY(doc: jsPDF, fallback: number) {
   const y = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY;
   return typeof y === "number" ? y + 10 : fallback + 10;
+}
+
+function coverTone(percent: number): [number, number, number] {
+  if (percent >= 70) return GREEN;
+  if (percent >= 35) return AMBER;
+  return RED;
+}
+
+function drawMeter(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  percent: number,
+  color: [number, number, number],
+) {
+  doc.setFillColor(...MUTED);
+  doc.roundedRect(x, y, width, 5, 1.5, 1.5, "F");
+  const filled = Math.max(0, Math.min(width, (width * percent) / 100));
+  if (filled > 0.8) {
+    doc.setFillColor(...color);
+    doc.roundedRect(x, y, filled, 5, 1.5, 1.5, "F");
+  }
+}
+
+function drawCover(
+  doc: jsPDF,
+  x: number,
+  startY: number,
+  width: number,
+  row: CoverShare,
+): number {
+  let y = startY;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...DARK);
+  doc.text(pdfSafe(`${row.name}  ${money(row.funded)} / ${money(row.target)}`), x, y);
+  doc.text(`${row.percent.toFixed(1)}%`, x + width, y, { align: "right" });
+  y += 5;
+  drawMeter(doc, x, y, width, row.percent, coverTone(row.percent));
+  return y + 11;
 }
 
 function clipRows(rows: string[][], max: number): string[][] {
@@ -201,6 +247,52 @@ export function buildReport(
         ["Freedom date", `${fi.fiDate.getFullYear()} | ${fi.yearsRemaining}y left`, "Health score", `${hs.total}/100`],
       ],
     });
+
+    if (y <= MAX_Y - 52) {
+      const snap = positionSnapshot(data);
+      const mix = Math.max(snap.assets + snap.liabilities, 1);
+      const leftW = (CONTENT_WIDTH - COL_GAP) / 2;
+      const rightX = PAGE_MARGIN + leftW + COL_GAP;
+      const chartTop = y;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...DARK);
+      doc.text("Assets vs liabilities", PAGE_MARGIN, y);
+      doc.text("Freedom & cover", rightX, y);
+      y += 8;
+
+      const assetShare = (snap.assets / mix) * 100;
+      const liabShare = (snap.liabilities / mix) * 100;
+      drawMeter(doc, PAGE_MARGIN, y, leftW, 100, MUTED);
+      if (assetShare > 0) {
+        doc.setFillColor(...GREEN);
+        doc.roundedRect(PAGE_MARGIN, y, (leftW * assetShare) / 100, 5, 1.5, 1.5, "F");
+      }
+      if (liabShare > 0) {
+        doc.setFillColor(...RED);
+        doc.roundedRect(PAGE_MARGIN + (leftW * assetShare) / 100, y, (leftW * liabShare) / 100, 5, 1.5, 1.5, "F");
+      }
+      y += 11;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(90, 100, 100);
+      doc.text(pdfSafe(`Assets ${money(snap.assets)}  |  Liab. ${money(snap.liabilities)}  |  Net ${money(snap.netWorth)}`), PAGE_MARGIN, y);
+      y += 9;
+      doc.text(pdfSafe(`Income ${money(snap.income)} vs spend ${money(snap.spend)}  |  DTI ${snap.dti.toFixed(1)}%`), PAGE_MARGIN, y);
+      const afterLeft = y + 6;
+
+      y = chartTop + 8;
+      y = drawCover(doc, rightX, y, leftW, {
+        id: "freedom-cover",
+        name: "Freedom cover",
+        percent: snap.freedomCover,
+        funded: snap.corpus,
+        target: snap.freedomTarget,
+      });
+      y = drawCover(doc, rightX, y, leftW, snap.goals[0] ?? snap.termCover);
+      y = Math.max(afterLeft, y);
+    }
   }
 
   const leftX = PAGE_MARGIN;
@@ -215,7 +307,7 @@ export function buildReport(
       {
         theme: "grid",
         head: [["Source", "Type", "Monthly"]],
-        body: clipRows(incomeRows.length ? incomeRows : [["None", "-", "-"]], 5),
+        body: clipRows(incomeRows.length ? incomeRows : [["None", "-", "-"]], 4),
         columnStyles: { 2: { cellWidth: 48, halign: "right" } },
       },
       leftX,
@@ -230,7 +322,7 @@ export function buildReport(
       {
         theme: "grid",
         head: [["Item", "Category", "Monthly"]],
-        body: clipRows(expenseRows.length ? expenseRows : [["None", "-", "-"]], 5),
+        body: clipRows(expenseRows.length ? expenseRows : [["None", "-", "-"]], 4),
         columnStyles: { 2: { cellWidth: 48, halign: "right" } },
       },
       rightX,
@@ -338,7 +430,7 @@ export function buildReport(
       table({
         theme: "grid",
         head: [["Highlight", "Detail"]],
-        body: advice.summaryReport.highlights.slice(0, 4).map((item) => [pdfSafe(item.label), pdfSafe(item.detail)]),
+        body: advice.summaryReport.highlights.slice(0, 3).map((item) => [pdfSafe(item.label), pdfSafe(item.detail)]),
         columnStyles: { 0: { cellWidth: 110 } },
       });
     }
@@ -367,7 +459,7 @@ export function buildReport(
     table({
       theme: "grid",
       head: [["Goal", "Target", "Prob.", "Status", "Gap"]],
-      body: clipRows(goalRows.length ? goalRows : [["No goals added", "-", "-", "-", "-"]], 5),
+      body: clipRows(goalRows.length ? goalRows : [["No goals added", "-", "-", "-", "-"]], 4),
     });
   }
 
@@ -375,7 +467,7 @@ export function buildReport(
     table({
       theme: "grid",
       head: [["#", "Impact", "Category", "Action"]],
-      body: advice.planOfAction.slice(0, 6).map((step) => [
+      body: advice.planOfAction.slice(0, 4).map((step) => [
         String(step.priority),
         pdfSafe(step.impact),
         pdfSafe(step.category),

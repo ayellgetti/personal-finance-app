@@ -15,7 +15,41 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 
-const { listAdvisorChats, sendAdvisorChatMessage } = await import("./advisor-chat");
+import { sampleData } from "./sampleData";
+
+const { listAdvisorChats, sendAdvisorChatMessage, advisorChatStarters } = await import("./advisor-chat");
+
+describe("advisorChatStarters", () => {
+  it("asks about cashflow and debt when surplus is negative and EMIs are high", () => {
+    const prompts = advisorChatStarters({
+      ...sampleData,
+      incomes: [
+        {
+          id: "salary",
+          name: "Salary",
+          type: "Salary",
+          monthlyAmount: 80_000,
+          growthRate: 0,
+          startDate: "2024-01-01",
+        },
+      ],
+      expenses: [
+        {
+          id: "rent",
+          name: "Rent",
+          category: "House Rent / EMI",
+          amount: 50_000,
+          recurring: true,
+          date: "2024-01-01",
+        },
+      ],
+    });
+
+    expect(prompts.length).toBeGreaterThan(4);
+    expect(prompts.some((prompt) => prompt.includes("surplus"))).toBe(true);
+    expect(prompts.some((prompt) => /EMI|prepay/i.test(prompt))).toBe(true);
+  });
+});
 
 describe("advisor chat remote", () => {
   beforeEach(() => {

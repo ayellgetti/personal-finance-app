@@ -149,9 +149,23 @@ describe("ReportModule", () => {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     }
     expect(screen.getByText("Take-home")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Total Income (monthly) breakdown: Take-home 100.0%" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Total Expenses (monthly) breakdown: Home loan 64.7%, Groceries 35.3%",
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Nifty index")).toBeInTheDocument();
-    expect(screen.getByText("Term cover")).toBeInTheDocument();
+    expect(screen.getAllByText("Term cover").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("HDFC Millennia")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Assets vs liabilities" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Monthly cashflow" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Health & freedom" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Goal & cover mix" })).toBeInTheDocument();
+    expect(screen.getByText("Freedom cover")).toBeInTheDocument();
+    expect(screen.getByText("Health cover")).toBeInTheDocument();
     expect(buildLocalAdvisorReport(data).summaryReport.headline).toBeTruthy();
   });
 });
