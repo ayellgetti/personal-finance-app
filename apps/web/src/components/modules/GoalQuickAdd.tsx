@@ -21,24 +21,19 @@ import { cn } from "@/lib/utils";
 
 export type NewGoal = Omit<Goal, "id">;
 
-const PRIMARY: QuickTypeTile<GoalType>[] = [
+const ALL_TILES: QuickTypeTile<GoalType>[] = [
+  { value: "Lean FIRE", label: "Lean FIRE", icon: Flame },
+  { value: "Coast FIRE", label: "Coast FIRE", icon: Waves },
+  { value: "Fat FIRE", label: "Fat FIRE", icon: Flame },
   { value: "Dream Home", label: "Home", icon: Home },
   { value: "Dream Car", label: "Car", icon: Car },
   { value: "Child Education", label: "Education", icon: GraduationCap },
   { value: "Retirement", label: "Retirement", icon: Palmtree },
-  { value: "Lean FIRE", label: "Lean FIRE", icon: Flame },
-];
-
-const EXTRA: QuickTypeTile<GoalType>[] = [
-  { value: "Fat FIRE", label: "Fat FIRE", icon: Flame },
-  { value: "Coast FIRE", label: "Coast FIRE", icon: Waves },
   { value: "Child Marriage", label: "Marriage", icon: Heart },
   { value: "International Vacation", label: "Vacation", icon: Plane },
   { value: "Business Expansion", label: "Business", icon: Briefcase },
   { value: "Custom Goal", label: "Custom", icon: Sparkles },
 ];
-
-const ALL_TILES = [...PRIMARY, ...EXTRA];
 const PRIORITIES: Priority[] = ["High", "Medium", "Low"];
 
 const defaultTargetDate = () => new Date(Date.now() + 5 * 31536000000).toISOString().slice(0, 10);
@@ -150,8 +145,7 @@ export const GoalQuickAdd = forwardRef<SetupDraftHandle, GoalQuickAddProps>(func
       <QuickTypePicker
         prompt="What goal do you want to add?"
         hint="Pick a type, then enter the target. Emergency fund is set up separately above."
-        items={PRIMARY}
-        extraItems={EXTRA}
+        items={ALL_TILES}
         selected={type}
         onSelect={select}
       />

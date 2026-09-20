@@ -51,8 +51,42 @@ docker compose -p personal-finance-prod --env-file .env.prod -f docker-compose.p
 
 docker compose -p personal-finance-prod --env-file .env.prod -f docker-compose.prod.yml build --no-cache web api nginx
 
+docker compose --env-file .env.prod -f docker-compose.dev.yml build --no-cache nginx api web website
+
+
 docker compose -p personal-finance-prod stop
 ```
+------------------------------------------------------------------------------------------
+
 
 Email: crm.admin@localhost.local
 Password: CrmAdmin#2026
+------------------------------------------------------------------------------------------
+
+docker rm -f $(docker ps -aq)
+
+# unused images, build cache, stopped containers — keeps named volumes
+docker builder prune -af
+docker image prune -af
+docker container prune -f
+docker system prune -af
+
+sudo du -xh /var/lib/docker | sort -h | tail -20
+sudo journalctl --vacuum-size=200M
+
+------------------------------------------------------------------------------------------
+
+docker exec -it docker-postgres \
+  psql -U "example" -d "example" \
+  -c 'UPDATE "User" SET "isPaid" = true, "updatedAt" = NOW() WHERE email = '\''bhaveshkhomne1992@gmail.com'\'' RETURNING id, email, "isPaid";'
+
+
+------------------------------------------------------------------------------------------
+
+
+docker compose -p personal-finance-prod --env-file .env.prod -f docker-compose.prod.yml down
+
+docker compose -p personal-finance-prod --env-file .env.prod -f docker-compose.prod.yml build --no-cache nginx api web website
+
+
+docker compose -p personal-finance-prod --env-file .env.prod -f docker-compose.prod.yml up -d

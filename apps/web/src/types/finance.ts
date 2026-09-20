@@ -137,8 +137,8 @@ export type GoalType =
 export const EMERGENCY_FUND_GOAL_ID = "emergency-fund";
 export const FIRE_GOAL_TYPES = [
   "Lean FIRE",
-  "Fat FIRE",
   "Coast FIRE",
+  "Fat FIRE",
 ] as const satisfies readonly GoalType[];
 export type FireGoalType = (typeof FIRE_GOAL_TYPES)[number];
 export const FIRE_POST_RETIREMENT_YEARS = 25;

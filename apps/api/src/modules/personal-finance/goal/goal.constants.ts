@@ -3,7 +3,7 @@ export const EMERGENCY_FUND_SUBCATEGORY = "emergency_fund";
 export const EMERGENCY_FUND_TITLE = "Emergency Fund";
 
 export const FIRE_GOAL_CATEGORY = "retirement";
-export const FIRE_GOAL_TYPES = ["lean_fire", "fat_fire", "coast_fire"] as const;
+export const FIRE_GOAL_TYPES = ["lean_fire", "coast_fire", "fat_fire"] as const;
 export type FireGoalType = (typeof FIRE_GOAL_TYPES)[number];
 export const FIRE_GOAL_SUBCATEGORIES = [
   ...FIRE_GOAL_TYPES,
