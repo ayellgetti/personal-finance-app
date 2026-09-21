@@ -19,6 +19,7 @@ import {
   createEnquiry as createEnquiryRemote,
   createFollowUp as createFollowUpRemote,
   createPayment as createPaymentRemote,
+  createRole as createRoleRemote,
   createTask as createTaskRemote,
   fetchCrmMe,
   fetchDashboard,
@@ -46,7 +47,7 @@ import {
   updateEnquiry as updateEnquiryRemote,
   updateFollowUp as updateFollowUpRemote,
   updatePayment as updatePaymentRemote,
-  updateRolePermissions as updateRolePermissionsRemote,
+  updateRole as updateRoleRemote,
   updateTask as updateTaskRemote,
   updateTaskStatus as updateTaskStatusRemote,
   type ListCalendarQuery,
@@ -65,6 +66,7 @@ import type {
   CreateClientInput,
   CreateContactInput,
   CreateCrmUserInput,
+  CreateCrmRoleInput,
   CreateEnquiryInput,
   CreateFollowUpInput,
   CreatePaymentInput,
@@ -83,6 +85,7 @@ import type {
   CrmStaffUser,
   CrmTask,
   CrmTaskStatus,
+  UpdateCrmRoleInput,
   UpdateCrmUserInput,
 } from "@/types/crm";
 
@@ -181,7 +184,8 @@ type CrmContextValue = {
   permissionsCatalog: ListCache<CrmPermission>;
   loadRoles: () => Promise<void>;
   loadPermissionsCatalog: () => Promise<void>;
-  updateRolePermissions: (id: string, permissionIds: string[]) => Promise<CrmRoleDetail>;
+  createRole: (input: CreateCrmRoleInput) => Promise<CrmRoleDetail>;
+  updateRole: (id: string, input: UpdateCrmRoleInput) => Promise<CrmRoleDetail>;
 };
 
 const CrmContext = createContext<CrmContextValue | null>(null);
@@ -711,9 +715,21 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const updateRolePermissions = useCallback(async (id: string, permissionIds: string[]) => {
+  const createRole = useCallback(async (input: CreateCrmRoleInput) => {
     try {
-      const role = await updateRolePermissionsRemote(id, permissionIds);
+      const role = await createRoleRemote(input);
+      setRoles((current) => ({ ...current, items: upsertById(current.items, role) }));
+      toast.success("Role created");
+      return role;
+    } catch (error) {
+      toast.error(mutationMessage(error));
+      throw error;
+    }
+  }, []);
+
+  const updateRole = useCallback(async (id: string, input: UpdateCrmRoleInput) => {
+    try {
+      const role = await updateRoleRemote(id, input);
       setRoles((current) => ({ ...current, items: upsertById(current.items, role) }));
       toast.success("Role updated");
       return role;
@@ -778,7 +794,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       permissionsCatalog,
       loadRoles,
       loadPermissionsCatalog,
-      updateRolePermissions,
+      createRole,
+      updateRole,
     }),
     [
       status,
@@ -832,7 +849,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       permissionsCatalog,
       loadRoles,
       loadPermissionsCatalog,
-      updateRolePermissions,
+      createRole,
+      updateRole,
     ],
   );
 

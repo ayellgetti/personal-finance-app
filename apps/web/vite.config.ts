@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from "vite-plugin-pwa";
 
 // nginx forwards the browser's Host header, so Vite's host check sees names
 // like web.local.uat rather than localhost. Comma separated; localhost and
@@ -31,7 +32,37 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: false,
+      includeAssets: ["favicon.svg", "apple-touch-icon.png", "pwa-192.png", "pwa-512.png"],
+      manifest: {
+        name: "Freedom Planner",
+        short_name: "Freedom Planner",
+        description: "Track income, expenses, loans, investments, insurance and goals.",
+        start_url: "/",
+        scope: "/",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#1c9b6a",
+        icons: [
+          { src: "pwa-192.png", sizes: "192x192", type: "image/png" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png" },
+          { src: "pwa-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,webmanifest}"],
+        globIgnores: ["**/env.js"],
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/env\.js$/],
+      },
+      devOptions: { enabled: false },
+    }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

@@ -55,7 +55,7 @@ Authenticated users manage their financial picture, run deterministic forecasts,
 | Runtime | Node.js `>=20` |
 | Package manager | pnpm 11 workspaces |
 | Monorepo | pnpm Workspaces + Turborepo |
-| Frontend | React 18 + Vite + TypeScript + Tailwind + shadcn/Radix |
+| Frontend | React 18 + Vite + TypeScript + Tailwind + shadcn/Radix. `apps/web` and `apps/crm` are installable PWAs (`vite-plugin-pwa`): shell cache only, no `/api` cache. `apps/website` is not a PWA. |
 | Backend | Express + TypeScript + ESM (source imports omit `.js`; build rewrites `dist`) |
 | ORM | Prisma |
 | Database | PostgreSQL |
@@ -116,7 +116,7 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 
 Do not import `apps/web` source from `apps/website`, `apps/crm`, or the reverse.
 
-**Admin (`apps/admin`)** does not exist. Do not scaffold it unless requested. CRM admin (users/roles) lives inside `apps/crm`, not a third app.
+**Admin (`apps/admin`)** does not exist. Do not scaffold it unless requested. CRM admin (users/roles) lives inside `apps/crm`, not a third app. Roles can be created after bootstrap; built-in slugs stay `admin` / `manager` / `sales` / `viewer`.
 
 Do not split the API into microservices.
 
@@ -143,6 +143,8 @@ Do not reshape into `src/features/*` in an unrelated PR.
 Marketing site (`apps/website`) is a second Vite app: `src/pages`, `src/components`. It has no auth store and must not import `apps/web`.
 
 Sales CRM (`apps/crm`) copies the web auth/API/shadcn pattern. LocalStorage keys are prefixed `crm-`. Do not import `apps/web` source.
+
+Both product SPAs ship a web app manifest and service worker (UI shell only). Chrome/Edge can **Install** them as standalone windows; iOS uses Share → Add to Home Screen (no `beforeinstallprompt`). Verify locally with `pnpm --filter web build` / `pnpm --filter crm build` then `preview` on localhost, or on the HTTPS production hosts. Do not cache JWT `/api` responses in the service worker.
 
 ```text
 apps/crm/src/

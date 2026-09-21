@@ -179,7 +179,7 @@ CRM-only Role/Permission RBAC is approved as **Track D**. Do not treat that as a
 
 **Status: COMPLETED** for `apps/web`
 
-Vite + React 18, routing, layout, API client, auth store, finance store.
+Vite + React 18, routing, layout, API client, auth store, finance store. Product SPAs (`apps/web`, `apps/crm`) later gained installable PWA shells (`vite-plugin-pwa`); that is in use, not a new track.
 
 `apps/admin`: **DEFERRED**.
 
@@ -395,7 +395,7 @@ Prisma `Crm*` + Role/Permission models and migration `20260904074646_sales_crm`;
 
 **Status: COMPLETED**
 
-Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`, admin nav hidden without `crm.users.read` / `crm.roles.read`, Docker/nginx/CORS examples. Pipeline/work/admin screens land in D3–D8. Public use-case HTML pages (no auth, finance `/guide` pattern): `/banquet`, `/real-estate`, `/freedom`. Public banquet intake form (no auth): `/banquet-enquiry` → `POST /api/crm/public/enquiries`. Public travel intake form (no auth): `/travel-enquiry` → the same endpoint with `kind: "travel"`.
+Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`, admin nav hidden without `crm.users.read` / `crm.roles.read`, Docker/nginx/CORS examples. Pipeline/work/admin screens land in D3–D8. Public use-case HTML pages (no auth, finance `/guide` pattern): `/banquet`, `/real-estate`, `/freedom`. Public banquet intake form (no auth): `/banquet-enquiry` → `POST /api/crm/public/enquiries`. Public travel intake form (no auth): `/travel-enquiry` → the same endpoint with `kind: "travel"`. Freedom Planner (`apps/web`) and Sales CRM (`apps/crm`) are installable PWAs (standalone shell cache, no `/api` cache); the marketing site is not.
 
 **Validate:** `pnpm --filter crm test` (12 passing), `pnpm --filter crm typecheck`, `pnpm --filter crm lint`.
 
@@ -441,5 +441,5 @@ Union of task due dates and `CrmCalendarEvent` rows, including events linked to 
 
 **Status: COMPLETED**
 
-Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`) and patch roles. Roles: list and edit permission ids; hidden without `crm.roles.read`, edit disabled without `crm.roles.update`. Admin nav still hidden without read permissions.
+Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`) and patch roles. Roles: list, create, view, and edit name plus permission ids (catalog includes a description for each permission); hidden without `crm.roles.read`, create/edit disabled without `crm.roles.update`. Admin nav still hidden without read permissions.
 

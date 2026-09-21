@@ -294,6 +294,7 @@ export type CrmPermission = {
   id: string;
   code: string;
   name: string;
+  description: string;
 };
 
 export type CrmPagination = {
@@ -416,4 +417,14 @@ export type UpdateCrmUserInput = {
   mobileNo?: string;
   email?: string;
   roleIds?: string[];
+};
+
+export type CreateCrmRoleInput = {
+  name: string;
+  permissionIds: string[];
+};
+
+export type UpdateCrmRoleInput = {
+  name?: string;
+  permissionIds?: string[];
 };

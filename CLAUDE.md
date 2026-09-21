@@ -439,7 +439,7 @@ Finance routes use `requireAuth`. CRM routes use `requireAuth` plus `requirePerm
 
 Finance: authenticated user owns their rows (`userId` from the token). Do not put `requirePermission` on finance routes.
 
-CRM (Track D, approved for CRM only): `Role` / `Permission` / `RolePermission` / `UserRole`. `requirePermission` runs after `requireAuth`, loads codes per request (not from the JWT), and returns `403` when missing. If `Permission` is empty, bootstrap the catalog and four roles (`admin` / `manager` / `sales` / `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`.
+CRM (Track D, approved for CRM only): `Role` / `Permission` / `RolePermission` / `UserRole`. `requirePermission` runs after `requireAuth`, loads codes per request (not from the JWT), and returns `403` when missing. If `Permission` is empty, bootstrap the catalog and four roles (`admin` / `manager` / `sales` / `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`. Staff with `crm.roles.update` can also `POST /api/crm/roles` to add roles (slug is derived from the name and is not renamed later). `GET /api/crm/permissions` includes a description for each catalog code.
 
 Do not hard-code a second ad-hoc admin model in one finance controller.
 

@@ -316,10 +316,19 @@ export const crmOpenApiSchemas = {
       roleIds: { type: "array", items: { type: "string", format: "uuid" }, minItems: 1 },
     },
   },
+  CreateCrmRoleRequest: {
+    type: "object",
+    required: ["name"],
+    properties: {
+      name: { type: "string", minLength: 2, maxLength: 80 },
+      permissionIds: { type: "array", items: { type: "string", format: "uuid" } },
+    },
+  },
   UpdateCrmRoleRequest: {
     type: "object",
-    required: ["permissionIds"],
+    minProperties: 1,
     properties: {
+      name: { type: "string", minLength: 2, maxLength: 80 },
       permissionIds: { type: "array", items: { type: "string", format: "uuid" } },
     },
   },
@@ -878,15 +887,25 @@ export const crmOpenApiPaths = {
       parameters: [requestId],
       responses: { ...ok("Roles") },
     },
+    post: {
+      tags: ["CRM Roles"],
+      summary: "Create a role",
+      description:
+        "Creates a role whose slug is derived from the name. Requires crm.roles.update. Permission descriptions come from GET /api/crm/permissions.",
+      security: [{ bearerAuth: [] }],
+      parameters: [requestId],
+      requestBody: jsonBody("CreateCrmRoleRequest"),
+      responses: { ...created("Role created"), "409": envelopeError, "422": validationFailed },
+    },
   },
   "/api/crm/roles/{id}": {
     patch: {
       tags: ["CRM Roles"],
-      summary: "Replace role permission ids",
+      summary: "Update a role name and/or permission ids",
       security: [{ bearerAuth: [] }],
       parameters: [requestId, idParam],
       requestBody: jsonBody("UpdateCrmRoleRequest"),
-      responses: { ...ok("Updated role"), "404": envelopeError, "422": validationFailed },
+      responses: { ...ok("Updated role"), "404": envelopeError, "409": envelopeError, "422": validationFailed },
     },
   },
   "/api/crm/permissions": {

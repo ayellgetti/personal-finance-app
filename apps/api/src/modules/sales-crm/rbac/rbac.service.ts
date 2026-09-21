@@ -14,6 +14,8 @@ import {
   CRM_ROLE_NAMES,
   CRM_ROLE_PERMISSIONS,
   CRM_ROLE_SLUGS,
+  permissionDescription,
+  roleSlugFromName,
 } from "./rbac.catalog";
 
 export type CrmSessionRole = {
@@ -137,22 +139,52 @@ export class RbacService {
       permissionIds: string[];
     }> = [];
     for (const role of roles) {
-      const grants = await this.rolePermissions.read({
-        roleId: role.id,
-        isActive: 1,
-      });
-      result.push({
-        id: role.id,
-        name: role.name,
-        slug: role.slug,
-        permissionIds: grants.map((grant) => grant.permissionId),
-      });
+      result.push(await this.toRoleDetail(role.id, role.name, role.slug));
     }
     return result;
   }
 
   async listPermissions() {
-    return this.permissions.read({ isActive: 1 }, { orderBy: { code: "asc" } });
+    const rows = await this.permissions.read({ isActive: 1 }, { orderBy: { code: "asc" } });
+    return rows.map((permission) => ({
+      id: permission.id,
+      code: permission.code,
+      name: permission.name,
+      description: permissionDescription(permission.code),
+    }));
+  }
+
+  async createRole(actorId: string, name: string, permissionIds: string[]) {
+    const trimmed = name.trim();
+    const slug = roleSlugFromName(trimmed);
+    if (!slug) {
+      throw new HttpError(422, "Role name must include letters or numbers");
+    }
+    await this.assertPermissionIds(permissionIds);
+    const nameClash = await this.roles.findOne({ name: trimmed });
+    if (nameClash) {
+      throw new HttpError(409, "Duplicate name is not allowed");
+    }
+    const slugClash = await this.roles.findOne({ slug });
+    if (slugClash) {
+      throw new HttpError(409, "Duplicate slug is not allowed");
+    }
+
+    const role = await this.roles.create({
+      name: trimmed,
+      slug,
+      createdBy: actorId,
+      updatedBy: actorId,
+    });
+    for (const permissionId of permissionIds) {
+      await this.rolePermissions.create({
+        roleId: role.id,
+        permissionId,
+        createdBy: actorId,
+        updatedBy: actorId,
+      });
+    }
+    return this.toRoleDetail(role.id, role.name, role.slug);
   }
 
   async listRoleIdsForUser(userId: string): Promise<string[]> {
@@ -248,10 +280,7 @@ export class RbacService {
     permissionIds: string[],
     actorId: string,
   ) {
-    const role = await this.roles.readOne({ id: roleId });
-    if (!role || role.isActive !== 1) {
-      throw new HttpError(404, "Role not found");
-    }
+    const role = await this.requireActiveRole(roleId);
     await this.assertPermissionIds(permissionIds);
     await this.rolePermissions.hardDeleteMany({ roleId });
     for (const permissionId of permissionIds) {
@@ -262,11 +291,53 @@ export class RbacService {
         updatedBy: actorId,
       });
     }
-    const grants = await this.rolePermissions.read({ roleId, isActive: 1 });
+    return this.toRoleDetail(role.id, role.name, role.slug);
+  }
+
+  async updateRole(
+    roleId: string,
+    actorId: string,
+    input: { name?: string; permissionIds?: string[] },
+  ) {
+    const role = await this.requireActiveRole(roleId);
+    let name = role.name;
+    if (input.name !== undefined) {
+      const trimmed = input.name.trim();
+      const clash = await this.roles.findOne({ name: trimmed });
+      if (clash && clash.id !== roleId) {
+        throw new HttpError(409, "Duplicate name is not allowed");
+      }
+      if (trimmed !== role.name) {
+        await this.roles.update(
+          { id: roleId },
+          { name: trimmed, updatedBy: actorId },
+        );
+        name = trimmed;
+      }
+    }
+    if (input.permissionIds !== undefined) {
+      return this.replaceRolePermissions(roleId, input.permissionIds, actorId);
+    }
+    return this.toRoleDetail(role.id, name, role.slug);
+  }
+
+  private async requireActiveRole(roleId: string) {
+    const role = await this.roles.readOne({ id: roleId });
+    if (!role || role.isActive !== 1) {
+      throw new HttpError(404, "Role not found");
+    }
+    return role;
+  }
+
+  private async toRoleDetail(id: string, name: string, slug: string) {
+    const grants = await this.rolePermissions.read({
+      roleId: id,
+      isActive: 1,
+    });
     return {
-      id: role.id,
-      name: role.name,
-      slug: role.slug,
+      id,
+      name,
+      slug,
       permissionIds: grants.map((grant) => grant.permissionId),
     };
   }

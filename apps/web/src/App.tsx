@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth/store";
 import { FinanceProvider } from "@/lib/finance/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PwaInstallDialog } from "@/components/PwaInstallDialog";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
@@ -25,6 +26,7 @@ const App = () => (
           <TooltipProvider delayDuration={200}>
             <Toaster />
             <Sonner />
+            <PwaInstallDialog appName="Freedom Planner" />
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />

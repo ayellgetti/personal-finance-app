@@ -15,6 +15,7 @@ import {
   CRM_ROLE_SLUGS,
   crmPermissionCodeSchema,
   crmRoleSlugSchema,
+  permissionDescription,
 } from "../modules/sales-crm/rbac/rbac.catalog";
 import { RbacService } from "../modules/sales-crm/rbac/rbac.service";
 import { MeService } from "../modules/sales-crm/me/me.service";
@@ -196,6 +197,7 @@ test("CRM permission catalog has unique codes and valid role maps", () => {
   assert.equal(new Set(CRM_PERMISSION_CODES).size, CRM_PERMISSION_CODES.length);
   for (const code of CRM_PERMISSION_CODES) {
     assert.equal(crmPermissionCodeSchema.parse(code), code);
+    assert.ok(permissionDescription(code).length > 10);
   }
   assert.equal(crmPermissionCodeSchema.safeParse("crm.roles.delete").success, false);
   for (const slug of CRM_ROLE_SLUGS) {

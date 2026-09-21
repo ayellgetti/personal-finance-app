@@ -6,6 +6,7 @@ import { AuthProvider } from "@/lib/auth/store";
 import { CrmProvider } from "@/lib/crm/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { CrmSessionGate } from "@/components/CrmSessionGate";
+import { PwaInstallDialog } from "@/components/PwaInstallDialog";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
@@ -22,6 +23,7 @@ const App = () => (
       <CrmProvider>
         <TooltipProvider delayDuration={200}>
           <Sonner />
+          <PwaInstallDialog appName="Sales CRM" />
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />

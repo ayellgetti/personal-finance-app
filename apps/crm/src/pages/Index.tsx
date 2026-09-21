@@ -68,7 +68,13 @@ const Index = () => {
       {view === "enquiries" ? (
         <EnquiriesModule createOnDate={createDateFor("enquiries")} onCreateOpened={clearCreateRequest} />
       ) : null}
-      {view === "followUps" ? <FollowUpsModule initialDueFilter={followUpDueFilter} /> : null}
+      {view === "followUps" ? (
+        <FollowUpsModule
+          initialDueFilter={followUpDueFilter}
+          createOnDate={createDateFor("followUps")}
+          onCreateOpened={clearCreateRequest}
+        />
+      ) : null}
       {view === "clients" ? (
         <ClientsModule
           onOpenContact={(contactId) => {

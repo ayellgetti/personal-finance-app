@@ -1,4 +1,4 @@
-import { FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { CalendarClock, CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,11 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ConfirmRemoveDialog,
-  Field,
   ModulePage,
   ModuleStatus,
   RemoveAction,
@@ -23,8 +20,6 @@ import {
   formatDate,
   formatDateTime,
   formatTime,
-  isoToLocalInput,
-  localInputToIso,
   toLocalDateKey,
 } from "@/lib/crm/display";
 import { listClients } from "@/lib/crm/remote";
@@ -32,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { useCrm } from "@/lib/crm/store";
 import {
   CRM_PERMISSIONS,
-  type CreateCalendarEventInput,
   type CrmCalendarItem,
   type CrmClient,
 } from "@/types/crm";
@@ -44,20 +38,21 @@ const KIND_LABELS: Record<CrmCalendarItem["kind"], string> = {
   booking: "Booked",
 };
 
-export type CalendarCreateTarget = "enquiries" | "clients" | "payments";
+export type CalendarCreateTarget = "enquiries" | "followUps" | "clients" | "payments";
 
 const CREATE_TARGETS: { target: CalendarCreateTarget; label: string; permission: string }[] = [
   { target: "enquiries", label: "Add enquiry", permission: CRM_PERMISSIONS.enquiriesCreate },
+  { target: "followUps", label: "Add follow-up", permission: CRM_PERMISSIONS.followUpsCreate },
   { target: "clients", label: "Add booking", permission: CRM_PERMISSIONS.clientsCreate },
   { target: "payments", label: "Add payment", permission: CRM_PERMISSIONS.paymentsCreate },
 ];
 
 type CalendarView = "day" | "week" | "month";
 
-const VIEW_OPTIONS: { key: CalendarView; label: string; icon: ReactNode }[] = [
-  { key: "day", label: "Day view", icon: <CalendarClock className="h-4 w-4" /> },
-  { key: "week", label: "Week view", icon: <CalendarRange className="h-4 w-4" /> },
-  { key: "month", label: "Month view", icon: <CalendarDays className="h-4 w-4" /> },
+const VIEW_OPTIONS: { key: CalendarView; label: string; shortLabel: string; icon: ReactNode }[] = [
+  { key: "day", label: "Day view", shortLabel: "Day", icon: <CalendarClock className="h-4 w-4" /> },
+  { key: "week", label: "Week view", shortLabel: "Week", icon: <CalendarRange className="h-4 w-4" /> },
+  { key: "month", label: "Month view", shortLabel: "Month", icon: <CalendarDays className="h-4 w-4" /> },
 ];
 
 const MONTH_CELL_ITEM_LIMIT = 3;
@@ -119,26 +114,6 @@ function dayKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-type FormState = {
-  title: string;
-  startsAt: string;
-  endsAt: string;
-  notes: string;
-};
-
-const EMPTY: FormState = { title: "", startsAt: "", endsAt: "", notes: "" };
-
-function validate(form: FormState): Record<string, string> {
-  const errors: Record<string, string> = {};
-  if (!form.title.trim()) errors.title = "Title is required";
-  if (!form.startsAt) errors.startsAt = "Start is required";
-  if (!form.endsAt) errors.endsAt = "End is required";
-  if (form.startsAt && form.endsAt && new Date(form.endsAt).getTime() <= new Date(form.startsAt).getTime()) {
-    errors.endsAt = "End must be after start";
-  }
-  return errors;
-}
-
 function matchBookedClient(clients: CrmClient[], item: CrmCalendarItem): CrmClient | null {
   const byEnquiry = item.enquiryId
     ? clients.find((client) => client.convertedFromEnquiryId === item.enquiryId)
@@ -147,15 +122,6 @@ function matchBookedClient(clients: CrmClient[], item: CrmCalendarItem): CrmClie
     ? clients.find((client) => client.contactId === item.contactId)
     : undefined;
   return byEnquiry ?? byContact ?? null;
-}
-
-function toInput(form: FormState): CreateCalendarEventInput {
-  return {
-    title: form.title.trim(),
-    startsAt: localInputToIso(form.startsAt),
-    endsAt: localInputToIso(form.endsAt),
-    notes: form.notes.trim() || null,
-  };
 }
 
 export function CalendarModule({
@@ -172,14 +138,10 @@ export function CalendarModule({
   const allowed = crm.hasPermission(CRM_PERMISSIONS.calendarRead);
   const [view, setView] = useState<CalendarView>("month");
   const [cursor, setCursor] = useState(() => new Date());
-  const [form, setForm] = useState<FormState>(EMPTY);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [detail, setDetail] = useState<CrmCalendarItem | null>(null);
   const [viewingClient, setViewingClient] = useState<CrmClient | null>(null);
   const [removeTarget, setRemoveTarget] = useState<CrmCalendarItem | null>(null);
   const [createDay, setCreateDay] = useState<Date | null>(null);
-  const [busy, setBusy] = useState(false);
 
   const createTargets = CREATE_TARGETS.filter((option) => crm.hasPermission(option.permission));
   const canPickDay = Boolean(onCreateFor) && createTargets.length > 0;
@@ -225,35 +187,6 @@ export function CalendarModule({
       .catch(() => setDetail(item));
   };
 
-  const openCreate = () => {
-    const start = new Date();
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
-    setForm({
-      title: "",
-      startsAt: isoToLocalInput(start.toISOString()),
-      endsAt: isoToLocalInput(end.toISOString()),
-      notes: "",
-    });
-    setErrors({});
-    setSheetOpen(true);
-  };
-
-  const onSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    const nextErrors = validate(form);
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length) return;
-    setBusy(true);
-    try {
-      await crm.createCalendarEvent(toInput(form));
-      setSheetOpen(false);
-    } catch {
-      // toast handled in store
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const changeView = (next: CalendarView) => {
     setView(next);
     const today = new Date();
@@ -294,6 +227,7 @@ export function CalendarModule({
       view={view}
       onViewChange={(next) => changeView(next as CalendarView)}
       viewOptions={VIEW_OPTIONS}
+      showViewLabels
       toolbar={
         <div className="flex w-full items-center gap-2">
           <Button
@@ -328,13 +262,6 @@ export function CalendarModule({
             Today
           </Button>
         </div>
-      }
-      actions={
-        crm.hasPermission(CRM_PERMISSIONS.calendarCreate) ? (
-          <Button type="button" className="rounded-xl" onClick={() => openCreate()}>
-            Add event
-          </Button>
-        ) : null
       }
     >
       <ModuleStatus
@@ -551,53 +478,6 @@ export function CalendarModule({
           </div>
         </DialogContent>
       </Dialog>
-
-      <SideSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        title="Add event"
-        onSubmit={onSubmit}
-        footer={
-          <Button type="submit" className="rounded-xl" disabled={busy}>
-            Create
-          </Button>
-        }
-      >
-        <Field id="event-title" label="Title" error={errors.title}>
-          <Input
-            id="event-title"
-            value={form.title}
-            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            className="rounded-xl"
-          />
-        </Field>
-        <Field id="event-start" label="Starts" error={errors.startsAt}>
-          <Input
-            id="event-start"
-            type="datetime-local"
-            value={form.startsAt}
-            onChange={(event) => setForm((current) => ({ ...current, startsAt: event.target.value }))}
-            className="rounded-xl"
-          />
-        </Field>
-        <Field id="event-end" label="Ends" error={errors.endsAt}>
-          <Input
-            id="event-end"
-            type="datetime-local"
-            value={form.endsAt}
-            onChange={(event) => setForm((current) => ({ ...current, endsAt: event.target.value }))}
-            className="rounded-xl"
-          />
-        </Field>
-        <Field id="event-notes" label="Notes">
-          <Textarea
-            id="event-notes"
-            value={form.notes}
-            onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-            className="rounded-xl"
-          />
-        </Field>
-      </SideSheet>
 
       <SideSheet
         open={Boolean(detail)}

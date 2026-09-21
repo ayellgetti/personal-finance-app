@@ -12,6 +12,7 @@ import type {
   CreateFollowUpInput,
   CreatePaymentInput,
   CreateTaskInput,
+  CreateCrmRoleInput,
   CrmCalendarEvent,
   CrmCalendarItem,
   CrmClient,
@@ -40,6 +41,7 @@ import type {
   CrmStaffUser,
   CrmTask,
   CrmTaskStatus,
+  UpdateCrmRoleInput,
   UpdateCrmUserInput,
 } from "@/types/crm";
 
@@ -319,10 +321,12 @@ function mapRoleDetail(row: Record<string, unknown>): CrmRoleDetail {
 }
 
 function mapPermission(row: Record<string, unknown>): CrmPermission {
+  const name = String(row.name ?? "");
   return {
     id: String(row.id),
     code: String(row.code ?? ""),
-    name: String(row.name ?? ""),
+    name,
+    description: String(row.description ?? name),
   };
 }
 
@@ -612,10 +616,15 @@ export async function listPermissions(): Promise<CrmPermission[]> {
   return permissions.map((permission) => mapPermission(asRecord(permission)));
 }
 
-export async function updateRolePermissions(id: string, permissionIds: string[]): Promise<CrmRoleDetail> {
+export async function createRole(input: CreateCrmRoleInput): Promise<CrmRoleDetail> {
+  const data = await api<Record<string, unknown>>("/api/crm/roles", { method: "POST", body: input });
+  return mapRoleDetail(asRecord(requireField(data, "role")));
+}
+
+export async function updateRole(id: string, input: UpdateCrmRoleInput): Promise<CrmRoleDetail> {
   const data = await api<Record<string, unknown>>(`/api/crm/roles/${id}`, {
     method: "PATCH",
-    body: { permissionIds },
+    body: input,
   });
   return mapRoleDetail(asRecord(requireField(data, "role")));
 }

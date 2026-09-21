@@ -24,6 +24,7 @@ import {
   formatDateTime,
   isoToLocalInput,
   localInputToIso,
+  parseLocalDateKey,
 } from "@/lib/crm/display";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
 import { ConvertToBookedSheet } from "@/components/modules/ConvertToBookedSheet";
@@ -420,8 +421,12 @@ function FollowUpTimelines({
 
 export function FollowUpsModule({
   initialDueFilter = "all",
+  createOnDate,
+  onCreateOpened,
 }: {
   initialDueFilter?: FollowUpDueFilter;
+  createOnDate?: string | null;
+  onCreateOpened?: () => void;
 } = {}) {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
@@ -519,19 +524,29 @@ export function FollowUpsModule({
     return crm.followUps.items.filter((item) => matchesDueFilter(item.nextFollowupDate, dueFilter, now));
   }, [crm.followUps.items, dueFilter]);
 
-  const openCreate = (enquiry?: CrmEnquiry) => {
+  const openCreate = (enquiry?: CrmEnquiry, nextFollowupDay?: string) => {
     const selected = enquiry ?? crm.enquiries.items[0];
     const now = new Date();
+    const nextDay = nextFollowupDay ? parseLocalDateKey(nextFollowupDay) : null;
+    if (nextDay) nextDay.setHours(9, 0, 0, 0);
     setEditing(null);
     setForm({
       ...EMPTY,
       enquiryId: selected?.id ?? "",
       stage: selected?.status ?? "new",
       dueAt: isoToLocalInput(now.toISOString()),
+      nextFollowupDate: nextDay ? isoToLocalInput(nextDay.toISOString()) : "",
     });
     setErrors({});
     setSheetOpen(true);
   };
+
+  useEffect(() => {
+    if (!createOnDate) return;
+    openCreate(undefined, createOnDate);
+    onCreateOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createOnDate]);
 
   const openEdit = (item: CrmFollowUp) => {
     setEditing(item);

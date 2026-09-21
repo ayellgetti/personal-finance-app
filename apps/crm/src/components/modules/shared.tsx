@@ -382,6 +382,7 @@ export function ModulePage({
   view,
   onViewChange,
   viewOptions,
+  showViewLabels = false,
   children,
 }: {
   /** Module name shown after "Sales CRM /" */
@@ -395,10 +396,12 @@ export function ModulePage({
   /** Called when user clicks a view toggle button */
   onViewChange?: (v: string) => void;
   /** Custom view options; defaults to [table, card] when view is provided */
-  viewOptions?: { key: string; label: string; icon: ReactNode }[];
+  viewOptions?: { key: string; label: string; icon: ReactNode; shortLabel?: string }[];
+  /** Show text beside each view icon instead of icon-only buttons */
+  showViewLabels?: boolean;
   children: ReactNode;
 }) {
-  const defaultViews: { key: string; label: string; icon: ReactNode }[] = [
+  const defaultViews: { key: string; label: string; icon: ReactNode; shortLabel?: string }[] = [
     { key: "table", label: "Table view", icon: <List className="h-4 w-4" /> },
     { key: "card", label: "Card view", icon: <LayoutGrid className="h-4 w-4" /> },
   ];
@@ -421,13 +424,14 @@ export function ModulePage({
                 <Button
                   key={opt.key}
                   type="button"
-                  size="icon"
+                  size={showViewLabels ? "sm" : "icon"}
                   variant={view === opt.key ? "secondary" : "ghost"}
-                  className="h-7 w-7"
+                  className={showViewLabels ? "h-7 gap-1.5 px-2.5 text-xs" : "h-7 w-7"}
                   aria-label={opt.label}
                   onClick={() => onViewChange(opt.key)}
                 >
                   {opt.icon}
+                  {showViewLabels ? <span>{opt.shortLabel ?? opt.label}</span> : null}
                 </Button>
               ))}
             </div>

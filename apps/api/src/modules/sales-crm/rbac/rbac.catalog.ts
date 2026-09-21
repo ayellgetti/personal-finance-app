@@ -93,10 +93,49 @@ const PERMISSION_NAMES: Record<CrmPermissionCode, string> = {
   "crm.roles.update": "Update roles",
 };
 
-export const CRM_PERMISSIONS: { code: CrmPermissionCode; name: string }[] =
+const PERMISSION_DESCRIPTIONS: Record<CrmPermissionCode, string> = {
+  "crm.dashboard.read": "Open the CRM dashboard and see summary counts and due items.",
+  "crm.contacts.read": "See contact records and open a contact’s details.",
+  "crm.contacts.create": "Add new contacts to the CRM.",
+  "crm.contacts.update": "Change contact details such as name, type, and notes.",
+  "crm.contacts.delete": "Remove contacts from the CRM.",
+  "crm.enquiries.read": "See enquiries and open enquiry details.",
+  "crm.enquiries.create": "Log new enquiries against a contact.",
+  "crm.enquiries.update": "Change enquiry details, stage, and notes.",
+  "crm.enquiries.delete": "Remove enquiries that are not locked by a paid booking.",
+  "crm.enquiries.convert": "Convert an enquiry into a booked record with event dates.",
+  "crm.followups.read": "See follow-ups and the follow-up calendar.",
+  "crm.followups.create": "Schedule follow-ups on enquiries or contacts.",
+  "crm.followups.update": "Change follow-up dates, notes, and status.",
+  "crm.followups.delete": "Remove follow-up records.",
+  "crm.clients.read": "See booked records and their current booking dates.",
+  "crm.clients.create": "Create booked records for a contact.",
+  "crm.clients.update": "Change booked record details and status.",
+  "crm.clients.delete": "Remove booked records that are not locked by a paid booking.",
+  "crm.payments.read": "See payment records linked to contacts and bookings.",
+  "crm.payments.create": "Record new payments.",
+  "crm.payments.update": "Change payment amounts, status, and notes.",
+  "crm.payments.delete": "Remove payment records.",
+  "crm.tasks.read": "See tasks on the board and in lists.",
+  "crm.tasks.create": "Create tasks and assign due dates.",
+  "crm.tasks.update": "Change task details and move them between stages.",
+  "crm.tasks.delete": "Remove tasks.",
+  "crm.calendar.read": "See the calendar of tasks, bookings, and events.",
+  "crm.calendar.create": "Create calendar events and standalone meetings.",
+  "crm.calendar.update": "Change event times, notes, and booking details.",
+  "crm.calendar.delete": "Remove calendar events that are not locked by a paid booking.",
+  "crm.users.read": "See CRM staff accounts and their assigned roles.",
+  "crm.users.create": "Create CRM staff accounts and assign roles.",
+  "crm.users.update": "Change staff profile details and role assignments.",
+  "crm.roles.read": "See roles and the permissions granted to each role.",
+  "crm.roles.update": "Create roles and change role names or granted permissions.",
+};
+
+export const CRM_PERMISSIONS: { code: CrmPermissionCode; name: string; description: string }[] =
   CRM_PERMISSION_CODES.map((code) => ({
     code,
     name: PERMISSION_NAMES[code],
+    description: PERMISSION_DESCRIPTIONS[code],
   }));
 
 function isSalesPermission(code: CrmPermissionCode): boolean {
@@ -118,4 +157,26 @@ export const CRM_ROLE_PERMISSIONS: Record<CrmRoleSlug, readonly CrmPermissionCod
 
 export function permissionName(code: CrmPermissionCode): string {
   return PERMISSION_NAMES[code];
+}
+
+export function permissionDescription(code: string): string {
+  if (code in PERMISSION_DESCRIPTIONS) {
+    return PERMISSION_DESCRIPTIONS[code as CrmPermissionCode];
+  }
+  return permissionNameForUnknown(code);
+}
+
+function permissionNameForUnknown(code: string): string {
+  if (code in PERMISSION_NAMES) {
+    return PERMISSION_NAMES[code as CrmPermissionCode];
+  }
+  return code;
+}
+
+export function roleSlugFromName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }

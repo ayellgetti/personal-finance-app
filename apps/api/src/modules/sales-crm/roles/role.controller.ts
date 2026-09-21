@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { BaseController } from "../../shared/base/base.controller";
 import { currentUserId, requireParamId } from "../crm.http";
-import type { UpdateRoleBody } from "./role.request";
+import type { CreateRoleBody, UpdateRoleBody } from "./role.request";
 import { roleService, type RoleService } from "./role.service";
 
 export class RoleController extends BaseController {
@@ -17,6 +17,11 @@ export class RoleController extends BaseController {
   async listPermissions(req: Request, res: Response) {
     const permissions = await this.service.listPermissions();
     this.sendSuccess(req, res, { permissions }, "Permissions retrieved");
+  }
+
+  async createRole(req: Request, res: Response) {
+    const role = await this.service.createRole(currentUserId(req), req.body as CreateRoleBody);
+    this.sendSuccess(req, res, { role }, "Role created", 201);
   }
 
   async updateRole(req: Request, res: Response) {

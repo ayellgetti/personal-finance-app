@@ -8,11 +8,13 @@ import { ContactsModule } from "@/components/modules/ContactsModule";
 import { DashboardModule } from "@/components/modules/DashboardModule";
 import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
 import { FollowUpsModule } from "@/components/modules/FollowUpsModule";
+import { RolesModule } from "@/components/modules/RolesModule";
 import { TasksModule } from "@/components/modules/TasksModule";
 import { ApiError } from "@/lib/api";
 import {
   adminMe,
   convertEnquiry,
+  createRole,
   emptyPage,
   fetchContactDetail,
   fetchCrmMe,
@@ -22,8 +24,11 @@ import {
   listContacts,
   listEnquiries,
   listFollowUps,
+  listPermissions,
+  listRoles,
   listTasks,
   updateCalendarEvent,
+  updateRole,
   updateTaskStatus,
 } from "@/test/crm-remote-mock";
 import { renderCrm } from "@/test/render-crm";
@@ -135,6 +140,8 @@ describe("CRM modules", () => {
     listClients.mockResolvedValue(emptyPage());
     listTasks.mockResolvedValue(emptyPage());
     listCalendar.mockResolvedValue({ items: [] });
+    listRoles.mockResolvedValue([]);
+    listPermissions.mockResolvedValue([]);
     convertEnquiry.mockReset();
     updateTaskStatus.mockReset();
     fetchContactDetail.mockReset();
@@ -464,12 +471,24 @@ describe("CRM modules", () => {
     fireEvent.click(dayCell as HTMLElement);
 
     expect(await screen.findByRole("button", { name: "Add enquiry" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add follow-up" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add booking" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Add event" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add payment" }));
 
     expect(onCreateFor).toHaveBeenCalledWith("payments", expect.stringMatching(/^\d{4}-\d{2}-15$/));
+  });
+
+  it("opens the follow-up form on the picked date", async () => {
+    listEnquiries.mockResolvedValue(emptyPage([enquiry]));
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listFollowUps.mockResolvedValue(emptyPage([]));
+    renderCrm(<FollowUpsModule createOnDate="2026-10-15" onCreateOpened={() => undefined} />);
+
+    expect(await screen.findByRole("heading", { name: "Add follow-up" })).toBeInTheDocument();
+    const nextDate = screen.getByLabelText("Next follow-up date & time") as HTMLInputElement;
+    expect(nextDate.value).toBe("2026-10-15T09:00");
   });
 
   it("opens the enquiry form on the picked date", async () => {
@@ -814,5 +833,88 @@ describe("CRM modules", () => {
         name: "Priya Shah · +919888888888 · Banquet inquiry — New",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("creates a role from Add role with a selected permission", async () => {
+    listPermissions.mockResolvedValue([
+      {
+        id: "p-read",
+        code: "crm.roles.read",
+        name: "View roles",
+        description: "See roles and the permissions granted to each role.",
+      },
+    ]);
+    createRole.mockResolvedValue({
+      id: "role-field",
+      name: "Field Lead",
+      slug: "field-lead",
+      permissionIds: ["p-read"],
+    });
+    renderCrm(<RolesModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "Add role" }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Field Lead" } });
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() =>
+      expect(createRole).toHaveBeenCalledWith({
+        name: "Field Lead",
+        permissionIds: ["p-read"],
+      }),
+    );
+  });
+
+  it("shows permission descriptions when viewing a role", async () => {
+    listRoles.mockResolvedValue([
+      { id: "role-admin", name: "Admin", slug: "admin", permissionIds: ["p-read"] },
+    ]);
+    listPermissions.mockResolvedValue([
+      {
+        id: "p-read",
+        code: "crm.roles.read",
+        name: "View roles",
+        description: "See roles and the permissions granted to each role.",
+      },
+    ]);
+    renderCrm(<RolesModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+    expect(await screen.findByText("See roles and the permissions granted to each role.")).toBeInTheDocument();
+    expect(screen.getByText("crm.roles.read")).toBeInTheDocument();
+  });
+
+  it("saves edited role name and permissions", async () => {
+    listRoles.mockResolvedValue([
+      { id: "role-sales", name: "Sales", slug: "sales", permissionIds: ["p-read"] },
+    ]);
+    listPermissions.mockResolvedValue([
+      {
+        id: "p-read",
+        code: "crm.roles.read",
+        name: "View roles",
+        description: "See roles and the permissions granted to each role.",
+      },
+      {
+        id: "p-update",
+        code: "crm.roles.update",
+        name: "Update roles",
+        description: "Create roles and change role names or granted permissions.",
+      },
+    ]);
+    updateRole.mockResolvedValue({
+      id: "role-sales",
+      name: "Inside Sales",
+      slug: "sales",
+      permissionIds: ["p-read", "p-update"],
+    });
+    renderCrm(<RolesModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Inside Sales" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Update roles/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(updateRole).toHaveBeenCalledWith("role-sales", {
+        name: "Inside Sales",
+        permissionIds: ["p-read", "p-update"],
+      }),
+    );
   });
 });

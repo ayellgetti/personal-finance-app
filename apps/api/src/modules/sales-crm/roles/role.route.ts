@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { asyncHandler } from "../../../middlewares/async-handler.middleware";
 import { requirePermission } from "../../../middlewares/require-permission.middleware";
-import { validate } from "../../../middlewares/request-validate.middleware";
+import { validate, validateBody } from "../../../middlewares/request-validate.middleware";
 import { roleController } from "./role.controller";
-import { roleIdParamsSchema, updateRoleBodySchema } from "./role.request";
+import { createRoleBodySchema, roleIdParamsSchema, updateRoleBodySchema } from "./role.request";
 
 export const roleRouter = Router();
 
@@ -12,6 +12,15 @@ roleRouter.get(
   requirePermission("crm.roles.read"),
   asyncHandler(async (req, res) => {
     await roleController.listRoles(req, res);
+  }),
+);
+
+roleRouter.post(
+  "/",
+  requirePermission("crm.roles.update"),
+  validateBody(createRoleBodySchema),
+  asyncHandler(async (req, res) => {
+    await roleController.createRole(req, res);
   }),
 );
 

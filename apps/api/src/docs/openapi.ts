@@ -1080,10 +1080,7 @@ export const openApiDocument = {
         properties: {
           id: { type: "string", format: "uuid" },
           name: { type: "string", example: "Admin" },
-          slug: {
-            type: "string",
-            enum: ["admin", "manager", "sales", "viewer"],
-          },
+          slug: { type: "string", example: "admin" },
         },
       },
       CrmMe: {

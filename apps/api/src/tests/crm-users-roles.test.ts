@@ -107,3 +107,48 @@ test("replacing role permissions swaps the grant set", async () => {
   assert.deepEqual(updated.permissionIds, ["p-read"]);
   assert.equal(rolePermissions.rows.length, 1);
 });
+
+test("creating a role derives slug and grants permissions", async () => {
+  const { rbac, roles } = rbacHarness();
+  const service = new RoleService(rbac);
+  const created = await service.createRole("admin-1", {
+    name: "Field Lead",
+    permissionIds: ["p-read"],
+  });
+  assert.equal(created.name, "Field Lead");
+  assert.equal(created.slug, "field-lead");
+  assert.deepEqual(created.permissionIds, ["p-read"]);
+  assert.equal(roles.rows.some((row) => row.slug === "field-lead"), true);
+});
+
+test("duplicate role name is 409", async () => {
+  const { rbac } = rbacHarness();
+  const service = new RoleService(rbac);
+  await assert.rejects(
+    () => service.createRole("admin-1", { name: "Admin", permissionIds: [] }),
+    (error: unknown) => error instanceof HttpError && error.status === 409,
+  );
+});
+
+test("role name without letters or numbers is 422", async () => {
+  const { rbac } = rbacHarness();
+  const service = new RoleService(rbac);
+  await assert.rejects(
+    () => service.createRole("admin-1", { name: "!!!", permissionIds: [] }),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
+  );
+});
+
+test("updating a role name keeps the slug", async () => {
+  const { rbac } = rbacHarness();
+  const service = new RoleService(rbac);
+  const updated = await service.updateRole("admin-1", "role-sales", { name: "Inside Sales" });
+  assert.equal(updated.name, "Inside Sales");
+  assert.equal(updated.slug, "sales");
+});
+
+test("permission catalog entries include a description", async () => {
+  const { rbac } = rbacHarness();
+  const listed = await rbac.listPermissions();
+  assert.equal(listed[0]?.description, "See roles and the permissions granted to each role.");
+});

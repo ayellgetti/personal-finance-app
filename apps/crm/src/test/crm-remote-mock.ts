@@ -8,6 +8,8 @@ import {
   type CrmEnquiry,
   type CrmMe,
   type CrmPaginated,
+  type CrmPermission,
+  type CrmRoleDetail,
   type CrmTask,
   type CrmTaskStatus,
 } from "@/types/crm";
@@ -119,6 +121,7 @@ export const removeCalendarEvent = vi.fn();
 export const listCrmUsers = vi.fn(async () => emptyPage());
 export const createCrmUser = vi.fn();
 export const updateCrmUser = vi.fn();
-export const listRoles = vi.fn(async () => []);
-export const listPermissions = vi.fn(async () => []);
-export const updateRolePermissions = vi.fn();
+export const listRoles = vi.fn(async (): Promise<CrmRoleDetail[]> => []);
+export const listPermissions = vi.fn(async (): Promise<CrmPermission[]> => []);
+export const createRole = vi.fn();
+export const updateRole = vi.fn();

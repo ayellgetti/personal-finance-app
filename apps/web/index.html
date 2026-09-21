@@ -8,6 +8,48 @@
     <meta name="author" content="Freedom Planner" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#1c9b6a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Freedom Planner" />
+    <script>
+      (function () {
+        var FLAG = "fp-stale-recovery";
+        window.addEventListener(
+          "error",
+          function (event) {
+            var el = event.target;
+            if (!el || el.tagName !== "SCRIPT" || !el.src) return;
+            if (sessionStorage.getItem(FLAG)) return;
+            sessionStorage.setItem(FLAG, "1");
+            var jobs = [];
+            if (window.caches && caches.keys) {
+              jobs.push(
+                caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                })
+              );
+            }
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+              jobs.push(
+                navigator.serviceWorker.getRegistrations().then(function (regs) {
+                  return Promise.all(regs.map(function (r) { return r.unregister(); }));
+                })
+              );
+            }
+            Promise.all(jobs.map(function (p) { return p.catch(function () {}); })).then(function () {
+              var url = new URL(window.location.href);
+              url.searchParams.set("v", Date.now().toString());
+              window.location.replace(url.toString());
+            });
+          },
+          true
+        );
+        window.addEventListener("load", function () {
+          setTimeout(function () { sessionStorage.removeItem(FLAG); }, 5000);
+        });
+      })();
+    </script>
 
     <meta property="og:title" content="Freedom Planner" />
     <meta property="og:description" content="Plan your path to financial independence with AI-powered insights, forecasts and net-worth dashboards." />
