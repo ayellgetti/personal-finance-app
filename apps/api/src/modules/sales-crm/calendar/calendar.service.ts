@@ -1,5 +1,6 @@
 import type {
   CrmCalendarEvent,
+  CrmEnquiry,
   CrmTask,
 } from "@prisma/client";
 import { Prisma } from "@prisma/client";
@@ -18,6 +19,7 @@ import {
   type CrmPaymentModel,
   type CrmTaskModel,
 } from "../../../models/index";
+import { OPEN_ENQUIRY_STATUSES } from "../crm.request";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
 import { isBookedAndPaid } from "../booking-lock";
 import type {
@@ -36,6 +38,14 @@ export type CalendarFeedItem =
       at: Date;
       endsAt: null;
       task: CrmTask;
+    }
+  | {
+      kind: "followup";
+      id: string;
+      title: string;
+      at: Date;
+      endsAt: null;
+      enquiry: CrmEnquiry;
     }
   | {
       kind: "event" | "booking";
@@ -57,7 +67,7 @@ export class CalendarService {
   ) {}
 
   async feed(query: ListCalendarQuery) {
-    const [taskRows, eventRows] = await Promise.all([
+    const [taskRows, eventRows, followUpRows] = await Promise.all([
       this.tasks.read({
         isActive: 1,
         dueAt: { not: null, gte: query.from, lte: query.to },
@@ -66,6 +76,11 @@ export class CalendarService {
         isActive: 1,
         startsAt: { lte: query.to },
         endsAt: { gte: query.from },
+      }),
+      this.enquiries.read({
+        isActive: 1,
+        status: { in: [...OPEN_ENQUIRY_STATUSES] },
+        nextFollowupDate: { gte: query.from, lte: query.to },
       }),
     ]);
 
@@ -79,6 +94,19 @@ export class CalendarService {
           at: task.dueAt,
           endsAt: null,
           task,
+        })),
+      ...followUpRows
+        .filter(
+          (enquiry): enquiry is CrmEnquiry & { nextFollowupDate: Date } =>
+            enquiry.nextFollowupDate !== null,
+        )
+        .map((enquiry) => ({
+          kind: "followup" as const,
+          id: enquiry.id,
+          title: `Follow-up: ${enquiry.title}`,
+          at: enquiry.nextFollowupDate,
+          endsAt: null,
+          enquiry,
         })),
       ...eventRows.map((event) => ({
         kind: event.enquiryId ? ("booking" as const) : ("event" as const),

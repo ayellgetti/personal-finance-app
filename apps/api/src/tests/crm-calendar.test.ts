@@ -50,11 +50,13 @@ function setup() {
   const contacts = fakeCrud("contact", []);
   const enquiries = fakeCrud<{
     id: string;
+    title?: string;
     contactId: string;
     status: string;
+    nextFollowupDate?: Date | null;
     closedReason?: string | null;
     isActive: number;
-  }>("enquiry", [{ id: "e-1", contactId: "c-1", status: "new", isActive: 1 }]);
+  }>("enquiry", [{ id: "e-1", title: "Wedding hall", contactId: "c-1", status: "new", isActive: 1 }]);
   const clients = fakeCrud<{
     id: string;
     contactId: string;
@@ -102,6 +104,32 @@ test("calendar feed includes tasks, standalone events, and booked enquiries", as
     feed.items.map((item) => item.kind),
     ["task", "event", "booking"],
   );
+});
+
+test("calendar feed includes scheduled follow-ups of open enquiries", async () => {
+  const { service, enquiries } = setup();
+  await enquiries.model.update(
+    { id: "e-1" },
+    { status: "contacted", nextFollowupDate: new Date("2026-09-14T06:30:00.000Z") },
+  );
+  await enquiries.model.create({
+    title: "Closed lead",
+    contactId: "c-2",
+    status: "closed",
+    nextFollowupDate: new Date("2026-09-15T06:30:00.000Z"),
+    isActive: 1,
+  });
+
+  const feed = await service.feed({
+    from: new Date("2026-09-01T00:00:00.000Z"),
+    to: new Date("2026-09-30T00:00:00.000Z"),
+  });
+
+  const followUps = feed.items.filter((item) => item.kind === "followup");
+  assert.equal(followUps.length, 1);
+  assert.equal(followUps[0]?.id, "e-1");
+  assert.equal(followUps[0]?.title, "Follow-up: Wedding hall");
+  assert.equal(followUps[0]?.at.toISOString(), "2026-09-14T06:30:00.000Z");
 });
 
 test("calendar event CRUD and soft-delete hide the row", async () => {

@@ -205,7 +205,7 @@ export type CrmTask = {
   enquiryId: string | null;
 };
 
-export type CrmCalendarKind = "task" | "event" | "booking";
+export type CrmCalendarKind = "task" | "event" | "booking" | "followup";
 
 export type CrmCalendarItem = {
   kind: CrmCalendarKind;

@@ -525,6 +525,38 @@ describe("CRM modules", () => {
     expect(booking).toHaveClass("bg-emerald-100");
   });
 
+  it("shows scheduled follow-ups on the calendar and opens the contact", async () => {
+    const onOpenContact = vi.fn();
+    const at = new Date();
+    at.setDate(Math.min(at.getDate(), 28));
+    at.setHours(11, 0, 0, 0);
+    listCalendar.mockResolvedValue({
+      items: [
+        {
+          kind: "followup",
+          id: "enquiry-1",
+          title: "Follow-up: Wedding hall",
+          at: at.toISOString(),
+          endsAt: null,
+          contactId: "contact-1",
+          enquiryId: "enquiry-1",
+        },
+      ],
+    });
+    renderCrm(<CalendarModule onOpenContact={onOpenContact} onOpenPayments={() => undefined} />);
+
+    await screen.findByRole("button", { name: "Follow-up: Wedding hall" });
+    await waitFor(() => {
+      expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    });
+    const followUp = screen.getByRole("button", { name: "Follow-up: Wedding hall" });
+    expect(followUp).toHaveClass("bg-amber-100");
+
+    fireEvent.click(followUp);
+
+    expect(onOpenContact).toHaveBeenCalledWith("contact-1");
+  });
+
   it("switches the calendar between day, week, and month views", async () => {
     const at = new Date();
     at.setHours(14, 0, 0, 0);

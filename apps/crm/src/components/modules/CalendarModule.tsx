@@ -36,6 +36,14 @@ const KIND_LABELS: Record<CrmCalendarItem["kind"], string> = {
   task: "Task",
   event: "Event",
   booking: "Booked",
+  followup: "Follow-up",
+};
+
+const KIND_CHIP_CLASSES: Record<CrmCalendarItem["kind"], string> = {
+  task: "bg-primary/10",
+  event: "bg-primary/10",
+  booking: "bg-emerald-100 text-emerald-900",
+  followup: "bg-amber-100 text-amber-900",
 };
 
 export type CalendarCreateTarget = "enquiries" | "followUps" | "clients" | "payments";
@@ -174,6 +182,14 @@ export function CalendarModule({
   }, [crm.calendar.items]);
 
   const openItem = (item: CrmCalendarItem) => {
+    if (item.kind === "followup") {
+      if (item.contactId && crm.hasPermission(CRM_PERMISSIONS.contactsRead)) {
+        onOpenContact(item.contactId);
+        return;
+      }
+      setDetail(item);
+      return;
+    }
     if (item.kind !== "booking" || !crm.hasPermission(CRM_PERMISSIONS.clientsRead)) {
       setDetail(item);
       return;
@@ -208,10 +224,7 @@ export function CalendarModule({
     <button
       key={`${item.kind}-${item.id}`}
       type="button"
-      className={cn(
-        className,
-        item.kind === "booking" ? "bg-emerald-100 text-emerald-900" : "bg-primary/10",
-      )}
+      className={cn(className, KIND_CHIP_CLASSES[item.kind])}
       onClick={(event) => {
         event.stopPropagation();
         openItem(item);
@@ -423,9 +436,7 @@ export function CalendarModule({
                       <span
                         className={cn(
                           "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                          item.kind === "booking"
-                            ? "bg-emerald-100 text-emerald-900"
-                            : "bg-primary/10",
+                          KIND_CHIP_CLASSES[item.kind],
                         )}
                       >
                         {KIND_LABELS[item.kind]}
@@ -486,7 +497,9 @@ export function CalendarModule({
         }}
         title={detail?.title ?? "Event"}
         footer={
-          detail && detail.kind !== "task" && crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
+          detail &&
+          (detail.kind === "event" || detail.kind === "booking") &&
+          crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
             <RemoveAction
               label={detail.kind === "booking" ? "Remove booking" : "Remove event"}
               onClick={() => setRemoveTarget(detail)}
@@ -500,7 +513,8 @@ export function CalendarModule({
               <span className="font-medium">Type:</span> {KIND_LABELS[detail.kind]}
             </p>
             <p>
-              <span className="font-medium">Starts:</span> {formatDateTime(detail.at)}
+              <span className="font-medium">{detail.endsAt ? "Starts" : "Due"}:</span>{" "}
+              {formatDateTime(detail.at)}
             </p>
             {detail.endsAt ? (
               <p>

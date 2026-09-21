@@ -281,15 +281,21 @@ function mapCalendarEvent(row: Record<string, unknown>): CrmCalendarEvent {
 }
 
 function mapCalendarItem(row: Record<string, unknown>): CrmCalendarItem {
-  const source = asRecord(row.event ?? row.task ?? {});
+  const kind = row.kind as CrmCalendarItem["kind"];
+  const source = asRecord(row.event ?? row.task ?? row.enquiry ?? {});
   return {
-    kind: row.kind as CrmCalendarItem["kind"],
+    kind,
     id: String(row.id),
     title: String(row.title ?? ""),
     at: asIso(row.at),
     endsAt: asIsoOrNull(row.endsAt),
     contactId: source.contactId == null ? null : String(source.contactId),
-    enquiryId: source.enquiryId == null ? null : String(source.enquiryId),
+    enquiryId:
+      kind === "followup"
+        ? String(row.id)
+        : source.enquiryId == null
+          ? null
+          : String(source.enquiryId),
   };
 }
 

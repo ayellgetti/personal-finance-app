@@ -387,15 +387,20 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       }));
       setCalendar((current) => ({
         ...current,
-        items: upsertById(current.items, {
-          kind: "booking",
-          id: converted.event.id,
-          title: converted.event.title,
-          at: converted.event.startsAt,
-          endsAt: converted.event.endsAt,
-          contactId: converted.event.contactId,
-          enquiryId: converted.event.enquiryId,
-        }),
+        items: upsertById(
+          current.items.filter(
+            (item) => !(item.kind === "followup" && item.enquiryId === converted.enquiry.id),
+          ),
+          {
+            kind: "booking",
+            id: converted.event.id,
+            title: converted.event.title,
+            at: converted.event.startsAt,
+            endsAt: converted.event.endsAt,
+            contactId: converted.event.contactId,
+            enquiryId: converted.event.enquiryId,
+          },
+        ),
       }));
       toast.success("Enquiry converted");
       return converted;

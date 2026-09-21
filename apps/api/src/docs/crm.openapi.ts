@@ -783,7 +783,7 @@ export const crmOpenApiPaths = {
     get: {
       tags: ["CRM Calendar"],
       summary: "Calendar union feed",
-      description: "Union of tasks with due dates, booked enquiry events (`kind=booking`), and standalone events (`kind=event`) overlapping from/to. Range is required and max 92 days. Follow-ups remain on the Follow-ups calendar.",
+      description: "Union of tasks with due dates, scheduled follow-ups of open enquiries (`kind=followup`, dated by `nextFollowupDate`), booked enquiry events (`kind=booking`), and standalone events (`kind=event`) overlapping from/to. Range is required and max 92 days.",
       security: [{ bearerAuth: [] }],
       parameters: [
         requestId,
