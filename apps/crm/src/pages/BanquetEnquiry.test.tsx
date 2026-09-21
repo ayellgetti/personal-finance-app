@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import BanquetEnquiry from "./BanquetEnquiry";
 
 const submitPublicEnquiry = vi.fn();
@@ -12,6 +12,9 @@ vi.mock("@/lib/crm/remote", () => ({
 }));
 
 describe("Banquet public enquiry form", () => {
+  beforeEach(() => {
+    submitPublicEnquiry.mockReset();
+  });
   it("renders the standalone form without asking for a login", () => {
     render(<BanquetEnquiry />);
     expect(screen.getByRole("heading", { name: /Quick Event Enquiry/i })).toBeInTheDocument();
@@ -48,5 +51,22 @@ describe("Banquet public enquiry form", () => {
         notes: "Need valet",
       });
     });
+  });
+
+  it("rejects an event date before today", async () => {
+    render(<BanquetEnquiry />);
+    fireEvent.change(screen.getByLabelText(/Customer name/), { target: { value: "Priya Sharma" } });
+    fireEvent.change(screen.getByLabelText(/Phone number/), { target: { value: "9876543210" } });
+    fireEvent.change(screen.getByLabelText(/Event type/), {
+      target: { value: "Wedding Ceremony & Reception" },
+    });
+    fireEvent.change(screen.getByLabelText(/Event date/), { target: { value: "2020-01-01" } });
+    fireEvent.change(screen.getByLabelText(/Time slot/), { target: { value: "evening" } });
+    fireEvent.change(screen.getByLabelText(/Number of guests/), { target: { value: "100" } });
+    fireEvent.change(screen.getByLabelText(/How did they find us/), { target: { value: "WhatsApp" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit enquiry" }));
+
+    expect(await screen.findByText("Event date must be today or in the future")).toBeInTheDocument();
+    expect(submitPublicEnquiry).not.toHaveBeenCalled();
   });
 });

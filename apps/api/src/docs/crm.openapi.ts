@@ -121,7 +121,8 @@ export const crmOpenApiSchemas = {
       dueDate: {
         type: "string",
         format: "date-time",
-        description: "Exact enquiry due date. Calendar shortcuts (7 days / 1 month / 3 months / 6 months) are UI-only.",
+        description:
+          "Exact enquiry due date; must be today or in the future. Calendar shortcuts (7 days / 1 month / 3 months / 6 months) are UI-only.",
       },
     },
   },
@@ -139,7 +140,11 @@ export const crmOpenApiSchemas = {
       name: { type: "string", minLength: 1, maxLength: 120 },
       mobile: { type: "string", pattern: "^\\+?[0-9]{7,15}$" },
       eventType: { type: "string", minLength: 1, maxLength: 80 },
-      eventDate: { type: "string", format: "date-time" },
+      eventDate: {
+        type: "string",
+        format: "date-time",
+        description: "Event date; must be today or in the future.",
+      },
       timeSlot: { type: "string", enum: ["morning", "evening", "full_day"] },
       guestCount: { type: "integer", minimum: 1, maximum: 10000 },
       source: { type: "string", minLength: 1, maxLength: 80 },
@@ -159,8 +164,16 @@ export const crmOpenApiSchemas = {
       mobile: { type: "string", pattern: "^\\+?[0-9]{7,15}$" },
       tripType: { type: "string", minLength: 1, maxLength: 80 },
       destination: { type: "string", minLength: 1, maxLength: 80 },
-      departureDate: { type: "string", format: "date-time" },
-      returnDate: { type: "string", format: "date-time" },
+      departureDate: {
+        type: "string",
+        format: "date-time",
+        description: "Trip start date; must be today or in the future.",
+      },
+      returnDate: {
+        type: "string",
+        format: "date-time",
+        description: "Trip end date; must be on or after the departure date and today or in the future.",
+      },
       travelerCount: { type: "integer", minimum: 1, maximum: 10000 },
       source: { type: "string", minLength: 1, maxLength: 80 },
       budget: { type: "string", maxLength: 80 },
@@ -176,7 +189,7 @@ export const crmOpenApiSchemas = {
       startsAt: {
         type: "string",
         format: "date-time",
-        description: "Required on first convert. Event start datetime.",
+        description: "Required on first convert. Event start datetime; must be today or in the future.",
       },
       endsAt: {
         type: "string",
@@ -500,7 +513,7 @@ export const crmOpenApiPaths = {
       tags: ["CRM Enquiries"],
       summary: "Convert an enquiry to a client",
       description:
-        "Runs in a short transaction: sets enquiry closed (Booked), contact type=client, creates CrmClient if missing, and creates a calendar event linked to the enquiry. The booking notes are seeded from the enquiry's latest follow-up note, falling back to the enquiry notes; edit them later through PATCH /api/crm/calendar/events/{id}. First convert requires startsAt and either endsAt or slot (morning / evening / full_day). Idempotent when already closed, a client exists, and a booking event is present.",
+        "Runs in a short transaction: sets enquiry closed (Booked), contact type=client, creates CrmClient if missing, and creates a calendar event linked to the enquiry. The booking notes are seeded from the enquiry's latest follow-up note, falling back to the enquiry notes; edit them later through PATCH /api/crm/calendar/events/{id}. First convert requires startsAt (today or later) and either endsAt or slot (morning / evening / full_day). Idempotent when already closed, a client exists, and a booking event is present.",
       security: [{ bearerAuth: [] }],
       parameters: [requestId, idParam],
       requestBody: jsonBody("ConvertCrmEnquiryRequest"),
@@ -619,6 +632,8 @@ export const crmOpenApiPaths = {
         limitParam,
         { name: "status", in: "query", schema: { type: "string", enum: ["active", "inactive"] } },
         { name: "search", in: "query", schema: { type: "string" } },
+        { name: "from", in: "query", schema: { type: "string", format: "date-time" } },
+        { name: "to", in: "query", schema: { type: "string", format: "date-time" } },
       ],
       responses: { ...ok("Paginated clients with current booking startsAt and endsAt") },
     },

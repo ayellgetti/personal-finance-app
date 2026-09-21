@@ -10,7 +10,7 @@ import {
   validateBooking,
   type BookingFormState,
 } from "@/lib/crm/booking";
-import { eventSlotOptions } from "@/lib/crm/display";
+import { eventSlotOptions, toLocalDateTimeMin } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
 import type { CrmEnquiry } from "@/types/crm";
 
@@ -29,6 +29,7 @@ export function BookingFields({
         <Input
           id="booking-start"
           type="datetime-local"
+          min={toLocalDateTimeMin()}
           value={form.startsAt}
           onChange={(event) => onChange(applyBookingStart(form, event.target.value))}
           className="rounded-xl"
@@ -38,6 +39,7 @@ export function BookingFields({
         <Input
           id="booking-end"
           type="datetime-local"
+          min={form.startsAt || toLocalDateTimeMin()}
           value={form.endsAt}
           onChange={(event) => onChange({ ...form, endsAt: event.target.value })}
           className="rounded-xl"

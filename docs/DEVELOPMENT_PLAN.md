@@ -413,13 +413,13 @@ Enquiries table with status filter and create/edit sheet. Follow-ups list with o
 
 Enquiry pipeline (exactly these eight stages): New → Contacted → Qualified → Discussion → Quotation Sent → Negotiation → Schedule Meeting / Site Visit → Closed. Convert sets `closed`. Dashboard cards include leads generated today, customer due dates, overdue follow-ups (`nextFollowupDate` past and enquiry not closed), follow-ups for today (open enquiries with `nextFollowupDate` on the current calendar day; click opens Follow-ups with When = Today), and open versus closed.
 
-Enquiry create requires an exact `dueDate`. The CRM form uses a calendar with shortcuts for 7 days, 1 month, 3 months, and 6 months from today. Note and status changes append follow-up history (date, notes, status, `nextFollowupDate`). Follow-ups are not written to `CrmCalendarEvent` or the main calendar feed. `GET /api/crm/followups/calendar?from&to` powers the Follow-ups calendar (new enquiry vs follow-up counts; click a day for enquiries due; overdue highlighted). Follow-ups Timeline view (and the enquiry detail sheet) shows lead created → follow-up history → next contact → closed/booked.
+Enquiry create requires an exact `dueDate` that is today or in the future. The CRM form uses a calendar with shortcuts for 7 days, 1 month, 3 months, and 6 months from today; past days cannot be selected. Note and status changes append follow-up history (date, notes, status, `nextFollowupDate`). Follow-ups are not written to `CrmCalendarEvent` or the main calendar feed. `GET /api/crm/followups/calendar?from&to` powers the Follow-ups calendar (new enquiry vs follow-up counts; click a day for enquiries due; overdue highlighted). Follow-ups Timeline view (and the enquiry detail sheet) shows lead created → follow-up history → next contact → closed/booked.
 
 ### Phase D5 — Convert, clients, payments
 
 **Status: COMPLETED**
 
-Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in the CRM store and creates a `CrmCalendarEvent` linked to the enquiry. First convert requires `startsAt` and either `endsAt` or `slot` (`morning` / `evening` / `full_day`; slot windows are IST). Contact and client view sheets show Current booking, Enquiries, and Payments tabs. Payments table records amount, `PaymentType` (INCOME / EXPENSE), `PaymentMode` (CASH / UPI / CARD / BANK_TRANSFER / CHEQUE), and status (no gateway).
+Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in the CRM store and creates a `CrmCalendarEvent` linked to the enquiry. First convert requires `startsAt` (today or later) and either `endsAt` or `slot` (`morning` / `evening` / `full_day`; slot windows are IST). Contact and client view sheets show Current booking, Enquiries, and Payments tabs. Payments table records amount, `PaymentType` (INCOME / EXPENSE), `PaymentMode` (CASH / UPI / CARD / BANK_TRANSFER / CHEQUE), and status (no gateway).
 
 `$transaction` on convert. No OpenAI/Redis inside the transaction.
 

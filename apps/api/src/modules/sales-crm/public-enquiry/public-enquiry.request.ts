@@ -1,12 +1,18 @@
 import { z } from "zod";
 import { crmEventSlotSchema, crmMobileSchema } from "../crm.request";
+import { isOnOrAfterLocalDay } from "../enquiries/enquiry-due-date";
 
 export const PUBLIC_ENQUIRY_ACTOR = "public";
 
 const optionalLabel = z.string().trim().max(80).optional();
-const requiredDate = z.coerce.date().refine((value) => !Number.isNaN(value.getTime()), {
-  message: "Invalid date",
-});
+const requiredDate = z.coerce
+  .date()
+  .refine((value) => !Number.isNaN(value.getTime()), {
+    message: "Invalid date",
+  })
+  .refine((value) => isOnOrAfterLocalDay(value), {
+    message: "Date must be today or in the future",
+  });
 
 const publicContactFields = {
   name: z.string().trim().min(1).max(120),

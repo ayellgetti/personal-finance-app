@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import TravelEnquiry from "./TravelEnquiry";
 
 const submitPublicEnquiry = vi.fn();
@@ -12,6 +12,9 @@ vi.mock("@/lib/crm/remote", () => ({
 }));
 
 describe("Travel public enquiry form", () => {
+  beforeEach(() => {
+    submitPublicEnquiry.mockReset();
+  });
   it("renders the standalone form without asking for a login", () => {
     render(<TravelEnquiry />);
     expect(screen.getByRole("heading", { name: /Quick Travel Enquiry/i })).toBeInTheDocument();
@@ -48,5 +51,20 @@ describe("Travel public enquiry form", () => {
         notes: "Prefer houseboat one night",
       });
     });
+  });
+
+  it("rejects a departure date before today", async () => {
+    render(<TravelEnquiry />);
+    fireEvent.change(screen.getByLabelText(/Customer name/), { target: { value: "Amit Patel" } });
+    fireEvent.change(screen.getByLabelText(/Phone number/), { target: { value: "9123456780" } });
+    fireEvent.change(screen.getByLabelText(/Trip type/), { target: { value: "Honeymoon" } });
+    fireEvent.change(screen.getByLabelText(/^Destination/), { target: { value: "Kerala" } });
+    fireEvent.change(screen.getByLabelText(/Departure date/), { target: { value: "2020-01-01" } });
+    fireEvent.change(screen.getByLabelText(/Number of travelers/), { target: { value: "2" } });
+    fireEvent.change(screen.getByLabelText(/How did they find us/), { target: { value: "Instagram" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit enquiry" }));
+
+    expect(await screen.findByText("Departure date must be today or in the future")).toBeInTheDocument();
+    expect(submitPublicEnquiry).not.toHaveBeenCalled();
   });
 });

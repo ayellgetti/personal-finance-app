@@ -20,7 +20,7 @@ import {
   TRAVEL_SOURCES,
   TRAVEL_TRIP_TYPES,
 } from "@/lib/crm/travel-enquiry";
-import { MOBILE_PATTERN } from "@/lib/crm/display";
+import { MOBILE_PATTERN, toLocalDateKey } from "@/lib/crm/display";
 import { submitPublicEnquiry } from "@/lib/crm/remote";
 
 type FormState = {
@@ -72,8 +72,14 @@ export default function TravelEnquiry() {
     if (!MOBILE_PATTERN.test(form.mobile.trim())) next.mobile = "Enter a valid phone number";
     if (!form.tripType) next.tripType = "Select a trip type";
     if (!form.destination) next.destination = "Select a destination";
+    const today = toLocalDateKey(new Date());
     if (!form.departureDate) next.departureDate = "Departure date is required";
-    if (form.returnDate && form.departureDate && form.returnDate < form.departureDate) {
+    else if (form.departureDate < today) {
+      next.departureDate = "Departure date must be today or in the future";
+    }
+    if (form.returnDate && form.returnDate < today) {
+      next.returnDate = "Return date must be today or in the future";
+    } else if (form.returnDate && form.departureDate && form.returnDate < form.departureDate) {
       next.returnDate = "Return date must be on or after departure";
     }
     const travelers = Number(form.travelerCount);
@@ -182,6 +188,7 @@ export default function TravelEnquiry() {
             <Input
               id="departure-date"
               type="date"
+              min={toLocalDateKey(new Date())}
               value={form.departureDate}
               onChange={(e) => set("departureDate", e.target.value)}
               className={inputClass}
@@ -191,6 +198,7 @@ export default function TravelEnquiry() {
             <Input
               id="return-date"
               type="date"
+              min={form.departureDate || toLocalDateKey(new Date())}
               value={form.returnDate}
               onChange={(e) => set("returnDate", e.target.value)}
               className={inputClass}

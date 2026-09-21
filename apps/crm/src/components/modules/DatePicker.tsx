@@ -120,18 +120,21 @@ export function DatePicker({
           const outside = day.getMonth() !== cursor.getMonth();
           const isSelected = key === value;
           const isToday = key === todayKey;
+          const beforeMin = key < todayKey && !isSelected;
           return (
             <button
               key={key}
               type="button"
               aria-label={dayLabel(day)}
               aria-pressed={isSelected}
+              disabled={beforeMin}
               className={cn(
                 "h-8 rounded-lg text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 outside && "text-muted-foreground/50",
                 isToday && !isSelected && "font-semibold text-primary",
                 isSelected && "bg-primary text-primary-foreground",
-                !isSelected && "hover:bg-accent",
+                beforeMin && "cursor-not-allowed opacity-40",
+                !isSelected && !beforeMin && "hover:bg-accent",
               )}
               onClick={() => {
                 onChange(key);

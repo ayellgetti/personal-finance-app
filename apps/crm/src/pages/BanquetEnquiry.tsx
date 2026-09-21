@@ -16,7 +16,7 @@ import {
   BANQUET_TIME_SLOTS,
   BANQUET_VENUES,
 } from "@/lib/crm/banquet-enquiry";
-import { EVENT_SLOT_LABELS, MOBILE_PATTERN } from "@/lib/crm/display";
+import { EVENT_SLOT_LABELS, MOBILE_PATTERN, toLocalDateKey } from "@/lib/crm/display";
 import { submitPublicEnquiry } from "@/lib/crm/remote";
 import type { CrmEventSlot } from "@/types/crm";
 
@@ -102,6 +102,9 @@ export default function BanquetEnquiry() {
     if (!MOBILE_PATTERN.test(form.mobile.trim())) next.mobile = "Enter a valid phone number";
     if (!form.eventType) next.eventType = "Select an event type";
     if (!form.eventDate) next.eventDate = "Event date is required";
+    else if (form.eventDate < toLocalDateKey(new Date())) {
+      next.eventDate = "Event date must be today or in the future";
+    }
     if (!form.timeSlot) next.timeSlot = "Select a time slot";
     const guests = Number(form.guestCount);
     if (!Number.isInteger(guests) || guests < 1) next.guestCount = "Enter the number of guests";
@@ -195,6 +198,7 @@ export default function BanquetEnquiry() {
               <Input
                 id="event-date"
                 type="date"
+                min={toLocalDateKey(new Date())}
                 value={form.eventDate}
                 onChange={(e) => set("eventDate", e.target.value)}
                 className={inputClass}

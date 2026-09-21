@@ -1,4 +1,4 @@
-import { endsAtFromSlot, localInputToIso } from "@/lib/crm/display";
+import { endsAtFromSlot, isLocalDateKeyOnOrAfterToday, localInputToIso } from "@/lib/crm/display";
 import type { ConvertEnquiryInput, CrmCalendarEvent, CrmEventSlot } from "@/types/crm";
 
 export type BookingFormState = {
@@ -13,9 +13,12 @@ export const EMPTY_BOOKING: BookingFormState = {
   slot: "",
 };
 
-export function validateBooking(form: BookingFormState): Record<string, string> {
+export function validateBooking(form: BookingFormState, from = new Date()): Record<string, string> {
   const errors: Record<string, string> = {};
   if (!form.startsAt) errors.startsAt = "Start date and time is required";
+  else if (!isLocalDateKeyOnOrAfterToday(form.startsAt.slice(0, 10), from)) {
+    errors.startsAt = "Booking date must be today or in the future";
+  }
   if (!form.endsAt && !form.slot) {
     errors.endsAt = "End date and time or a slot is required";
     errors.slot = "End date and time or a slot is required";

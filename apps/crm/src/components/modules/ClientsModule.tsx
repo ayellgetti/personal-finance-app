@@ -17,7 +17,7 @@ import {
   ViewAction,
 } from "@/components/modules/shared";
 import { bookingDatesForClient } from "@/lib/crm/booking";
-import { CLIENT_STATUS_LABELS, clientStatusOptions, formatDateTime } from "@/lib/crm/display";
+import { CLIENT_STATUS_LABELS, clientStatusOptions, formatDateTime, parseLocalDateKey } from "@/lib/crm/display";
 import { fetchContactDetail } from "@/lib/crm/remote";
 import { useCrm } from "@/lib/crm/store";
 import {
@@ -58,6 +58,17 @@ function toInput(form: FormState): CreateClientInput {
   };
 }
 
+function startOfLocalDayIso(dateKey: string): string | undefined {
+  const date = parseLocalDateKey(dateKey);
+  return date ? date.toISOString() : undefined;
+}
+
+function endOfLocalDayIso(dateKey: string): string | undefined {
+  const date = parseLocalDateKey(dateKey);
+  if (!date) return undefined;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999).toISOString();
+}
+
 export function ClientsModule({
   onOpenContact,
   onOpenPayments,
@@ -73,6 +84,8 @@ export function ClientsModule({
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.clientsRead);
   const [statusFilter, setStatusFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -84,10 +97,14 @@ export function ClientsModule({
   const [busy, setBusy] = useState(false);
   const [bookingsByContactId, setBookingsByContactId] = useState<Record<string, CrmCalendarEvent[]>>({});
 
+  const dateRangeInvalid = Boolean(fromDate && toDate && fromDate > toDate);
+
   const reload = () => {
     void crm.loadClients({
       status: statusFilter ? (statusFilter as CrmClientStatus) : undefined,
       search: appliedSearch || undefined,
+      from: !dateRangeInvalid ? startOfLocalDayIso(fromDate) : undefined,
+      to: !dateRangeInvalid ? endOfLocalDayIso(toDate) : undefined,
     });
     if (crm.hasPermission(CRM_PERMISSIONS.contactsRead)) void crm.loadContacts({ type: "client", limit: 100 });
   };
@@ -95,7 +112,7 @@ export function ClientsModule({
   useEffect(() => {
     if (sessionReady && allowed) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionReady, allowed, statusFilter, appliedSearch]);
+  }, [sessionReady, allowed, statusFilter, appliedSearch, fromDate, toDate]);
 
   useEffect(() => {
     const missing = crm.clients.items.filter((client) => !client.startsAt || !client.endsAt);
@@ -193,6 +210,26 @@ export function ClientsModule({
               <option value="">All statuses</option>
               {clientStatusOptions()}
             </NativeSelect>
+          </Field>
+          <Field id="client-from-date" label="From">
+            <Input
+              id="client-from-date"
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={(event) => setFromDate(event.target.value)}
+              className="rounded-xl"
+            />
+          </Field>
+          <Field id="client-to-date" label="To">
+            <Input
+              id="client-to-date"
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={(event) => setToDate(event.target.value)}
+              className="rounded-xl"
+            />
           </Field>
           <Button type="submit" variant="outline" className="rounded-xl">
             Search

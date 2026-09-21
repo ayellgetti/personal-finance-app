@@ -16,6 +16,7 @@ import {
   SideSheet,
 } from "@/components/modules/shared";
 import { ClientViewSheet } from "@/components/modules/ClientViewSheet";
+import { LeadHistorySheet, type LeadHistoryTarget } from "@/components/modules/LeadHistorySheet";
 import {
   formatDate,
   formatDateTime,
@@ -148,6 +149,7 @@ export function CalendarModule({
   const [cursor, setCursor] = useState(() => new Date());
   const [detail, setDetail] = useState<CrmCalendarItem | null>(null);
   const [viewingClient, setViewingClient] = useState<CrmClient | null>(null);
+  const [historyLead, setHistoryLead] = useState<LeadHistoryTarget | null>(null);
   const [removeTarget, setRemoveTarget] = useState<CrmCalendarItem | null>(null);
   const [createDay, setCreateDay] = useState<Date | null>(null);
 
@@ -181,10 +183,13 @@ export function CalendarModule({
     return grouped;
   }, [crm.calendar.items]);
 
+  const canReadLeadHistory =
+    crm.hasPermission(CRM_PERMISSIONS.contactsRead) || crm.hasPermission(CRM_PERMISSIONS.enquiriesRead);
+
   const openItem = (item: CrmCalendarItem) => {
     if (item.kind === "followup") {
-      if (item.contactId && crm.hasPermission(CRM_PERMISSIONS.contactsRead)) {
-        onOpenContact(item.contactId);
+      if (item.contactId && canReadLeadHistory) {
+        setHistoryLead({ contactId: item.contactId, enquiryId: item.enquiryId, title: item.title });
         return;
       }
       setDetail(item);
@@ -524,6 +529,15 @@ export function CalendarModule({
           </div>
         ) : null}
       </SideSheet>
+
+      <LeadHistorySheet
+        lead={historyLead}
+        onClose={() => setHistoryLead(null)}
+        onOpenContact={(contactId) => {
+          setHistoryLead(null);
+          onOpenContact(contactId);
+        }}
+      />
 
       <ClientViewSheet
         client={viewingClient}

@@ -2,6 +2,10 @@ export function startOfLocalDay(value: Date): Date {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate());
 }
 
+export function isOnOrAfterLocalDay(value: Date, now = new Date()): boolean {
+  return startOfLocalDay(value).getTime() >= startOfLocalDay(now).getTime();
+}
+
 export function endOfLocalDay(value: Date): Date {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 23, 59, 59, 999);
 }

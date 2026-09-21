@@ -27,6 +27,7 @@ import {
   parseLocalDateKey,
 } from "@/lib/crm/display";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
+import { LeadHistorySheet, type LeadHistoryTarget } from "@/components/modules/LeadHistorySheet";
 import { ConvertToBookedSheet } from "@/components/modules/ConvertToBookedSheet";
 import { listFollowUpCalendar } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
@@ -449,6 +450,7 @@ export function FollowUpsModule({
   const [calendarStatus, setCalendarStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [historyLead, setHistoryLead] = useState<LeadHistoryTarget | null>(null);
 
   const cells = useMemo(() => monthGrid(cursor), [cursor]);
   const range = useMemo(() => {
@@ -888,18 +890,30 @@ export function FollowUpsModule({
         ) : (
           <ul className="space-y-3">
             {selectedItems.map((item) => (
-              <li key={`${item.kind}-${item.enquiryId}`} className="rounded-xl border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium">{item.title}</p>
-                  <Badge variant="secondary">
-                    {item.kind === "new_enquiry" ? "New enquiry" : "Follow-up"}
-                  </Badge>
-                  <StageBadge stage={item.status} />
-                  {item.overdue ? <Badge variant="destructive">Overdue</Badge> : null}
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Next follow-up {formatDateTime(item.nextFollowupDate)}
-                </p>
+              <li key={`${item.kind}-${item.enquiryId}`}>
+                <button
+                  type="button"
+                  className="w-full rounded-xl border p-3 text-left hover:bg-muted/40"
+                  onClick={() =>
+                    setHistoryLead({
+                      contactId: item.contactId,
+                      enquiryId: item.enquiryId,
+                      title: item.title,
+                    })
+                  }
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{item.title}</p>
+                    <Badge variant="secondary">
+                      {item.kind === "new_enquiry" ? "New enquiry" : "Follow-up"}
+                    </Badge>
+                    <StageBadge stage={item.status} />
+                    {item.overdue ? <Badge variant="destructive">Overdue</Badge> : null}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Next follow-up {formatDateTime(item.nextFollowupDate)}
+                  </p>
+                </button>
               </li>
             ))}
           </ul>
@@ -916,6 +930,8 @@ export function FollowUpsModule({
           void crm.removeFollowUp(removeId).finally(() => setRemoveId(null));
         }}
       />
+
+      <LeadHistorySheet lead={historyLead} onClose={() => setHistoryLead(null)} />
 
       <ConvertToBookedSheet
         enquiry={convertingEnquiry}

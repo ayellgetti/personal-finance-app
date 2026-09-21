@@ -413,6 +413,28 @@ test("enquiry create requires an exact due date", () => {
   );
 });
 
+test("enquiry create rejects a due date before today", () => {
+  assert.equal(
+    createEnquiryBodySchema.safeParse({
+      contactId: "00000000-0000-4000-8000-000000000001",
+      title: "Banquet",
+      source: "web",
+      dueDate: "2020-01-01",
+    }).success,
+    false,
+  );
+});
+
+test("convert body rejects a booking start before today", () => {
+  assert.equal(
+    convertEnquiryBodySchema.safeParse({
+      startsAt: "2020-01-01T10:00:00.000Z",
+      slot: "morning",
+    }).success,
+    false,
+  );
+});
+
 test("enquiry create stores the exact due date and logs note history", async () => {
   const { service, followUps } = setup([
     { id: "c-1", name: "Ada", mobile: "111", type: "lead", isActive: 1 },

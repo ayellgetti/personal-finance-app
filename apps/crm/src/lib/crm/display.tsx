@@ -165,6 +165,14 @@ export function toLocalDateKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+export function isLocalDateKeyOnOrAfterToday(value: string, from = new Date()): boolean {
+  return value >= toLocalDateKey(from);
+}
+
+export function toLocalDateTimeMin(from = new Date()): string {
+  return `${toLocalDateKey(from)}T00:00`;
+}
+
 export function parseLocalDateKey(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return null;

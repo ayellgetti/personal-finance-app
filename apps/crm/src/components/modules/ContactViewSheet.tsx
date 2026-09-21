@@ -378,8 +378,19 @@ export function BookingNotes({ booking }: { booking: CrmCalendarEvent }) {
   );
 }
 
-export function EnquiriesTab({ enquiries }: { enquiries: CrmEnquiryWithFollowUps[] }) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+export function EnquiriesTab({
+  enquiries,
+  focusEnquiryId,
+}: {
+  enquiries: CrmEnquiryWithFollowUps[];
+  /** Keeps only this enquiry expanded on mount; every enquiry is expanded when omitted. */
+  focusEnquiryId?: string | null;
+}) {
+  const [collapsed, setCollapsed] = useState<Set<string>>(() =>
+    focusEnquiryId
+      ? new Set(enquiries.filter((enquiry) => enquiry.id !== focusEnquiryId).map((enquiry) => enquiry.id))
+      : new Set(),
+  );
 
   if (enquiries.length === 0) {
     return <p className="text-sm text-muted-foreground">No enquiries yet.</p>;

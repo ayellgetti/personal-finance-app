@@ -16,6 +16,7 @@ import { fakeCrud } from "./crm-test-utils";
 function setup() {
   const contacts = fakeCrud("contact", [
     { id: "c-1", name: "Ada", mobile: "111", type: "client", isActive: 1 },
+    { id: "c-2", name: "Bea", mobile: "444", type: "client", isActive: 1 },
     { id: "c-lead", name: "Lead", mobile: "222", type: "lead", isActive: 1 },
     { id: "c-vendor", name: "Decor Co", mobile: "333", type: "vendor", isActive: 1 },
   ]);
@@ -58,6 +59,42 @@ test("client create, list, update, and soft-delete hide the row", async () => {
   await clientService.update("user-1", created.id, { gstin: "GSTIN1" });
   await clientService.remove("user-1", { id: created.id });
   assert.equal((await clientService.list({})).items.length, 0);
+});
+
+test("client list filters bookings that overlap a from-to date range", async () => {
+  const { clientService, events } = setup();
+  const inRange = await clientService.create("user-1", {
+    contactId: "c-1",
+    billingName: "December wedding",
+  });
+  const outOfRange = await clientService.create("user-1", {
+    contactId: "c-2",
+    billingName: "October lunch",
+  });
+  await events.model.create({
+    id: "event-dec",
+    title: "Wedding",
+    startsAt: new Date("2026-12-12T10:30:00.000Z"),
+    endsAt: new Date("2026-12-12T17:30:00.000Z"),
+    contactId: inRange.contactId,
+    enquiryId: null,
+    isActive: 1,
+  });
+  await events.model.create({
+    id: "event-oct",
+    title: "Lunch",
+    startsAt: new Date("2026-10-04T04:00:00.000Z"),
+    endsAt: new Date("2026-10-04T10:00:00.000Z"),
+    contactId: outOfRange.contactId,
+    enquiryId: null,
+    isActive: 1,
+  });
+  const listed = await clientService.list({
+    from: new Date("2026-12-01T00:00:00.000Z"),
+    to: new Date("2026-12-31T23:59:59.999Z"),
+  });
+  assert.equal(listed.items.length, 1);
+  assert.equal(listed.items[0]?.id, inRange.id);
 });
 
 test("client list includes current booking start and end dates", async () => {

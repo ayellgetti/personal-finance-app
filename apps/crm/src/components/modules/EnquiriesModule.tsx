@@ -45,6 +45,7 @@ import {
   formatDate,
   isoToLocalDateInput,
   isoToLocalInput,
+  isLocalDateKeyOnOrAfterToday,
   localDateInputToIso,
   localInputToIso,
 } from "@/lib/crm/display";
@@ -473,7 +474,7 @@ const EMPTY: FormState = {
   dueDate: "",
 };
 
-function validate(form: FormState): Record<string, string> {
+function validate(form: FormState, allowedPastDueDate?: string): Record<string, string> {
   const errors: Record<string, string> = {};
   if (form.contactMode === "existing") {
     if (!form.contactId) errors.contactId = "Select an existing contact";
@@ -484,6 +485,9 @@ function validate(form: FormState): Record<string, string> {
   if (!form.title.trim()) errors.title = "Title is required";
   if (!form.source.trim()) errors.source = "Source is required";
   if (!form.dueDate) errors.dueDate = "Due date is required";
+  else if (!isLocalDateKeyOnOrAfterToday(form.dueDate) && form.dueDate !== allowedPastDueDate) {
+    errors.dueDate = "Due date must be today or in the future";
+  }
   return errors;
 }
 
@@ -951,7 +955,7 @@ export function EnquiriesModule({
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const nextErrors = validate(form);
+    const nextErrors = validate(form, editing ? isoToLocalDateInput(editing.dueDate) : undefined);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setBusy(true);

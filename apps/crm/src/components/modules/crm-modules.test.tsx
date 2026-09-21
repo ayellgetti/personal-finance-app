@@ -23,6 +23,7 @@ import {
   listClients,
   listContacts,
   listEnquiries,
+  listFollowUpCalendar,
   listFollowUps,
   listPermissions,
   listRoles,
@@ -525,7 +526,7 @@ describe("CRM modules", () => {
     expect(booking).toHaveClass("bg-emerald-100");
   });
 
-  it("shows scheduled follow-ups on the calendar and opens the contact", async () => {
+  it("shows scheduled follow-ups on the calendar and opens the lead history", async () => {
     const onOpenContact = vi.fn();
     const at = new Date();
     at.setDate(Math.min(at.getDate(), 28));
@@ -543,6 +544,28 @@ describe("CRM modules", () => {
         },
       ],
     });
+    fetchContactDetail.mockResolvedValue({
+      contact,
+      enquiries: [
+        {
+          ...enquiry,
+          status: "contacted",
+          followUps: [
+            {
+              id: "fu-1",
+              enquiryId: enquiry.id,
+              contactId: contact.id,
+              stage: "contacted",
+              dueAt: "2026-09-16T10:00:00.000Z",
+              nextFollowupDate: "2026-09-20T00:00:00.000Z",
+              notes: "Called the venue",
+            },
+          ],
+        },
+      ],
+      payments: [],
+      bookings: [],
+    });
     renderCrm(<CalendarModule onOpenContact={onOpenContact} onOpenPayments={() => undefined} />);
 
     await screen.findByRole("button", { name: "Follow-up: Wedding hall" });
@@ -554,7 +577,64 @@ describe("CRM modules", () => {
 
     fireEvent.click(followUp);
 
+    expect(await screen.findByText("Priya Shah")).toBeInTheDocument();
+    expect(screen.getByText("Lead created")).toBeInTheDocument();
+    expect(screen.getByText("Follow-up — Contacted")).toBeInTheDocument();
+    expect(screen.getByText("Called the venue")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open contact" }));
     expect(onOpenContact).toHaveBeenCalledWith("contact-1");
+  });
+
+  it("opens the lead history from a follow-up on the follow-ups calendar", async () => {
+    const at = new Date();
+    at.setDate(Math.min(at.getDate(), 28));
+    at.setHours(11, 0, 0, 0);
+    listFollowUpCalendar.mockResolvedValue({
+      items: [
+        {
+          kind: "followup",
+          enquiryId: enquiry.id,
+          title: enquiry.title,
+          contactId: contact.id,
+          status: "contacted",
+          at: at.toISOString(),
+          nextFollowupDate: at.toISOString(),
+          overdue: false,
+        },
+      ],
+      overdue: [],
+    });
+    fetchContactDetail.mockResolvedValue({
+      contact,
+      enquiries: [
+        {
+          ...enquiry,
+          status: "contacted",
+          followUps: [
+            {
+              id: "fu-1",
+              enquiryId: enquiry.id,
+              contactId: contact.id,
+              stage: "contacted",
+              dueAt: "2026-09-16T10:00:00.000Z",
+              nextFollowupDate: at.toISOString(),
+              notes: "Called the venue",
+            },
+          ],
+        },
+      ],
+      payments: [],
+      bookings: [],
+    });
+    renderCrm(<FollowUpsModule />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Calendar view" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Follow-ups 1/ }));
+    fireEvent.click(await screen.findByRole("button", { name: new RegExp(enquiry.title) }));
+
+    expect(await screen.findByText("Priya Shah")).toBeInTheDocument();
+    expect(screen.getByText("Called the venue")).toBeInTheDocument();
   });
 
   it("switches the calendar between day, week, and month views", async () => {
@@ -805,6 +885,26 @@ describe("CRM modules", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Follow-ups for today" }));
     expect(onOpenFollowUps).toHaveBeenCalledWith("today");
+  });
+
+  it("filters booked rows by from and to dates", async () => {
+    const clientContact: CrmContact = { ...contact, type: "client" };
+    listContacts.mockResolvedValue(emptyPage([clientContact]));
+    listClients.mockResolvedValue(emptyPage([client]));
+    renderCrm(<ClientsModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
+
+    await screen.findByText("Acme Events");
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "2026-12-01" } });
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "2026-12-31" } });
+
+    await waitFor(() => {
+      expect(listClients).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: new Date(2026, 11, 1).toISOString(),
+          to: new Date(2026, 11, 31, 23, 59, 59, 999).toISOString(),
+        }),
+      );
+    });
   });
 
   it("opens a booked view sidebar from the booked row", async () => {

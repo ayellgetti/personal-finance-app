@@ -77,6 +77,8 @@ export type ListClientsQuery = {
   limit?: number;
   status?: CrmClientStatus;
   search?: string;
+  from?: string;
+  to?: string;
 };
 
 export type ListPaymentsQuery = {

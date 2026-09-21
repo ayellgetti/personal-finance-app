@@ -6,6 +6,7 @@ import {
   type CrmContactDetail,
   type CrmCalendarItem,
   type CrmEnquiry,
+  type CrmFollowUpCalendar,
   type CrmMe,
   type CrmPaginated,
   type CrmPermission,
@@ -82,11 +83,20 @@ export const updateEnquiry = vi.fn();
 export const removeEnquiry = vi.fn();
 export const convertEnquiry = vi.fn();
 export const listFollowUps = vi.fn(async () => emptyPage());
-export const listFollowUpCalendar = vi.fn(async () => ({ items: [], overdue: [] }));
+export const listFollowUpCalendar = vi.fn(
+  async (): Promise<CrmFollowUpCalendar> => ({ items: [], overdue: [] }),
+);
 export const createFollowUp = vi.fn();
 export const updateFollowUp = vi.fn();
 export const removeFollowUp = vi.fn();
-export const listClients = vi.fn(async (query?: { status?: string; search?: string; page?: number; limit?: number }) => {
+export const listClients = vi.fn(async (query?: {
+  status?: string;
+  search?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}) => {
   void query;
   return emptyPage<CrmClient>();
 });

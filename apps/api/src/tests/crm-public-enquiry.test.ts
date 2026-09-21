@@ -84,6 +84,19 @@ test("public enquiry schema accepts a banquet form payload", () => {
   assert.equal(expectedValueFromBudget(parsed.budget), 350_000);
 });
 
+test("public enquiry schema rejects an event date before today", () => {
+  const parsed = createPublicEnquiryBodySchema.safeParse({
+    name: "Priya Sharma",
+    mobile: "9876543210",
+    eventType: "Wedding",
+    eventDate: "2020-01-01",
+    timeSlot: "evening",
+    guestCount: 100,
+    source: "WhatsApp",
+  });
+  assert.equal(parsed.success, false);
+});
+
 test("public enquiry schema accepts a travel form payload", () => {
   const parsed = createPublicEnquiryBodySchema.parse({
     kind: "travel",

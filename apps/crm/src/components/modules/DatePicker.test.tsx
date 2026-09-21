@@ -46,6 +46,11 @@ describe("DatePicker", () => {
     expect(dueDateShortcutKey("6m", from)).toBe(toLocalDateKey(applyDueDateShortcut("6m", from)));
   });
 
+  it("does not let a day before today be selected", () => {
+    render(<Harness from={from} />);
+    expect(screen.getByRole("button", { name: dayLabel(new Date(2026, 8, 18)) })).toBeDisabled();
+  });
+
   it("selects a calendar day as the exact due date", () => {
     render(<Harness from={from} />);
     const target = new Date(2026, 8, 24);

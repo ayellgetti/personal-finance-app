@@ -63,6 +63,25 @@ export class ClientService {
         { gstin: { contains: query.search, mode: "insensitive" } },
       ];
     }
+    if (query.from || query.to) {
+      const contactIds = await this.contactIdsWithBookingsInRange(query.from, query.to);
+      if (contactIds.length === 0) {
+        const page = query.page ?? 1;
+        const limit = query.limit ?? 25;
+        return {
+          items: [],
+          pagination: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPreviousPage: page > 1,
+          },
+        };
+      }
+      where.contactId = { in: contactIds };
+    }
     const result = await this.model.paginate(where, query.page ?? 1, query.limit ?? 25, {
       orderBy: { createdAt: "desc" },
     });
@@ -70,6 +89,34 @@ export class ClientService {
       ...result,
       items: await this.withBookingDates(result.items),
     };
+  }
+
+  private async contactIdsWithBookingsInRange(from?: Date, to?: Date): Promise<string[]> {
+    const events = await this.events.read({
+      isActive: 1,
+      AND: [to ? { startsAt: { lte: to } } : {}, from ? { endsAt: { gte: from } } : {}],
+    });
+    const enquiryIds = [
+      ...new Set(
+        events
+          .map((event) => event.enquiryId)
+          .filter((enquiryId): enquiryId is string => Boolean(enquiryId)),
+      ),
+    ];
+    const enquiryRows =
+      enquiryIds.length > 0
+        ? await this.enquiries.read({ isActive: 1, id: { in: enquiryIds } })
+        : [];
+    const enquiryContactById = new Map(enquiryRows.map((enquiry) => [enquiry.id, enquiry.contactId]));
+    const contactIds = new Set<string>();
+    for (const event of events) {
+      if (event.contactId) contactIds.add(event.contactId);
+      if (event.enquiryId) {
+        const contactId = enquiryContactById.get(event.enquiryId);
+        if (contactId) contactIds.add(contactId);
+      }
+    }
+    return [...contactIds];
   }
 
   async getById(id: string) {

@@ -9,10 +9,17 @@ import {
 export const clientIdParamsSchema = crmIdParamsSchema;
 export const removeClientBodySchema = crmRemoveBodySchema;
 
-export const listClientsQuerySchema = crmListQuerySchema.extend({
-  status: crmClientStatusSchema.optional(),
-  search: z.string().trim().min(1).max(120).optional(),
-});
+export const listClientsQuerySchema = crmListQuerySchema
+  .extend({
+    status: crmClientStatusSchema.optional(),
+    search: z.string().trim().min(1).max(120).optional(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+  })
+  .refine((value) => !value.from || !value.to || value.to.getTime() >= value.from.getTime(), {
+    message: "to must be on or after from",
+    path: ["to"],
+  });
 
 export const createClientBodySchema = z.object({
   contactId: z.string().uuid(),

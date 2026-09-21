@@ -6,6 +6,7 @@ import {
   crmListQuerySchema,
   crmRemoveBodySchema,
 } from "../crm.request";
+import { isOnOrAfterLocalDay } from "./enquiry-due-date";
 
 export const enquiryIdParamsSchema = crmIdParamsSchema;
 export const removeEnquiryBodySchema = crmRemoveBodySchema;
@@ -14,6 +15,10 @@ export const listEnquiriesQuerySchema = crmListQuerySchema.extend({
   status: crmEnquiryStatusSchema.optional(),
   contactId: z.string().uuid().optional(),
   assignedToId: z.string().uuid().optional(),
+});
+
+const dueDateSchema = z.coerce.date().refine((value) => !Number.isNaN(value.getTime()), {
+  message: "Invalid due date",
 });
 
 export const createEnquiryBodySchema = z.object({
@@ -25,16 +30,17 @@ export const createEnquiryBodySchema = z.object({
   expectedValue: z.number().finite().nonnegative().nullable().optional(),
   assignedToId: z.string().uuid().nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
-  dueDate: z.coerce.date().refine((value) => !Number.isNaN(value.getTime()), {
-    message: "Invalid due date",
+  dueDate: dueDateSchema.refine((value) => isOnOrAfterLocalDay(value), {
+    message: "Due date must be today or in the future",
   }),
 });
 
 export const updateEnquiryBodySchema = createEnquiryBodySchema
-  .omit({ contactId: true })
+  .omit({ contactId: true, dueDate: true })
   .partial()
   .extend({
     contactId: z.string().uuid().optional(),
+    dueDate: dueDateSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field is required",
@@ -68,6 +74,13 @@ export const convertEnquiryBodySchema = z
         code: "custom",
         message: "endsAt must be after startsAt",
         path: ["endsAt"],
+      });
+    }
+    if (value.startsAt && !isOnOrAfterLocalDay(value.startsAt)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Booking date must be today or in the future",
+        path: ["startsAt"],
       });
     }
   });
