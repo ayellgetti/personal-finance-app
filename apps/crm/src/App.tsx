@@ -10,6 +10,8 @@ import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import Banquet from "./pages/Banquet.tsx";
+import BanquetEnquiry from "./pages/BanquetEnquiry.tsx";
+import TravelEnquiry from "./pages/TravelEnquiry.tsx";
 import RealEstate from "./pages/RealEstate.tsx";
 import Freedom from "./pages/Freedom.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -26,6 +28,8 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/banquet" element={<Banquet />} />
               <Route path="/banquet.html" element={<Banquet />} />
+              <Route path="/banquet-enquiry" element={<BanquetEnquiry />} />
+              <Route path="/travel-enquiry" element={<TravelEnquiry />} />
               <Route path="/real-estate" element={<RealEstate />} />
               <Route path="/real-estate.html" element={<RealEstate />} />
               <Route path="/freedom" element={<Freedom />} />

@@ -24,7 +24,7 @@ export const NAV: NavItem[] = [
   { id: "contacts", label: "Contacts", icon: Users, group: "Pipeline" },
   { id: "enquiries", label: "Enquiries", icon: FolderKanban, group: "Pipeline" },
   { id: "followUps", label: "Follow-ups", icon: PhoneCall, group: "Pipeline" },
-  { id: "clients", label: "Clients", icon: Building2, group: "Pipeline" },
+  { id: "clients", label: "Booked", icon: Building2, group: "Pipeline" },
   { id: "payments", label: "Payments", icon: Wallet, group: "Pipeline" },
   { id: "tasks", label: "Tasks", icon: ListTodo, group: "Work" },
   { id: "calendar", label: "Calendar", icon: CalendarDays, group: "Work" },

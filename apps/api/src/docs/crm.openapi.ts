@@ -68,11 +68,15 @@ export const crmOpenApiTags = [
   { name: "CRM", description: "Sales CRM session, dashboard, and company-wide records. RBAC is CRM-only." },
   { name: "CRM Contacts", description: "Party records (lead, client, vendor, employee)" },
   { name: "CRM Enquiries", description: "Sales cases and conversion to clients" },
+  {
+    name: "CRM Public",
+    description: "Unauthenticated banquet or travel enquiry intake. Creates a lead contact and a new enquiry; does not return existing CRM records.",
+  },
   { name: "CRM Follow-ups", description: "Follow-up history, next-contact calendar, and lead timeline; not added to the main calendar" },
   { name: "CRM Clients", description: "Commercial client records created on convert or manually" },
   { name: "CRM Payments", description: "Collection records (not a payment gateway)" },
   { name: "CRM Tasks", description: "Work items with kanban statuses" },
-  { name: "CRM Calendar", description: "Task due dates plus standalone events. Follow-ups live under Follow-ups calendar." },
+  { name: "CRM Calendar", description: "Task due dates, booked enquiries, and standalone events. Follow-ups live under Follow-ups calendar." },
   { name: "CRM Users", description: "Admin create and assign CRM roles" },
   { name: "CRM Roles", description: "Roles and permission catalog" },
 ];
@@ -119,6 +123,50 @@ export const crmOpenApiSchemas = {
         format: "date-time",
         description: "Exact enquiry due date. Calendar shortcuts (7 days / 1 month / 3 months / 6 months) are UI-only.",
       },
+    },
+  },
+  CreatePublicCrmEnquiryRequest: {
+    oneOf: [
+      { $ref: "#/components/schemas/CreatePublicBanquetEnquiryRequest" },
+      { $ref: "#/components/schemas/CreatePublicTravelEnquiryRequest" },
+    ],
+  },
+  CreatePublicBanquetEnquiryRequest: {
+    type: "object",
+    required: ["name", "mobile", "eventType", "eventDate", "timeSlot", "guestCount", "source"],
+    properties: {
+      kind: { type: "string", enum: ["banquet"], default: "banquet" },
+      name: { type: "string", minLength: 1, maxLength: 120 },
+      mobile: { type: "string", pattern: "^\\+?[0-9]{7,15}$" },
+      eventType: { type: "string", minLength: 1, maxLength: 80 },
+      eventDate: { type: "string", format: "date-time" },
+      timeSlot: { type: "string", enum: ["morning", "evening", "full_day"] },
+      guestCount: { type: "integer", minimum: 1, maximum: 10000 },
+      source: { type: "string", minLength: 1, maxLength: 80 },
+      venue: { type: "string", maxLength: 80 },
+      budget: { type: "string", maxLength: 80 },
+      menu: { type: "string", maxLength: 80 },
+      decoration: { type: "string", maxLength: 80 },
+      notes: { type: "string", maxLength: 4000 },
+    },
+  },
+  CreatePublicTravelEnquiryRequest: {
+    type: "object",
+    required: ["kind", "name", "mobile", "tripType", "destination", "departureDate", "travelerCount", "source"],
+    properties: {
+      kind: { type: "string", enum: ["travel"] },
+      name: { type: "string", minLength: 1, maxLength: 120 },
+      mobile: { type: "string", pattern: "^\\+?[0-9]{7,15}$" },
+      tripType: { type: "string", minLength: 1, maxLength: 80 },
+      destination: { type: "string", minLength: 1, maxLength: 80 },
+      departureDate: { type: "string", format: "date-time" },
+      returnDate: { type: "string", format: "date-time" },
+      travelerCount: { type: "integer", minimum: 1, maximum: 10000 },
+      source: { type: "string", minLength: 1, maxLength: 80 },
+      budget: { type: "string", maxLength: 80 },
+      travelClass: { type: "string", maxLength: 80 },
+      accommodation: { type: "string", maxLength: 80 },
+      notes: { type: "string", maxLength: 4000 },
     },
   },
   ConvertCrmEnquiryRequest: {
@@ -278,6 +326,24 @@ export const crmOpenApiSchemas = {
 };
 
 export const crmOpenApiPaths = {
+  "/api/crm/public/enquiries": {
+    post: {
+      tags: ["CRM Public"],
+      summary: "Submit a public banquet or travel enquiry",
+      description:
+        "No JWT. `kind` selects banquet (default) or travel. Creates a lead contact when the mobile is new, or attaches a new enquiry to the existing active contact. Trip or event details and notes are stored on the enquiry. Response is only `{ submitted: true }` so existing CRM data is not leaked.",
+      security: [],
+      parameters: [requestId],
+      requestBody: jsonBody("CreatePublicCrmEnquiryRequest"),
+      responses: {
+        "201": {
+          description: "Enquiry submitted",
+          content: { "application/json": { schema: envelope } },
+        },
+        "422": validationFailed,
+      },
+    },
+  },
   "/api/crm/me": {
     get: {
       tags: ["CRM"],
@@ -412,10 +478,12 @@ export const crmOpenApiPaths = {
     post: {
       tags: ["CRM Enquiries"],
       summary: "Soft-delete an enquiry",
+      description:
+        "Also soft-deletes the booking event linked to the enquiry, so no orphan booking is left behind. A closed booked enquiry cannot be removed after a paid payment exists for its linked booking.",
       security: [{ bearerAuth: [] }],
       parameters: [requestId],
       requestBody: removeBody,
-      responses: { ...ok("Enquiry deactivated"), "404": envelopeError },
+      responses: { ...ok("Enquiry deactivated"), "404": envelopeError, "409": envelopeError },
     },
   },
   "/api/crm/enquiries/{id}/convert": {
@@ -543,7 +611,7 @@ export const crmOpenApiPaths = {
         { name: "status", in: "query", schema: { type: "string", enum: ["active", "inactive"] } },
         { name: "search", in: "query", schema: { type: "string" } },
       ],
-      responses: { ...ok("Paginated clients") },
+      responses: { ...ok("Paginated clients with current booking startsAt and endsAt") },
     },
     post: {
       tags: ["CRM Clients"],
@@ -706,7 +774,7 @@ export const crmOpenApiPaths = {
     get: {
       tags: ["CRM Calendar"],
       summary: "Calendar union feed",
-      description: "Union of follow-ups, tasks with due dates, and events overlapping from/to. Range is required and max 92 days.",
+      description: "Union of tasks with due dates, booked enquiry events (`kind=booking`), and standalone events (`kind=event`) overlapping from/to. Range is required and max 92 days. Follow-ups remain on the Follow-ups calendar.",
       security: [{ bearerAuth: [] }],
       parameters: [
         requestId,
@@ -744,10 +812,12 @@ export const crmOpenApiPaths = {
     post: {
       tags: ["CRM Calendar"],
       summary: "Soft-delete a calendar event",
+      description:
+        "When the event is a booking (linked to an enquiry), the linked enquiry is soft-deleted with it and the removed `enquiryId` is returned. A booking whose enquiry has a paid payment cannot be removed.",
       security: [{ bearerAuth: [] }],
       parameters: [requestId],
       requestBody: removeBody,
-      responses: { ...ok("Event deactivated"), "404": envelopeError },
+      responses: { ...ok("Event deactivated"), "404": envelopeError, "409": envelopeError },
     },
   },
   "/api/crm/calendar/events/{id}": {

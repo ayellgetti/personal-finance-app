@@ -26,6 +26,7 @@ import {
   updateTaskStatus,
 } from "@/test/crm-remote-mock";
 import { renderCrm } from "@/test/render-crm";
+import { formatDateTime } from "@/lib/crm/display";
 import type { CrmCalendarItem, CrmClient, CrmContact, CrmEnquiry, CrmPayment, CrmTask } from "@/types/crm";
 
 vi.mock("@/lib/auth/store", () => ({
@@ -92,6 +93,8 @@ const client: CrmClient = {
   billingName: "Acme Events",
   gstin: null,
   convertedFromEnquiryId: enquiry.id,
+  startsAt: "2026-12-12T10:30:00.000Z",
+  endsAt: "2026-12-12T17:30:00.000Z",
 };
 
 const draft: CrmTask = {
@@ -110,7 +113,7 @@ function ConvertFlow() {
   return (
     <div>
       <button type="button" onClick={() => setView("clients")}>
-        Go to clients
+        Go to booked
       </button>
       {view === "enquiries" ? (
         <EnquiriesModule />
@@ -330,7 +333,7 @@ describe("CRM modules", () => {
     expect(screen.queryByText("Due date is required")).not.toBeInTheDocument();
   });
 
-  it("shows the converted client on the Clients screen", async () => {
+  it("shows the converted booking on the Booked screen", async () => {
     const created: CrmClient[] = [];
     listContacts.mockResolvedValue(emptyPage([contact]));
     listEnquiries.mockResolvedValue(emptyPage([enquiry]));
@@ -369,7 +372,7 @@ describe("CRM modules", () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Go to clients" }));
+    fireEvent.click(screen.getByRole("button", { name: "Go to booked" }));
     expect(await screen.findByText("Acme Events")).toBeInTheDocument();
   });
 
@@ -390,6 +393,58 @@ describe("CRM modules", () => {
     const itemButton = await screen.findByRole("button", { name: "Send venue proposal" });
     expect(itemButton.closest("button")).toBe(itemButton);
     expect(screen.queryByRole("button", { name: /10 Send venue proposal/ })).not.toBeInTheDocument();
+  });
+
+  it("shows booked enquiries as distinct calendar items", async () => {
+    const at = new Date();
+    at.setDate(Math.min(at.getDate(), 28));
+    at.setHours(14, 0, 0, 0);
+    listCalendar.mockResolvedValue({
+      items: [
+        {
+          kind: "booking",
+          id: "booking-1",
+          title: "Wedding booking",
+          at: at.toISOString(),
+          endsAt: new Date(at.getTime() + 60 * 60 * 1000).toISOString(),
+        },
+      ],
+    });
+    renderCrm(<CalendarModule />);
+
+    const booking = await screen.findByRole("button", { name: "Wedding booking" });
+    expect(booking).toHaveClass("bg-emerald-100");
+  });
+
+  it("warns that removing a booking also removes its enquiry", async () => {
+    const at = new Date();
+    at.setDate(Math.min(at.getDate(), 28));
+    at.setHours(14, 0, 0, 0);
+    listCalendar.mockResolvedValue({
+      items: [
+        {
+          kind: "booking",
+          id: "booking-1",
+          title: "Wedding booking",
+          at: at.toISOString(),
+          endsAt: new Date(at.getTime() + 60 * 60 * 1000).toISOString(),
+        },
+      ],
+    });
+    renderCrm(<CalendarModule />);
+
+    await screen.findByRole("button", { name: "Wedding booking" });
+    await waitFor(() => {
+      expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Wedding booking" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove booking" }));
+
+    expect(
+      await screen.findByText(
+        "The enquiry linked to this booking is removed with it. A booking with a paid payment cannot be removed.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows lead created, follow-up, and next contact on the Follow-ups timeline", async () => {
@@ -529,7 +584,7 @@ describe("CRM modules", () => {
     expect(onOpenFollowUps).toHaveBeenCalledWith("today");
   });
 
-  it("opens a client view sidebar from the client row", async () => {
+  it("opens a booked view sidebar from the booked row", async () => {
     const clientContact: CrmContact = { ...contact, type: "client" };
     listContacts.mockResolvedValue(emptyPage([clientContact]));
     listClients.mockResolvedValue(emptyPage([{ ...client, gstin: "27AAPFU0939F1ZV" }]));
@@ -544,6 +599,37 @@ describe("CRM modules", () => {
     expect(screen.getAllByText("27AAPFU0939F1ZV")).toHaveLength(2);
     expect(screen.getByText("+919888888888")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getAllByText("Start date").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("End date").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(formatDateTime(client.startsAt)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(formatDateTime(client.endsAt)).length).toBeGreaterThan(0);
+  });
+
+  it("fills booked start and end dates from the contact booking when the list omits them", async () => {
+    const clientContact: CrmContact = { ...contact, type: "client" };
+    listContacts.mockResolvedValue(emptyPage([clientContact]));
+    listClients.mockResolvedValue(emptyPage([{ ...client, startsAt: null, endsAt: null }]));
+    fetchContactDetail.mockResolvedValue({
+      contact: clientContact,
+      enquiries: [{ ...enquiry, status: "closed", closedReason: "Booked", followUps: [] }],
+      payments: [],
+      bookings: [
+        {
+          id: "event-1",
+          title: "Other enquiry",
+          startsAt: "2026-09-26T10:30:00.000Z",
+          endsAt: "2026-09-26T17:30:00.000Z",
+          slot: "evening",
+          contactId: contact.id,
+          enquiryId: enquiry.id,
+          assigneeId: null,
+          notes: null,
+        },
+      ],
+    });
+    renderCrm(<ClientsModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
+    expect(await screen.findByText(formatDateTime("2026-09-26T10:30:00.000Z"))).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime("2026-09-26T17:30:00.000Z"))).toBeInTheDocument();
   });
 
   it("shows customer name and mobile in the follow-up enquiry dropdown", async () => {

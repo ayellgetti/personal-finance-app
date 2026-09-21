@@ -39,7 +39,11 @@ const AUTH_FREE_PATHS = [
 ];
 
 function isAuthFree(path: string) {
-  return AUTH_FREE_PATHS.includes(path) || path.startsWith("/api/otp/");
+  return (
+    AUTH_FREE_PATHS.includes(path) ||
+    path.startsWith("/api/otp/") ||
+    path.startsWith("/api/crm/public/")
+  );
 }
 
 let refreshInFlight: Promise<string | null> | null = null;

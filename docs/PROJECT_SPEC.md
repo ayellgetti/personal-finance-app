@@ -18,7 +18,7 @@ Build a **production-ready TypeScript monorepo** that hosts a personal-finance p
 
 The running finance product: an **India-first personal finance web app** — capture a household’s money, project cash flow and net worth, and turn that into an AI advisor report.
 
-The Sales CRM (same login `User`, company-wide data, CRM-only RBAC) is specified in `docs/DEVELOPMENT_PLAN.md` Track D. `apps/crm` is the CRM UI. CRM HTTP lives under `/api/crm` (session, contacts, enquiries, follow-ups, clients, payments, tasks, calendar, users, roles, dashboard). Contact and client views (`GET /api/crm/contacts/:id`) include that party’s enquiries with follow-ups, related payments, and current bookings (calendar events linked to the enquiry). Convert-to-booked requires an event start datetime and either an end datetime or a slot (morning / evening / full day). Add, edit, and record-view screens open in a right-side sheet; remove and stage-move confirmations stay centered dialogs.
+The Sales CRM (same login `User`, company-wide data, CRM-only RBAC) is specified in `docs/DEVELOPMENT_PLAN.md` Track D. `apps/crm` is the CRM UI. CRM HTTP lives under `/api/crm` (session, contacts, enquiries, follow-ups, clients, payments, tasks, calendar, users, roles, dashboard). Public banquet or travel intake is `POST /api/crm/public/enquiries` (no JWT, `kind` = `banquet` or `travel`): it creates a lead contact when the mobile is new, or a new enquiry on the existing active contact, and stores event or trip details plus notes on the enquiry. The clients module is labeled **Booked** in the CRM UI (API paths and `crm.clients.*` permissions stay the same). The Booked list (`GET /api/crm/clients`) includes each record’s current booking `startsAt` and `endsAt`. Contact and booked views (`GET /api/crm/contacts/:id`) include that party’s enquiries with follow-ups, related payments, and current bookings (calendar events linked to the enquiry). Convert-to-booked requires an event start datetime and either an end datetime or a slot (morning / evening / full day). Linked booking events appear as **Booked** items on the main calendar. An enquiry and its booking are removed together in both directions: removing the enquiry soft-deletes its booking event, and removing the booking soft-deletes its enquiry, so neither side is left orphaned. Once a linked payment is `paid`, neither side can be deleted. Add, edit, and record-view screens open in a right-side sheet; remove and stage-move confirmations stay centered dialogs.
 
 The system must be scalable, maintainable, secure, testable, modular, developer-friendly, and AI-agent friendly.
 
@@ -111,7 +111,7 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 | --- | --- | --- |
 | Web | `apps/web` | Authenticated Freedom Planner UI (`8080` in Compose) |
 | Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
-| CRM | `apps/crm` | Sales CRM UI (`8082`); extra Compose copies on `8083` (travel) and `8084` (banquet). Dashboard, pipeline, tasks, calendar, users/roles. Public walkthroughs (no auth): `/banquet`, `/real-estate`, `/freedom`. |
+| CRM | `apps/crm` | Sales CRM UI (`8082`); extra Compose copies on `8083` (travel) and `8084` (banquet). Dashboard, pipeline, tasks, calendar, users/roles. Public pages (no auth): walkthroughs `/banquet`, `/real-estate`, `/freedom`, banquet intake `/banquet-enquiry`, and travel intake `/travel-enquiry`. |
 | API | `apps/api` | Express backend (`5001`), Swagger `/docs`; finance + `/api/crm` |
 
 Do not import `apps/web` source from `apps/website`, `apps/crm`, or the reverse.
@@ -151,7 +151,7 @@ apps/crm/src/
 ├── lib/api.ts
 ├── lib/auth/
 ├── lib/crm/              # remote.ts, store.tsx (me + list caches)
-├── pages/                # Login, ForgotPassword, Index, NotFound, public HTML walkthroughs (`/banquet`, `/real-estate`, `/freedom`)
+├── pages/                # Login, ForgotPassword, Index, NotFound, public HTML walkthroughs (`/banquet`, `/real-estate`, `/freedom`), public intake (`/banquet-enquiry`, `/travel-enquiry`)
 ├── types/crm.ts
 └── main.tsx
 ```
@@ -332,7 +332,7 @@ SSO is out of scope until requested; do not block it with one-off token formats 
 
 Finance: `requireAuth` + row ownership by `userId`. No finance Role/Permission matrix.
 
-CRM (Track D): `requireAuth` then `requirePermission`. Load permission codes per request via `UserRole` → `RolePermission` → `Permission`. Missing permission → `403`. First authenticated `GET /api/crm/me` caller becomes `admin` if `UserRole` is empty; later users with no CRM role get `403` on `/api/crm/*`.
+CRM (Track D): `requireAuth` then `requirePermission`. Load permission codes per request via `UserRole` → `RolePermission` → `Permission`. Missing permission → `403`. First authenticated `GET /api/crm/me` caller becomes `admin` if `UserRole` is empty; later users with no CRM role get `403` on `/api/crm/*`. The exception is `POST /api/crm/public/enquiries`, which is unauthenticated banquet or travel intake only.
 
 Do not scatter a second ad-hoc admin check in one finance controller. Do not put permissions in the JWT.
 

@@ -105,6 +105,39 @@ test("CRM me route requires authentication", async () => {
   }
 });
 
+test("CRM public enquiry route does not require authentication", async () => {
+  const server = createServer(app.express);
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  try {
+    const address = server.address();
+    assert(address && typeof address !== "string");
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/crm/public/enquiries`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      },
+    );
+    assert.equal(response.status, 422);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+});
+
 test("CRM contacts route requires authentication", async () => {
   const server = createServer(app.express);
 

@@ -8,13 +8,16 @@ import {
   crmContactModel,
   crmEnquiryModel,
   crmFollowUpModel,
+  crmPaymentModel,
   type CrmCalendarEventModel,
   type CrmClientModel,
   type CrmContactModel,
   type CrmEnquiryModel,
   type CrmFollowUpModel,
+  type CrmPaymentModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
+import { isBookedAndPaid } from "../booking-lock";
 import { resolveEventRange } from "../calendar/event-slot";
 import { endOfLocalDay } from "./enquiry-due-date";
 import type {
@@ -115,6 +118,7 @@ export class EnquiryService {
     private readonly persistConvert: PersistEnquiryConversion = persistEnquiryConversion,
     private readonly followUps: CrmFollowUpModel = crmFollowUpModel,
     private readonly events: CrmCalendarEventModel = crmCalendarEventModel,
+    private readonly payments: CrmPaymentModel = crmPaymentModel,
   ) {}
 
   list(query: ListEnquiriesQuery) {
@@ -189,8 +193,17 @@ export class EnquiryService {
   }
 
   async remove(actorId: string, input: RemoveEnquiryBody) {
-    await this.getById(input.id);
+    const enquiry = await this.getById(input.id);
+    const locked = await isBookedAndPaid(enquiry, {
+      clients: this.clients,
+      events: this.events,
+      payments: this.payments,
+    });
+    if (locked) {
+      throw new HttpError(409, "Cannot remove a booked enquiry after payment has been made");
+    }
     await this.model.update({ id: input.id }, actorDelete(actorId));
+    await this.events.updateMany({ enquiryId: input.id, isActive: 1 }, actorDelete(actorId));
     return { id: input.id, removed: true };
   }
 

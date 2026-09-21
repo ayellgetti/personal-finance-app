@@ -373,7 +373,7 @@ Second product on the same Express/Prisma API. Frontend is `apps/crm`. Backend m
 - No second Prisma client, no second API codebase, no `/api/v1`, no envelope change. Extra Compose API containers (`api-travel`, `api-banque`) are the same image pointed at different databases.
 - Do not fold CRM into `apps/web`. Do not copy `apps/crm` into `apps/travel-crm` / `apps/banque-crm`. Do not scaffold banquet-specific entities.
 
-**RBAC bootstrap (no seed script):** if `Permission` is empty, insert the catalog and four roles (`admin`, `manager`, `sales`, `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`. Later authenticated users with no CRM role get `403` on `/api/crm/*` (they can still use `/api/auth` and finance). Permissions are loaded per request, not stored in the JWT.
+**RBAC bootstrap (no seed script):** if `Permission` is empty, insert the catalog and four roles (`admin`, `manager`, `sales`, `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`. Later authenticated users with no CRM role get `403` on `/api/crm/*` (they can still use `/api/auth` and finance). `POST /api/crm/public/enquiries` is unauthenticated banquet or travel intake and is not behind `requireAuth`. Permissions are loaded per request, not stored in the JWT.
 
 Do not start D2 while D1 typecheck, tests, or migration are failing.
 
@@ -395,7 +395,7 @@ Prisma `Crm*` + Role/Permission models and migration `20260904074646_sales_crm`;
 
 **Status: COMPLETED**
 
-Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`, admin nav hidden without `crm.users.read` / `crm.roles.read`, Docker/nginx/CORS examples. Pipeline/work/admin screens land in D3–D8. Public use-case HTML pages (no auth, finance `/guide` pattern): `/banquet`, `/real-estate`, `/freedom`.
+Vite app on port **8082**, login / forgot-password, AppLayout, `GET /api/crm/me`, admin nav hidden without `crm.users.read` / `crm.roles.read`, Docker/nginx/CORS examples. Pipeline/work/admin screens land in D3–D8. Public use-case HTML pages (no auth, finance `/guide` pattern): `/banquet`, `/real-estate`, `/freedom`. Public banquet intake form (no auth): `/banquet-enquiry` → `POST /api/crm/public/enquiries`. Public travel intake form (no auth): `/travel-enquiry` → the same endpoint with `kind: "travel"`.
 
 **Validate:** `pnpm --filter crm test` (12 passing), `pnpm --filter crm typecheck`, `pnpm --filter crm lint`.
 
@@ -433,9 +433,9 @@ Four columns (Todo / In-Progress / In-Review / Done). Status changes via native 
 
 **Status: COMPLETED**
 
-Month grid of `GET /api/crm/calendar?from&to` (tasks and standalone events). Click an item for detail; create-event sheet.
+Month grid of `GET /api/crm/calendar?from&to` (tasks, booked enquiry events, and standalone events). Events linked to an enquiry are `booking` items; removing one also soft-deletes its enquiry, and it is blocked once a linked payment is `paid`. Click an item for detail; create-event sheet.
 
-Union of task due dates and standalone `CrmCalendarEvent`. Follow-up contact dates live on the Follow-ups calendar (`GET /api/crm/followups/calendar`).
+Union of task due dates and `CrmCalendarEvent` rows, including events linked to booked enquiries. Follow-up contact dates live on the Follow-ups calendar (`GET /api/crm/followups/calendar`).
 
 ### Phase D8 — Users/roles admin UI
 

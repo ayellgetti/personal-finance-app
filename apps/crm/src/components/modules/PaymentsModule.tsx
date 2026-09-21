@@ -66,7 +66,7 @@ function validate(form: FormState): Record<string, string> {
   if (form.referenceType === "vendor") {
     if (!form.vendorContactId) errors.vendorContactId = "Vendor is required";
   } else if (!form.clientId) {
-    errors.clientId = "Client is required";
+    errors.clientId = "Booked record is required";
   }
   const amount = Number(form.amount);
   if (!form.amount.trim() || !Number.isFinite(amount) || amount <= 0) {
@@ -75,11 +75,12 @@ function validate(form: FormState): Record<string, string> {
   return errors;
 }
 
-function toInput(form: FormState): CreatePaymentInput {
+function toInput(form: FormState, enquiryId: string | null): CreatePaymentInput {
   const vendor = form.referenceType === "vendor";
   return {
     referenceType: form.referenceType,
     referenceId: vendor ? form.vendorContactId : form.clientId,
+    enquiryId: vendor ? null : enquiryId,
     amount: Number(form.amount),
     type: form.type,
     mode: form.mode,
@@ -167,8 +168,13 @@ export function PaymentsModule({
     if (Object.keys(nextErrors).length) return;
     setBusy(true);
     try {
-      if (editing) await crm.updatePayment(editing.id, toInput(form));
-      else await crm.createPayment(toInput(form));
+      const selectedClient = crm.clients.items.find((client) => client.id === form.clientId);
+      const input = toInput(
+        form,
+        selectedClient?.convertedFromEnquiryId ?? editing?.enquiryId ?? null,
+      );
+      if (editing) await crm.updatePayment(editing.id, input);
+      else await crm.createPayment(input);
       setSheetOpen(false);
     } catch {
       // toast handled in store
@@ -195,7 +201,7 @@ export function PaymentsModule({
           </Field>
           {clientId ? (
             <Button type="button" variant="outline" className="rounded-xl" onClick={onClearClientFilter}>
-              Clear client filter
+              Clear booked filter
             </Button>
           ) : null}
         </div>
@@ -275,7 +281,7 @@ export function PaymentsModule({
               setForm((current) => ({ ...current, referenceType: value as CrmPaymentReferenceType }))
             }
           >
-            <option value="client">Client</option>
+            <option value="client">Booked</option>
             <option value="vendor">Vendor</option>
           </NativeSelect>
         </Field>
@@ -297,13 +303,13 @@ export function PaymentsModule({
             </NativeSelect>
           </Field>
         ) : (
-          <Field id="payment-client" label="Client" error={errors.clientId}>
+          <Field id="payment-client" label="Booked" error={errors.clientId}>
             <NativeSelect
               id="payment-client"
               value={form.clientId}
               onChange={(value) => setForm((current) => ({ ...current, clientId: value }))}
             >
-              <option value="">Select client</option>
+              <option value="">Select booked record</option>
               {crm.clients.items.map((client) => (
                 <option key={client.id} value={client.id}>
                   {client.billingName}

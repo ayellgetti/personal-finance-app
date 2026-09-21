@@ -1,4 +1,6 @@
 import { api } from "@/lib/api";
+import type { PublicBanquetEnquiryInput } from "@/lib/crm/banquet-enquiry";
+import type { PublicTravelEnquiryInput } from "@/lib/crm/travel-enquiry";
 import type {
   ConvertedEnquiry,
   ConvertEnquiryInput,
@@ -40,6 +42,8 @@ import type {
   CrmTaskStatus,
   UpdateCrmUserInput,
 } from "@/types/crm";
+
+export type PublicEnquiryInput = PublicBanquetEnquiryInput | PublicTravelEnquiryInput;
 
 export type ListContactsQuery = {
   page?: number;
@@ -226,6 +230,8 @@ function mapClient(row: Record<string, unknown>): CrmClient {
     billingName: String(row.billingName ?? ""),
     gstin: row.gstin == null ? null : String(row.gstin),
     convertedFromEnquiryId: row.convertedFromEnquiryId == null ? null : String(row.convertedFromEnquiryId),
+    startsAt: asIsoOrNull(row.startsAt),
+    endsAt: asIsoOrNull(row.endsAt),
   };
 }
 
@@ -418,6 +424,10 @@ export async function removeContact(id: string): Promise<void> {
 export async function listEnquiries(query: ListEnquiriesQuery = {}): Promise<CrmPaginated<CrmEnquiry>> {
   const raw = await api<unknown>(`/api/crm/enquiries${toSearchParams(query)}`);
   return mapPaginated(raw, mapEnquiry);
+}
+
+export async function submitPublicEnquiry(input: PublicEnquiryInput): Promise<void> {
+  await api("/api/crm/public/enquiries", { method: "POST", body: input, skipAuth: true });
 }
 
 export async function createEnquiry(input: CreateEnquiryInput): Promise<CrmEnquiry> {

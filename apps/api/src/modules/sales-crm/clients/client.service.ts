@@ -1,9 +1,11 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type CrmCalendarEvent, type CrmClient } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import {
+  crmCalendarEventModel,
   crmClientModel,
   crmContactModel,
   crmEnquiryModel,
+  type CrmCalendarEventModel,
   type CrmClientModel,
   type CrmContactModel,
   type CrmEnquiryModel,
@@ -16,14 +18,41 @@ import type {
   UpdateClientBody,
 } from "./client.request";
 
+export type ClientWithBookingDates = CrmClient & {
+  startsAt: Date | null;
+  endsAt: Date | null;
+};
+
+function eventTime(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+}
+
+function pickCurrentBooking(
+  bookings: CrmCalendarEvent[],
+  convertedFromEnquiryId: string | null,
+): CrmCalendarEvent | null {
+  if (bookings.length === 0) return null;
+  const linked = convertedFromEnquiryId
+    ? bookings.filter((booking) => booking.enquiryId === convertedFromEnquiryId)
+    : bookings;
+  const pool = linked.length > 0 ? linked : bookings;
+  const now = Date.now();
+  const upcoming = pool
+    .filter((booking) => eventTime(booking.endsAt) >= now)
+    .sort((left, right) => eventTime(left.startsAt) - eventTime(right.startsAt));
+  if (upcoming[0]) return upcoming[0];
+  return [...pool].sort((left, right) => eventTime(left.startsAt) - eventTime(right.startsAt)).at(-1) ?? null;
+}
+
 export class ClientService {
   constructor(
     private readonly model: CrmClientModel = crmClientModel,
     private readonly contacts: CrmContactModel = crmContactModel,
     private readonly enquiries: CrmEnquiryModel = crmEnquiryModel,
+    private readonly events: CrmCalendarEventModel = crmCalendarEventModel,
   ) {}
 
-  list(query: ListClientsQuery) {
+  async list(query: ListClientsQuery) {
     const where: Prisma.CrmClientWhereInput = { isActive: 1 };
     if (query.status) {
       where.status = query.status;
@@ -34,13 +63,52 @@ export class ClientService {
         { gstin: { contains: query.search, mode: "insensitive" } },
       ];
     }
-    return this.model.paginate(where, query.page ?? 1, query.limit ?? 25, {
+    const result = await this.model.paginate(where, query.page ?? 1, query.limit ?? 25, {
       orderBy: { createdAt: "desc" },
     });
+    return {
+      ...result,
+      items: await this.withBookingDates(result.items),
+    };
   }
 
   async getById(id: string) {
-    return requireActive(await this.model.readOne({ id }), "Client");
+    const client = requireActive(await this.model.readOne({ id }), "Client");
+    const [withDates] = await this.withBookingDates([client]);
+    return withDates ?? { ...client, startsAt: null, endsAt: null };
+  }
+
+  private async withBookingDates(clients: CrmClient[]): Promise<ClientWithBookingDates[]> {
+    if (clients.length === 0) return [];
+    const contactIds = clients.map((client) => client.contactId);
+    const enquiryRows = await this.enquiries.read({
+      isActive: 1,
+      contactId: { in: contactIds },
+    });
+    const enquiryIds = enquiryRows.map((enquiry) => enquiry.id);
+    const events = await this.events.read({
+      isActive: 1,
+      OR: [
+        { contactId: { in: contactIds } },
+        ...(enquiryIds.length > 0 ? [{ enquiryId: { in: enquiryIds } }] : []),
+      ],
+    });
+    return clients.map((client) => {
+      const contactEnquiryIds = new Set(
+        enquiryRows.filter((enquiry) => enquiry.contactId === client.contactId).map((enquiry) => enquiry.id),
+      );
+      const related = events.filter(
+        (event) =>
+          event.contactId === client.contactId ||
+          (event.enquiryId != null && contactEnquiryIds.has(event.enquiryId)),
+      );
+      const current = pickCurrentBooking(related, client.convertedFromEnquiryId);
+      return {
+        ...client,
+        startsAt: current?.startsAt ?? null,
+        endsAt: current?.endsAt ?? null,
+      };
+    });
   }
 
   async create(actorId: string, input: CreateClientBody) {

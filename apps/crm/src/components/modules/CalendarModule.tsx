@@ -19,6 +19,7 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const KIND_LABELS: Record<CrmCalendarItem["kind"], string> = {
   task: "Task",
   event: "Event",
+  booking: "Booked",
 };
 
 function startOfDay(date: Date): Date {
@@ -80,7 +81,7 @@ export function CalendarModule() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sheetOpen, setSheetOpen] = useState(false);
   const [detail, setDetail] = useState<CrmCalendarItem | null>(null);
-  const [removeId, setRemoveId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<CrmCalendarItem | null>(null);
   const [busy, setBusy] = useState(false);
 
   const cells = useMemo(() => monthGrid(cursor), [cursor]);
@@ -212,7 +213,12 @@ export function CalendarModule() {
                       <button
                         key={`${item.kind}-${item.id}`}
                         type="button"
-                        className="block w-full truncate rounded-md bg-primary/10 px-1.5 py-1 text-left text-xs"
+                        className={cn(
+                          "block w-full truncate rounded-md px-1.5 py-1 text-left text-xs",
+                          item.kind === "booking"
+                            ? "bg-emerald-100 text-emerald-900"
+                            : "bg-primary/10",
+                        )}
                         onClick={(event) => {
                           event.stopPropagation();
                           setDetail(item);
@@ -286,8 +292,11 @@ export function CalendarModule() {
         }}
         title={detail?.title ?? "Event"}
         footer={
-          detail?.kind === "event" && crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
-            <RemoveAction label="Remove event" onClick={() => setRemoveId(detail.id)} />
+          detail && detail.kind !== "task" && crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
+            <RemoveAction
+              label={detail.kind === "booking" ? "Remove booking" : "Remove event"}
+              onClick={() => setRemoveTarget(detail)}
+            />
           ) : null
         }
       >
@@ -309,14 +318,18 @@ export function CalendarModule() {
       </SideSheet>
 
       <ConfirmRemoveDialog
-        open={Boolean(removeId)}
-        title="Remove event"
-        description="This standalone meeting will be hidden from the calendar."
-        onCancel={() => setRemoveId(null)}
+        open={Boolean(removeTarget)}
+        title={removeTarget?.kind === "booking" ? "Remove booking" : "Remove event"}
+        description={
+          removeTarget?.kind === "booking"
+            ? "The enquiry linked to this booking is removed with it. A booking with a paid payment cannot be removed."
+            : "This standalone meeting will be hidden from the calendar."
+        }
+        onCancel={() => setRemoveTarget(null)}
         onConfirm={() => {
-          if (!removeId) return;
-          void crm.removeCalendarEvent(removeId).finally(() => {
-            setRemoveId(null);
+          if (!removeTarget) return;
+          void crm.removeCalendarEvent(removeTarget.id).finally(() => {
+            setRemoveTarget(null);
             setDetail(null);
           });
         }}

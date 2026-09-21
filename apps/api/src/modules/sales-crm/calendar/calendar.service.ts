@@ -6,15 +6,20 @@ import { Prisma } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import {
   crmCalendarEventModel,
+  crmClientModel,
   crmContactModel,
   crmEnquiryModel,
+  crmPaymentModel,
   crmTaskModel,
   type CrmCalendarEventModel,
+  type CrmClientModel,
   type CrmContactModel,
   type CrmEnquiryModel,
+  type CrmPaymentModel,
   type CrmTaskModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
+import { isBookedAndPaid } from "../booking-lock";
 import type {
   CreateCalendarEventBody,
   ListCalendarEventsQuery,
@@ -33,7 +38,7 @@ export type CalendarFeedItem =
       task: CrmTask;
     }
   | {
-      kind: "event";
+      kind: "event" | "booking";
       id: string;
       title: string;
       at: Date;
@@ -47,6 +52,8 @@ export class CalendarService {
     private readonly tasks: CrmTaskModel = crmTaskModel,
     private readonly contacts: CrmContactModel = crmContactModel,
     private readonly enquiries: CrmEnquiryModel = crmEnquiryModel,
+    private readonly clients: CrmClientModel = crmClientModel,
+    private readonly payments: CrmPaymentModel = crmPaymentModel,
   ) {}
 
   async feed(query: ListCalendarQuery) {
@@ -74,7 +81,7 @@ export class CalendarService {
           task,
         })),
       ...eventRows.map((event) => ({
-        kind: "event" as const,
+        kind: event.enquiryId ? ("booking" as const) : ("event" as const),
         id: event.id,
         title: event.title,
         at: event.startsAt,
@@ -140,9 +147,21 @@ export class CalendarService {
   }
 
   async removeEvent(actorId: string, input: RemoveCalendarEventBody) {
-    await this.getEventById(input.id);
+    const event = await this.getEventById(input.id);
+    const enquiry = event.enquiryId ? await this.enquiries.readOne({ id: event.enquiryId }) : null;
+    if (enquiry && enquiry.isActive === 1) {
+      const locked = await isBookedAndPaid(enquiry, {
+        clients: this.clients,
+        events: this.events,
+        payments: this.payments,
+      });
+      if (locked) {
+        throw new HttpError(409, "Cannot remove a booking after payment has been made");
+      }
+      await this.enquiries.update({ id: enquiry.id }, actorDelete(actorId));
+    }
     await this.events.update({ id: input.id }, actorDelete(actorId));
-    return { id: input.id, removed: true };
+    return { id: input.id, removed: true, enquiryId: enquiry?.id ?? null };
   }
 
   private async assertOptionalRefs(

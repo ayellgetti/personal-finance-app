@@ -22,6 +22,7 @@ import {
   formatDateTime,
   formatMoney,
 } from "@/lib/crm/display";
+import { pickCurrentBooking } from "@/lib/crm/booking";
 import { fetchContactDetail, listClients, listEnquiries, listFollowUps, listPayments } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
 import type {
@@ -199,12 +200,7 @@ export function ContactViewSheet({
 }
 
 function currentBooking(bookings: CrmCalendarEvent[]): CrmCalendarEvent | null {
-  if (bookings.length === 0) return null;
-  const now = Date.now();
-  const upcoming = bookings
-    .filter((booking) => new Date(booking.endsAt).getTime() >= now)
-    .sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime());
-  return upcoming[0] ?? bookings[bookings.length - 1] ?? null;
+  return pickCurrentBooking(bookings);
 }
 
 export function BookingsTab({

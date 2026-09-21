@@ -43,19 +43,19 @@ describe("PaymentsModule", () => {
     createPayment.mockReset();
   });
 
-  it("shows a vendor dropdown when the payee type is Vendor instead of the client field", async () => {
+  it("shows a vendor dropdown when the payee type is Vendor instead of the booked field", async () => {
     listContacts.mockResolvedValue(emptyPage([vendor]));
     renderCrm(<PaymentsModule />);
     fireEvent.click(await screen.findByRole("button", { name: "Add payment" }));
 
     expect(screen.getByLabelText("Payment type")).toBeInTheDocument();
-    expect(screen.getByLabelText("Client")).toBeInTheDocument();
+    expect(screen.getByLabelText("Booked")).toBeInTheDocument();
     expect(screen.queryByLabelText("Vendor")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Type"), { target: { value: "vendor" } });
 
     await waitFor(() => {
-      expect(screen.queryByLabelText("Client")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Booked")).not.toBeInTheDocument();
       expect(screen.getByLabelText("Vendor")).toBeInTheDocument();
     });
     expect(screen.getByRole("option", { name: "Decor Co" })).toBeInTheDocument();

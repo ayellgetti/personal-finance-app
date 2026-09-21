@@ -16,6 +16,7 @@ import { setupRouter } from "../modules/personal-finance/setup/setup.route";
 import { statementRouter } from "../modules/personal-finance/statement/statement.route";
 import { taxRouter } from "../modules/personal-finance/tax/tax.route";
 import { crmRouter } from "../modules/sales-crm/crm.route";
+import { publicEnquiryRouter } from "../modules/sales-crm/public-enquiry/public-enquiry.route";
 import { authRouter } from "../modules/shared/auth/auth.route";
 import { deviceRouter } from "../modules/shared/device/device.route";
 import { otpRouter } from "../modules/shared/otp/otp.route";
@@ -63,6 +64,7 @@ export class Route {
     app.use("/api/advisor", advisorChatRouter);
     app.use("/api/statements", statementRouter);
     app.use("/api/tax", taxRouter);
+    app.use("/api/crm/public", publicEnquiryRouter);
     app.use("/api/crm", crmRouter);
   }
 }

@@ -431,7 +431,7 @@ Never store plaintext passwords.
 
 Never log credentials, OTPs, or tokens.
 
-Finance routes use `requireAuth`. CRM routes use `requireAuth` plus `requirePermission` (not on finance).
+Finance routes use `requireAuth`. CRM routes use `requireAuth` plus `requirePermission` (not on finance), except `POST /api/crm/public/enquiries` (unauthenticated banquet or travel intake).
 
 ---
 

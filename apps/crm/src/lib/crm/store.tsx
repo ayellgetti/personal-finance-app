@@ -380,7 +380,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       setCalendar((current) => ({
         ...current,
         items: upsertById(current.items, {
-          kind: "event",
+          kind: "booking",
           id: converted.event.id,
           title: converted.event.title,
           at: converted.event.startsAt,
@@ -454,7 +454,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     try {
       const client = await createClientRemote(input);
       setClients((current) => ({ ...current, items: upsertById(current.items, client) }));
-      toast.success("Client created");
+      toast.success("Booking created");
       return client;
     } catch (error) {
       toast.error(mutationMessage(error));
@@ -466,7 +466,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     try {
       const client = await updateClientRemote(id, input);
       setClients((current) => ({ ...current, items: upsertById(current.items, client) }));
-      toast.success("Client updated");
+      toast.success("Booking updated");
       return client;
     } catch (error) {
       toast.error(mutationMessage(error));
@@ -478,7 +478,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     try {
       await removeClientRemote(id);
       setClients((current) => ({ ...current, items: current.items.filter((item) => item.id !== id) }));
-      toast.success("Client removed");
+      toast.success("Booking removed");
     } catch (error) {
       toast.error(mutationMessage(error));
       throw error;
@@ -640,7 +640,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         toast.success("Event removed");
         setCalendar((current) => ({
           ...current,
-          items: current.items.filter((item) => !(item.kind === "event" && item.id === id)),
+          items: current.items.filter((item) => !(item.kind !== "task" && item.id === id)),
         }));
       } catch (error) {
         toast.error(mutationMessage(error));

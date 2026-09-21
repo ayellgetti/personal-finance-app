@@ -29,12 +29,14 @@ import {
   StatusBadge,
   ViewAction,
 } from "@/components/modules/shared";
-import { CLIENT_STATUS_LABELS, clientStatusOptions } from "@/lib/crm/display";
+import { bookingDatesForClient } from "@/lib/crm/booking";
+import { CLIENT_STATUS_LABELS, clientStatusOptions, formatDateTime } from "@/lib/crm/display";
 import { fetchContactDetail } from "@/lib/crm/remote";
 import { useCrm } from "@/lib/crm/store";
 import {
   CRM_PERMISSIONS,
   type CreateClientInput,
+  type CrmCalendarEvent,
   type CrmClient,
   type CrmClientStatus,
   type CrmContact,
@@ -91,6 +93,7 @@ export function ClientsModule({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bookingsByContactId, setBookingsByContactId] = useState<Record<string, CrmCalendarEvent[]>>({});
 
   const reload = () => {
     void crm.loadClients({
@@ -104,6 +107,28 @@ export function ClientsModule({
     if (sessionReady && allowed) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionReady, allowed, statusFilter, appliedSearch]);
+
+  useEffect(() => {
+    const missing = crm.clients.items.filter((client) => !client.startsAt || !client.endsAt);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    void Promise.all(
+      missing.map(async (client) => {
+        const detail = await fetchContactDetail(client.contactId);
+        return [client.contactId, detail.bookings] as const;
+      }),
+    )
+      .then((rows) => {
+        if (cancelled) return;
+        setBookingsByContactId((current) => ({ ...current, ...Object.fromEntries(rows) }));
+      })
+      .catch(() => {
+        // toast handled in store / request layer
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [crm.clients.items]);
 
   const contactFor = (id: string) => crm.contacts.items.find((contact) => contact.id === id) ?? null;
   const contactName = (id: string) => contactFor(id)?.name ?? id;
@@ -149,7 +174,7 @@ export function ClientsModule({
 
   return (
     <ModulePage
-      crumb="Clients"
+      crumb="Booked"
       toolbar={
         <form
           className="flex flex-1 flex-wrap items-end gap-3"
@@ -181,7 +206,7 @@ export function ClientsModule({
       actions={
         crm.hasPermission(CRM_PERMISSIONS.clientsCreate) ? (
           <Button type="button" className="rounded-xl" onClick={openCreate}>
-            Add client
+            Add booking
           </Button>
         ) : null
       }
@@ -192,7 +217,7 @@ export function ClientsModule({
         status={crm.clients.status}
         errorMessage={crm.clients.errorMessage}
         empty={crm.clients.items.length === 0}
-        emptyLabel="No clients yet"
+        emptyLabel="No bookings yet"
         onRetry={reload}
       >
         <Table>
@@ -200,13 +225,17 @@ export function ClientsModule({
             <TableRow>
               <TableHead>Billing name</TableHead>
               <TableHead>Contact</TableHead>
+              <TableHead>Start date</TableHead>
+              <TableHead>End date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>GSTIN</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {crm.clients.items.map((client) => (
+            {crm.clients.items.map((client) => {
+              const dates = bookingDatesForClient(client, bookingsByContactId[client.contactId] ?? []);
+              return (
               <TableRow key={client.id}>
                 <TableCell className="font-medium">
                   <button
@@ -218,6 +247,8 @@ export function ClientsModule({
                   </button>
                 </TableCell>
                 <TableCell>{contactName(client.contactId)}</TableCell>
+                <TableCell>{formatDateTime(dates.startsAt)}</TableCell>
+                <TableCell>{formatDateTime(dates.endsAt)}</TableCell>
                 <TableCell>
                   <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
                 </TableCell>
@@ -252,7 +283,8 @@ export function ClientsModule({
                   </RowActions>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </ModuleStatus>
@@ -260,7 +292,7 @@ export function ClientsModule({
       <SideSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        title={editing ? "Edit client" : "Add client"}
+        title={editing ? "Edit booking" : "Add booking"}
         onSubmit={onSubmit}
         footer={
           <Button type="submit" className="rounded-xl" disabled={busy}>
@@ -275,7 +307,7 @@ export function ClientsModule({
               value={form.contactId}
               onChange={(value) => setForm((current) => ({ ...current, contactId: value }))}
             >
-              <option value="">Select client contact</option>
+              <option value="">Select booked contact</option>
               {clientContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
                   {contact.name}
@@ -331,8 +363,8 @@ export function ClientsModule({
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}
-        title="Remove client"
-        description="This commercial record will be hidden from the list."
+        title="Remove booking"
+        description="This booked record will be hidden from the list."
         onCancel={() => setRemoveId(null)}
         onConfirm={() => {
           if (!removeId) return;
@@ -385,7 +417,7 @@ function ClientViewSheet({
       .catch((caught: unknown) => {
         if (cancelled) return;
         setDetail(null);
-        setError(caught instanceof Error ? caught.message : "Unable to load client");
+        setError(caught instanceof Error ? caught.message : "Unable to load booking");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -396,6 +428,7 @@ function ClientViewSheet({
   }, [client]);
 
   const bookings = detail?.bookings ?? [];
+  const dates = client ? bookingDatesForClient(client, bookings) : { startsAt: null, endsAt: null };
   const enquiries = (detail?.enquiries ?? []).filter(
     (enquiry) => !client?.convertedFromEnquiryId || enquiry.id === client.convertedFromEnquiryId,
   );
@@ -413,7 +446,7 @@ function ClientViewSheet({
               <div className="flex items-start justify-between gap-3 pr-6">
                 <div className="min-w-0 space-y-1">
                   <SheetTitle className="truncate text-lg leading-snug">{client.billingName}</SheetTitle>
-                  <SheetDescription className="text-sm">{contact?.name ?? "Client"}</SheetDescription>
+                  <SheetDescription className="text-sm">{contact?.name ?? "Booked"}</SheetDescription>
                 </div>
                 <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
               </div>
@@ -429,6 +462,14 @@ function ClientViewSheet({
                   <dd className="mt-0.5 font-medium">{contact?.mobile ?? "—"}</dd>
                 </div>
                 <div>
+                  <dt className="text-xs text-muted-foreground">Start date</dt>
+                  <dd className="mt-0.5 font-medium">{formatDateTime(dates.startsAt)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">End date</dt>
+                  <dd className="mt-0.5 font-medium">{formatDateTime(dates.endsAt)}</dd>
+                </div>
+                <div>
                   <dt className="text-xs text-muted-foreground">GSTIN</dt>
                   <dd className="mt-0.5 font-medium">{client.gstin ?? "—"}</dd>
                 </div>
@@ -442,7 +483,7 @@ function ClientViewSheet({
                 </div>
               </dl>
 
-              <SheetTabList label="Client records">
+              <SheetTabList label="Booked records">
                 <SheetTabButton id="booking" selected={tab === "booking"} onSelect={setTab}>
                   Current booking{!loading ? ` (${bookings.length})` : ""}
                 </SheetTabButton>

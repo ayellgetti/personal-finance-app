@@ -169,6 +169,8 @@ export type CrmClient = {
   billingName: string;
   gstin: string | null;
   convertedFromEnquiryId: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
 };
 
 export type CrmPayment = {
@@ -203,7 +205,7 @@ export type CrmTask = {
   enquiryId: string | null;
 };
 
-export type CrmCalendarKind = "task" | "event";
+export type CrmCalendarKind = "task" | "event" | "booking";
 
 export type CrmCalendarItem = {
   kind: CrmCalendarKind;

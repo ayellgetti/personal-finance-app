@@ -156,6 +156,15 @@ export function fakeCrud<T extends { id: string; isActive: number }>(
       rows[index] = next;
       return next;
     },
+    async updateMany(where: Record<string, unknown> | undefined, data: Partial<T>) {
+      let count = 0;
+      rows.forEach((row, index) => {
+        if (!matchesWhere(row as Record<string, unknown>, where)) return;
+        rows[index] = { ...row, ...data };
+        count += 1;
+      });
+      return count;
+    },
     async hardDeleteOne(where: { id: string }) {
       const index = rows.findIndex((row) => row.id === where.id);
       const current = rows[index];

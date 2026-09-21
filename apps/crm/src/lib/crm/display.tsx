@@ -19,7 +19,7 @@ import {
 
 export const CONTACT_TYPE_LABELS: Record<CrmContactType, string> = {
   lead: "Lead",
-  client: "Client",
+  client: "Booked",
   vendor: "Vendor",
   employee: "Employee",
 };

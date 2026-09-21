@@ -5,6 +5,7 @@ import { ClientService } from "../modules/sales-crm/clients/client.service";
 import { PaymentService } from "../modules/sales-crm/payments/payment.service";
 import { createPaymentBodySchema } from "../modules/sales-crm/payments/payment.request";
 import type {
+  CrmCalendarEventModel,
   CrmClientModel,
   CrmContactModel,
   CrmEnquiryModel,
@@ -20,11 +21,21 @@ function setup() {
   ]);
   const enquiries = fakeCrud("enquiry", []);
   const clients = fakeCrud("client", []);
+  const events = fakeCrud<{
+    id: string;
+    isActive: number;
+    title: string;
+    startsAt: Date;
+    endsAt: Date;
+    contactId: string | null;
+    enquiryId: string | null;
+  }>("event", []);
   const payments = fakeCrud("payment", []);
   const clientService = new ClientService(
     clients.model as unknown as CrmClientModel,
     contacts.model as unknown as CrmContactModel,
     enquiries.model as unknown as CrmEnquiryModel,
+    events.model as unknown as CrmCalendarEventModel,
   );
   const paymentService = new PaymentService(
     payments.model as unknown as CrmPaymentModel,
@@ -32,7 +43,7 @@ function setup() {
     enquiries.model as unknown as CrmEnquiryModel,
     contacts.model as unknown as CrmContactModel,
   );
-  return { clientService, paymentService, clients, payments, contacts };
+  return { clientService, paymentService, clients, payments, contacts, events };
 }
 
 test("client create, list, update, and soft-delete hide the row", async () => {
@@ -47,6 +58,27 @@ test("client create, list, update, and soft-delete hide the row", async () => {
   await clientService.update("user-1", created.id, { gstin: "GSTIN1" });
   await clientService.remove("user-1", { id: created.id });
   assert.equal((await clientService.list({})).items.length, 0);
+});
+
+test("client list includes current booking start and end dates", async () => {
+  const { clientService, events } = setup();
+  const created = await clientService.create("user-1", {
+    contactId: "c-1",
+    billingName: "Ada LLC",
+  });
+  await events.model.create({
+    id: "event-1",
+    title: "Wedding",
+    startsAt: new Date("2026-12-12T10:30:00.000Z"),
+    endsAt: new Date("2026-12-12T17:30:00.000Z"),
+    contactId: created.contactId,
+    enquiryId: null,
+    isActive: 1,
+  });
+  const listed = await clientService.list({ search: "Ada" });
+  assert.equal(listed.items.length, 1);
+  assert.equal(listed.items[0]?.startsAt?.toISOString(), "2026-12-12T10:30:00.000Z");
+  assert.equal(listed.items[0]?.endsAt?.toISOString(), "2026-12-12T17:30:00.000Z");
 });
 
 test("client cannot be created from a lead contact", async () => {

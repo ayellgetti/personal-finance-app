@@ -9,6 +9,7 @@ import type {
   CrmContactModel,
   CrmEnquiryModel,
   CrmFollowUpModel,
+  CrmPaymentModel,
 } from "../models/index";
 import { fakeCrud } from "./crm-test-utils";
 
@@ -85,6 +86,14 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
     enquiryId: string | null;
     isActive: number;
   }>("event", []);
+  const payments = fakeCrud<{
+    id: string;
+    referenceType: "client" | "vendor";
+    referenceId: string;
+    enquiryId: string | null;
+    status: "pending" | "paid" | "failed" | "refunded";
+    isActive: number;
+  }>("payment", []);
   const service = new EnquiryService(
     enquiries.model as unknown as CrmEnquiryModel,
     contacts.model as unknown as CrmContactModel,
@@ -129,8 +138,9 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
     },
     followUps.model as unknown as CrmFollowUpModel,
     events.model as unknown as CrmCalendarEventModel,
+    payments.model as unknown as CrmPaymentModel,
   );
-  return { service, contacts, enquiries, clients, followUps, events };
+  return { service, contacts, enquiries, clients, followUps, events, payments };
 }
 
 test("enquiry create, list, update, and soft-delete hide the row", async () => {
@@ -244,6 +254,58 @@ test("convert accepts a slot instead of an end datetime", async () => {
   });
   assert.equal(converted.event.slot, "evening");
   assert.ok(converted.event.endsAt.getTime() > converted.event.startsAt.getTime());
+});
+
+test("a closed booked enquiry with a paid client payment cannot be removed", async () => {
+  const { service, enquiries, payments } = setup([
+    { id: "c-1", name: "Ada Lovelace", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const enquiry = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Wedding",
+    source: "web",
+    dueDate: DUE_DATE,
+  });
+  const converted = await service.convert("user-1", enquiry.id, {
+    startsAt: BOOKING_START,
+    endsAt: BOOKING_END,
+  });
+  await payments.model.create({
+    referenceType: "client",
+    referenceId: converted.client.id,
+    enquiryId: null,
+    status: "paid",
+  });
+
+  await assert.rejects(
+    () => service.remove("user-1", { id: enquiry.id }),
+    (error: unknown) =>
+      error instanceof HttpError &&
+      error.status === 409 &&
+      error.message === "Cannot remove a booked enquiry after payment has been made",
+  );
+  assert.equal(enquiries.rows[0]?.isActive, 1);
+});
+
+test("removing a booked enquiry soft-deletes its booking instead of orphaning it", async () => {
+  const { service, events } = setup([
+    { id: "c-1", name: "Ada Lovelace", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const enquiry = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Baby Shower",
+    source: "web",
+    dueDate: DUE_DATE,
+  });
+  await service.convert("user-1", enquiry.id, {
+    startsAt: BOOKING_START,
+    endsAt: BOOKING_END,
+  });
+  assert.equal(events.rows[0]?.isActive, 1);
+
+  await service.remove("user-1", { id: enquiry.id });
+
+  assert.equal(events.rows[0]?.isActive, 0);
 });
 
 test("convert body requires start plus end datetime or slot", () => {
