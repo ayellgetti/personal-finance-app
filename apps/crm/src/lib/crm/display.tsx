@@ -142,6 +142,13 @@ export function formatDateTime(value: string | null | undefined): string {
   });
 }
 
+export function formatTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 export function isoToLocalDateInput(iso: string | null | undefined): string {
   if (!iso) return "";
   const date = new Date(iso);

@@ -506,6 +506,52 @@ describe("CRM modules", () => {
     expect(booking).toHaveClass("bg-emerald-100");
   });
 
+  it("switches the calendar between day, week, and month views", async () => {
+    const at = new Date();
+    at.setHours(14, 0, 0, 0);
+    listCalendar.mockResolvedValue({
+      items: [
+        {
+          kind: "event",
+          id: "event-1",
+          title: "Venue walkthrough",
+          at: at.toISOString(),
+          endsAt: null,
+          contactId: null,
+          enquiryId: null,
+        },
+      ],
+    });
+    renderCrm(<CalendarModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
+
+    await screen.findByRole("button", { name: "Venue walkthrough" });
+
+    const settled = async (assert: () => void) => {
+      await waitFor(() => {
+        expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+        assert();
+      });
+    };
+
+    fireEvent.click(screen.getByRole("button", { name: "Day view" }));
+    await settled(() => {
+      expect(screen.getByText("Event")).toBeInTheDocument();
+      expect(screen.queryByText("Nothing scheduled")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await settled(() => expect(screen.getByText("Nothing scheduled")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
+    fireEvent.click(screen.getByRole("button", { name: "Week view" }));
+    await settled(() => expect(screen.getByText("Venue walkthrough")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Month view" }));
+    await settled(() =>
+      expect(screen.getByRole("button", { name: "Venue walkthrough" })).toBeInTheDocument(),
+    );
+  });
+
   it("opens the booked view sidebar from a calendar booking", async () => {
     const clientContact: CrmContact = { ...contact, type: "client" };
     const at = new Date();
