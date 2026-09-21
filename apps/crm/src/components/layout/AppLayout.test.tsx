@@ -52,6 +52,13 @@ describe("admin nav", () => {
     expect(screen.getAllByText("Admin").length).toBeGreaterThan(0);
   });
 
+  it("lists Calendar under Dashboard in the Overview group", () => {
+    const overview = visibleNavItems([CRM_PERMISSIONS.dashboardRead])
+      .filter((item) => item.group === "Overview")
+      .map((item) => item.id);
+    expect(overview).toEqual(["dashboard", "calendar"]);
+  });
+
   it("filters admin items from the nav catalog without mutating other groups", () => {
     const items = visibleNavItems([CRM_PERMISSIONS.dashboardRead]);
     expect(items.some((item) => item.id === "users" || item.id === "roles")).toBe(false);

@@ -23,6 +23,7 @@ import {
   listEnquiries,
   listFollowUps,
   listTasks,
+  updateCalendarEvent,
   updateTaskStatus,
 } from "@/test/crm-remote-mock";
 import { renderCrm } from "@/test/render-crm";
@@ -284,6 +285,53 @@ describe("CRM modules", () => {
     expect(screen.getByText("Linked enquiry")).toBeInTheDocument();
   });
 
+  it("edits the booking notes and copies them to the clipboard", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    const booking = {
+      id: "event-1",
+      title: "Banquet inquiry",
+      startsAt: "2026-12-12T10:30:00.000Z",
+      endsAt: "2026-12-12T17:30:00.000Z",
+      slot: "evening" as const,
+      contactId: contact.id,
+      enquiryId: enquiry.id,
+      assigneeId: null,
+      notes: "Menu: Mix deluxe",
+    };
+    const finalNotes = "Menu: Mix deluxe\nFinal menu: paneer tikka, dal makhani";
+    listContacts.mockResolvedValue(emptyPage([{ ...contact, type: "client" }]));
+    fetchContactDetail.mockResolvedValue({
+      contact: { ...contact, type: "client" },
+      enquiries: [{ ...enquiry, status: "closed", closedReason: "Booked", followUps: [] }],
+      payments: [],
+      bookings: [booking],
+    });
+    updateCalendarEvent.mockImplementation(async (id: string, input: { notes?: string | null }) => ({
+      ...booking,
+      id,
+      notes: input.notes ?? null,
+    }));
+
+    renderCrm(<ContactsModule />);
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+    expect(await screen.findByText("Menu: Mix deluxe")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit notes" }));
+    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: finalNotes } });
+    fireEvent.click(screen.getByRole("button", { name: "Save notes" }));
+
+    await waitFor(() => {
+      expect(updateCalendarEvent).toHaveBeenCalledWith("event-1", { notes: finalNotes });
+    });
+    expect(await screen.findByText(/Final menu: paneer tikka, dal makhani/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(finalNotes);
+    });
+  });
+
   it("shows an error state when the list fails", async () => {
     listContacts.mockRejectedValue(new Error("Contacts unavailable"));
     renderCrm(<ContactsModule />);
@@ -386,13 +434,53 @@ describe("CRM modules", () => {
       title: "Send venue proposal",
       at: at.toISOString(),
       endsAt: null,
+      contactId: null,
+      enquiryId: null,
     };
     listCalendar.mockResolvedValue({ items: [item] });
-    renderCrm(<CalendarModule />);
+    renderCrm(<CalendarModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
 
     const itemButton = await screen.findByRole("button", { name: "Send venue proposal" });
     expect(itemButton.closest("button")).toBe(itemButton);
     expect(screen.queryByRole("button", { name: /10 Send venue proposal/ })).not.toBeInTheDocument();
+  });
+
+  it("asks what to add when a calendar day is clicked", async () => {
+    const onCreateFor = vi.fn();
+    renderCrm(
+      <CalendarModule
+        onOpenContact={() => undefined}
+        onOpenPayments={() => undefined}
+        onCreateFor={onCreateFor}
+      />,
+    );
+
+    await screen.findAllByText("15");
+    await waitFor(() => {
+      expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    });
+    const dayCell = screen.getAllByText("15")[0]?.parentElement;
+    expect(dayCell).not.toBeUndefined();
+    fireEvent.click(dayCell as HTMLElement);
+
+    expect(await screen.findByRole("button", { name: "Add enquiry" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add booking" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Add event" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add payment" }));
+
+    expect(onCreateFor).toHaveBeenCalledWith("payments", expect.stringMatching(/^\d{4}-\d{2}-15$/));
+  });
+
+  it("opens the enquiry form on the picked date", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    renderCrm(<EnquiriesModule createOnDate="2026-10-15" onCreateOpened={() => undefined} />);
+
+    expect(await screen.findByRole("heading", { name: "Add enquiry" })).toBeInTheDocument();
+    const pickedDay = screen
+      .getAllByRole("button", { pressed: true })
+      .find((button) => button.textContent === "15");
+    expect(pickedDay).toBeDefined();
   });
 
   it("shows booked enquiries as distinct calendar items", async () => {
@@ -407,13 +495,49 @@ describe("CRM modules", () => {
           title: "Wedding booking",
           at: at.toISOString(),
           endsAt: new Date(at.getTime() + 60 * 60 * 1000).toISOString(),
+          contactId: null,
+          enquiryId: null,
         },
       ],
     });
-    renderCrm(<CalendarModule />);
+    renderCrm(<CalendarModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
 
     const booking = await screen.findByRole("button", { name: "Wedding booking" });
     expect(booking).toHaveClass("bg-emerald-100");
+  });
+
+  it("opens the booked view sidebar from a calendar booking", async () => {
+    const clientContact: CrmContact = { ...contact, type: "client" };
+    const at = new Date();
+    at.setDate(Math.min(at.getDate(), 28));
+    at.setHours(14, 0, 0, 0);
+    listContacts.mockResolvedValue(emptyPage([clientContact]));
+    listClients.mockResolvedValue(emptyPage([client]));
+    listCalendar.mockResolvedValue({
+      items: [
+        {
+          kind: "booking",
+          id: "booking-1",
+          title: "Wedding booking",
+          at: at.toISOString(),
+          endsAt: new Date(at.getTime() + 60 * 60 * 1000).toISOString(),
+          contactId: contact.id,
+          enquiryId: enquiry.id,
+        },
+      ],
+    });
+    renderCrm(<CalendarModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
+
+    await screen.findByRole("button", { name: "Wedding booking" });
+    await waitFor(() => {
+      expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Wedding booking" }));
+
+    expect(await screen.findByRole("heading", { name: "Acme Events" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Current booking/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Enquiry/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Payments/ })).toBeInTheDocument();
   });
 
   it("warns that removing a booking also removes its enquiry", async () => {
@@ -428,10 +552,12 @@ describe("CRM modules", () => {
           title: "Wedding booking",
           at: at.toISOString(),
           endsAt: new Date(at.getTime() + 60 * 60 * 1000).toISOString(),
+          contactId: null,
+          enquiryId: null,
         },
       ],
     });
-    renderCrm(<CalendarModule />);
+    renderCrm(<CalendarModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
 
     await screen.findByRole("button", { name: "Wedding booking" });
     await waitFor(() => {

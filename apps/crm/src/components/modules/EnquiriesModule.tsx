@@ -830,7 +830,13 @@ function EnquiryKanban({
 
 // ─── Module ───────────────────────────────────────────────────────────────────
 
-export function EnquiriesModule() {
+export function EnquiriesModule({
+  createOnDate,
+  onCreateOpened,
+}: {
+  createOnDate?: string | null;
+  onCreateOpened?: () => void;
+}) {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.enquiriesRead);
@@ -869,12 +875,19 @@ export function EnquiriesModule() {
   const contactName = (contactId: string) =>
     crm.contacts.items.find((c) => c.id === contactId)?.name ?? contactId;
 
-  const openCreate = () => {
+  const openCreate = (dueDate = "") => {
     setEditing(null);
-    setForm({ ...EMPTY });
+    setForm({ ...EMPTY, dueDate });
     setErrors({});
     setSheetOpen(true);
   };
+
+  useEffect(() => {
+    if (!createOnDate) return;
+    openCreate(createOnDate);
+    onCreateOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createOnDate]);
 
   const openEdit = (enquiry: CrmEnquiry) => {
     setEditing(enquiry);
@@ -1018,7 +1031,7 @@ export function EnquiriesModule() {
           </div>
         </div>
         {crm.hasPermission(CRM_PERMISSIONS.enquiriesCreate) ? (
-          <Button type="button" className="rounded-xl" onClick={openCreate}>
+          <Button type="button" className="rounded-xl" onClick={() => openCreate()}>
             Add enquiry
           </Button>
         ) : null}

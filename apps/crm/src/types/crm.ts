@@ -213,6 +213,8 @@ export type CrmCalendarItem = {
   title: string;
   at: string;
   endsAt: string | null;
+  contactId: string | null;
+  enquiryId: string | null;
 };
 
 export type CrmCalendarEvent = {

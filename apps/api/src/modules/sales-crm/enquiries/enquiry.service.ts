@@ -35,6 +35,14 @@ export type ConvertedEnquiry = {
   event: CrmCalendarEvent;
 };
 
+type ConversionBooking = {
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  slot: CrmCalendarEvent["slot"];
+  notes: string | null;
+};
+
 export type PersistEnquiryConversion = (input: {
   actorId: string;
   enquiryId: string;
@@ -42,13 +50,14 @@ export type PersistEnquiryConversion = (input: {
   billingName: string;
   existingClientId: string | null;
   convertedFromEnquiryId: string;
-  booking: {
-    title: string;
-    startsAt: Date;
-    endsAt: Date;
-    slot: CrmCalendarEvent["slot"];
-  };
+  booking: ConversionBooking;
 }) => Promise<ConvertedEnquiry>;
+
+function sortTime(value: Date | string | null | undefined): number {
+  if (!value) return 0;
+  const parsed = value instanceof Date ? value.getTime() : Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export async function persistEnquiryConversion(input: {
   actorId: string;
@@ -57,12 +66,7 @@ export async function persistEnquiryConversion(input: {
   billingName: string;
   existingClientId: string | null;
   convertedFromEnquiryId: string;
-  booking: {
-    title: string;
-    startsAt: Date;
-    endsAt: Date;
-    slot: CrmCalendarEvent["slot"];
-  };
+  booking: ConversionBooking;
 }): Promise<ConvertedEnquiry> {
   return prisma.$transaction(async (tx) => {
     const enquiry = await tx.crmEnquiry.update({
@@ -100,6 +104,7 @@ export async function persistEnquiryConversion(input: {
         startsAt: input.booking.startsAt,
         endsAt: input.booking.endsAt,
         slot: input.booking.slot,
+        notes: input.booking.notes,
         contactId: input.contactId,
         enquiryId: input.enquiryId,
         createdBy: input.actorId,
@@ -239,12 +244,15 @@ export class EnquiryService {
       slot: input.slot,
     });
 
+    const notes = await this.latestUpdateNotes(enquiry);
+
     if (enquiry.status === "closed" && activeClient && !existingEvent) {
       const event = await this.events.create({
         title: enquiry.title,
         startsAt: booking.startsAt,
         endsAt: booking.endsAt,
         slot: booking.slot,
+        notes,
         contactId: contact.id,
         enquiryId: enquiry.id,
         ...actorCreate(actorId),
@@ -265,8 +273,21 @@ export class EnquiryService {
         startsAt: booking.startsAt,
         endsAt: booking.endsAt,
         slot: booking.slot,
+        notes,
       },
     });
+  }
+
+  /**
+   * Seed value for the booking notes: the newest follow-up note, falling back to
+   * the enquiry notes when no follow-up carries one.
+   */
+  private async latestUpdateNotes(enquiry: CrmEnquiry): Promise<string | null> {
+    const history = await this.followUps.read({ enquiryId: enquiry.id, isActive: 1 });
+    const latest = [...history]
+      .sort((left, right) => sortTime(left.dueAt) - sortTime(right.dueAt))
+      .reduce<string | null>((notes, followUp) => followUp.notes?.trim() || notes, null);
+    return latest ?? (enquiry.notes?.trim() || null);
   }
 
   private async recordHistory(

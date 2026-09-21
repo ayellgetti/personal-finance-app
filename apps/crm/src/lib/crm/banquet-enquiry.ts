@@ -47,9 +47,9 @@ export const BANQUET_BUDGETS = [
 ] as const;
 
 export const BANQUET_MENUS = [
-  "Veg deluxe",
-  "Non-veg deluxe",
-  "Mix deluxe",
+  "Broze",
+  "Silver",
+  "Gold",
   "Custom",
 ] as const;
 

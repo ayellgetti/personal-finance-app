@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { CalendarModule } from "@/components/modules/CalendarModule";
+import { CalendarModule, type CalendarCreateTarget } from "@/components/modules/CalendarModule";
 import { ClientsModule } from "@/components/modules/ClientsModule";
 import { ContactsModule } from "@/components/modules/ContactsModule";
 import { DashboardModule } from "@/components/modules/DashboardModule";
@@ -34,6 +34,7 @@ const Index = () => {
   const [contactHighlightId, setContactHighlightId] = useState<string | null>(null);
   const [paymentClientId, setPaymentClientId] = useState<string | null>(null);
   const [followUpDueFilter, setFollowUpDueFilter] = useState<FollowUpDueFilter>("all");
+  const [createRequest, setCreateRequest] = useState<{ target: CalendarCreateTarget; date: string } | null>(null);
   const meta = META[view];
 
   const onSelect = (next: CrmViewId) => {
@@ -42,6 +43,10 @@ const Index = () => {
     if (next !== "payments") setPaymentClientId(null);
     if (next !== "followUps") setFollowUpDueFilter("all");
   };
+
+  const createDateFor = (target: CalendarCreateTarget) =>
+    createRequest?.target === target ? createRequest.date : null;
+  const clearCreateRequest = () => setCreateRequest(null);
 
   return (
     <AppLayout
@@ -60,7 +65,9 @@ const Index = () => {
         />
       ) : null}
       {view === "contacts" ? <ContactsModule highlightId={contactHighlightId} /> : null}
-      {view === "enquiries" ? <EnquiriesModule /> : null}
+      {view === "enquiries" ? (
+        <EnquiriesModule createOnDate={createDateFor("enquiries")} onCreateOpened={clearCreateRequest} />
+      ) : null}
       {view === "followUps" ? <FollowUpsModule initialDueFilter={followUpDueFilter} /> : null}
       {view === "clients" ? (
         <ClientsModule
@@ -72,13 +79,35 @@ const Index = () => {
             setPaymentClientId(clientId);
             setView("payments");
           }}
+          createOnDate={createDateFor("clients")}
+          onCreateOpened={clearCreateRequest}
         />
       ) : null}
       {view === "payments" ? (
-        <PaymentsModule clientId={paymentClientId} onClearClientFilter={() => setPaymentClientId(null)} />
+        <PaymentsModule
+          clientId={paymentClientId}
+          onClearClientFilter={() => setPaymentClientId(null)}
+          createOnDate={createDateFor("payments")}
+          onCreateOpened={clearCreateRequest}
+        />
       ) : null}
       {view === "tasks" ? <TasksModule /> : null}
-      {view === "calendar" ? <CalendarModule /> : null}
+      {view === "calendar" ? (
+        <CalendarModule
+          onOpenContact={(contactId) => {
+            setContactHighlightId(contactId);
+            setView("contacts");
+          }}
+          onOpenPayments={(clientId) => {
+            setPaymentClientId(clientId);
+            setView("payments");
+          }}
+          onCreateFor={(target, date) => {
+            setCreateRequest({ target, date });
+            onSelect(target);
+          }}
+        />
+      ) : null}
       {view === "users" ? <UsersModule /> : null}
       {view === "roles" ? <RolesModule /> : null}
       {view === "profile" ? <ProfileModule /> : null}

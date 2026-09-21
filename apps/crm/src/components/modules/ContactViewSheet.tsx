@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -24,14 +26,17 @@ import {
 } from "@/lib/crm/display";
 import { pickCurrentBooking } from "@/lib/crm/booking";
 import { fetchContactDetail, listClients, listEnquiries, listFollowUps, listPayments } from "@/lib/crm/remote";
+import { useCrm } from "@/lib/crm/store";
+import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
-import type {
-  CrmCalendarEvent,
-  CrmContact,
-  CrmContactDetail,
-  CrmEnquiry,
-  CrmEnquiryWithFollowUps,
-  CrmPayment,
+import {
+  CRM_PERMISSIONS,
+  type CrmCalendarEvent,
+  type CrmContact,
+  type CrmContactDetail,
+  type CrmEnquiry,
+  type CrmEnquiryWithFollowUps,
+  type CrmPayment,
 } from "@/types/crm";
 
 type TabId = "booking" | "enquiries" | "payments";
@@ -243,17 +248,133 @@ export function BookingsTab({
                 <dt className="text-xs text-muted-foreground">Linked enquiry</dt>
                 <dd className="mt-0.5 font-medium">{enquiry?.title ?? booking.enquiryId ?? "—"}</dd>
               </div>
-              {booking.notes ? (
-                <div className="col-span-2">
-                  <dt className="text-xs text-muted-foreground">Notes</dt>
-                  <dd className="mt-0.5 whitespace-pre-wrap text-muted-foreground">{booking.notes}</dd>
-                </div>
-              ) : null}
             </dl>
+            <BookingNotes booking={booking} />
           </article>
         );
       })}
     </div>
+  );
+}
+
+export function BookingNotes({ booking }: { booking: CrmCalendarEvent }) {
+  const crm = useCrm();
+  const [notes, setNotes] = useState(booking.notes ?? "");
+  const [draft, setDraft] = useState(booking.notes ?? "");
+  const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const canEdit = crm.hasPermission(CRM_PERMISSIONS.calendarUpdate);
+  const fieldId = `booking-notes-${booking.id}`;
+
+  useEffect(() => {
+    setNotes(booking.notes ?? "");
+    setDraft(booking.notes ?? "");
+    setEditing(false);
+    setCopied(false);
+  }, [booking.id, booking.notes]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const updated = await crm.updateCalendarEvent(booking.id, { notes: draft.trim() || null });
+      setNotes(updated.notes ?? "");
+      setDraft(updated.notes ?? "");
+      setEditing(false);
+    } catch {
+      // toast handled in store
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copy = async () => {
+    const ok = await copyToClipboard(notes);
+    if (!ok) {
+      toast.error("Unable to copy notes");
+      return;
+    }
+    setCopied(true);
+    toast.success("Notes copied");
+  };
+
+  return (
+    <section className="mt-3 space-y-2 border-t pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground" id={`${fieldId}-label`}>
+          Notes
+        </p>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1.5 rounded-xl px-2 text-xs"
+            disabled={!notes}
+            onClick={() => void copy()}
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+          {canEdit && !editing ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 rounded-xl px-2 text-xs"
+              onClick={() => {
+                setDraft(notes);
+                setEditing(true);
+              }}
+            >
+              {notes ? "Edit notes" : "Add notes"}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {editing ? (
+        <div className="space-y-2">
+          <Textarea
+            id={fieldId}
+            aria-labelledby={`${fieldId}-label`}
+            rows={6}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Enquiry notes, final menu, and anything else to hand over"
+            className="rounded-xl"
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="rounded-xl"
+              disabled={busy}
+              onClick={() => {
+                setDraft(notes);
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" size="sm" className="rounded-xl" disabled={busy} onClick={() => void save()}>
+              Save notes
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+          {notes || "No notes yet."}
+        </p>
+      )}
+    </section>
   );
 }
 

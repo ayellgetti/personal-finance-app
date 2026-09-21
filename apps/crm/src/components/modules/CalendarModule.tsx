@@ -1,5 +1,12 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -10,10 +17,17 @@ import {
   RemoveAction,
   SideSheet,
 } from "@/components/modules/shared";
-import { formatDateTime, isoToLocalInput, localInputToIso } from "@/lib/crm/display";
+import { ClientViewSheet } from "@/components/modules/ClientViewSheet";
+import { formatDate, formatDateTime, isoToLocalInput, localInputToIso, toLocalDateKey } from "@/lib/crm/display";
+import { listClients } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
 import { useCrm } from "@/lib/crm/store";
-import { CRM_PERMISSIONS, type CreateCalendarEventInput, type CrmCalendarItem } from "@/types/crm";
+import {
+  CRM_PERMISSIONS,
+  type CreateCalendarEventInput,
+  type CrmCalendarItem,
+  type CrmClient,
+} from "@/types/crm";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const KIND_LABELS: Record<CrmCalendarItem["kind"], string> = {
@@ -21,6 +35,14 @@ const KIND_LABELS: Record<CrmCalendarItem["kind"], string> = {
   event: "Event",
   booking: "Booked",
 };
+
+export type CalendarCreateTarget = "enquiries" | "clients" | "payments";
+
+const CREATE_TARGETS: { target: CalendarCreateTarget; label: string; permission: string }[] = [
+  { target: "enquiries", label: "Add enquiry", permission: CRM_PERMISSIONS.enquiriesCreate },
+  { target: "clients", label: "Add booking", permission: CRM_PERMISSIONS.clientsCreate },
+  { target: "payments", label: "Add payment", permission: CRM_PERMISSIONS.paymentsCreate },
+];
 
 function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -63,6 +85,16 @@ function validate(form: FormState): Record<string, string> {
   return errors;
 }
 
+function matchBookedClient(clients: CrmClient[], item: CrmCalendarItem): CrmClient | null {
+  const byEnquiry = item.enquiryId
+    ? clients.find((client) => client.convertedFromEnquiryId === item.enquiryId)
+    : undefined;
+  const byContact = item.contactId
+    ? clients.find((client) => client.contactId === item.contactId)
+    : undefined;
+  return byEnquiry ?? byContact ?? null;
+}
+
 function toInput(form: FormState): CreateCalendarEventInput {
   return {
     title: form.title.trim(),
@@ -72,7 +104,15 @@ function toInput(form: FormState): CreateCalendarEventInput {
   };
 }
 
-export function CalendarModule() {
+export function CalendarModule({
+  onOpenContact,
+  onOpenPayments,
+  onCreateFor,
+}: {
+  onOpenContact: (contactId: string) => void;
+  onOpenPayments: (clientId: string) => void;
+  onCreateFor?: (target: CalendarCreateTarget, date: string) => void;
+}) {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.calendarRead);
@@ -81,8 +121,13 @@ export function CalendarModule() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sheetOpen, setSheetOpen] = useState(false);
   const [detail, setDetail] = useState<CrmCalendarItem | null>(null);
+  const [viewingClient, setViewingClient] = useState<CrmClient | null>(null);
   const [removeTarget, setRemoveTarget] = useState<CrmCalendarItem | null>(null);
+  const [createDay, setCreateDay] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const createTargets = CREATE_TARGETS.filter((option) => crm.hasPermission(option.permission));
+  const canPickDay = Boolean(onCreateFor) && createTargets.length > 0;
 
   const cells = useMemo(() => monthGrid(cursor), [cursor]);
   const range = useMemo(() => {
@@ -108,8 +153,22 @@ export function CalendarModule() {
     return grouped;
   }, [crm.calendar.items]);
 
-  const openCreate = (day?: Date) => {
-    const start = day ? new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9, 0) : new Date();
+  const openItem = (item: CrmCalendarItem) => {
+    if (item.kind !== "booking" || !crm.hasPermission(CRM_PERMISSIONS.clientsRead)) {
+      setDetail(item);
+      return;
+    }
+    void listClients({ limit: 100 })
+      .then((page) => {
+        const client = matchBookedClient(page.items, item);
+        if (client) setViewingClient(client);
+        else setDetail(item);
+      })
+      .catch(() => setDetail(item));
+  };
+
+  const openCreate = () => {
+    const start = new Date();
     const end = new Date(start.getTime() + 60 * 60 * 1000);
     setForm({
       title: "",
@@ -192,19 +251,18 @@ export function CalendarModule() {
             {cells.map((day) => {
               const items = byDay.get(dayKey(day)) ?? [];
               const outside = day.getMonth() !== cursor.getMonth();
-              const canCreate = crm.hasPermission(CRM_PERMISSIONS.calendarCreate);
               return (
                 <div
                   key={day.toISOString()}
                   className={cn(
                     "min-h-[7.5rem] border-b border-r p-2 text-left align-top",
                     outside && "bg-muted/30 text-muted-foreground",
-                    canCreate && "cursor-pointer",
+                    canPickDay && "cursor-pointer",
                   )}
                   onClick={(event) => {
-                    if (!canCreate) return;
+                    if (!canPickDay) return;
                     if ((event.target as HTMLElement).closest("button")) return;
-                    openCreate(day);
+                    setCreateDay(day);
                   }}
                 >
                   <p className="mb-1 text-xs font-semibold">{day.getDate()}</p>
@@ -221,7 +279,7 @@ export function CalendarModule() {
                         )}
                         onClick={(event) => {
                           event.stopPropagation();
-                          setDetail(item);
+                          openItem(item);
                         }}
                       >
                         {item.title}
@@ -237,6 +295,38 @@ export function CalendarModule() {
           <p className="text-sm text-muted-foreground">No calendar items this month</p>
         ) : null}
       </ModuleStatus>
+
+      <Dialog
+        open={Boolean(createDay)}
+        onOpenChange={(open) => {
+          if (!open) setCreateDay(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{createDay ? formatDate(createDay.toISOString()) : "Add"}</DialogTitle>
+            <DialogDescription>Pick what to add. The form opens in its own tab.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {createTargets.map((option) => (
+              <Button
+                key={option.target}
+                type="button"
+                variant="outline"
+                className="justify-start rounded-xl"
+                onClick={() => {
+                  if (!createDay) return;
+                  const date = toLocalDateKey(createDay);
+                  setCreateDay(null);
+                  onCreateFor?.(option.target, date);
+                }}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <SideSheet
         open={sheetOpen}
@@ -316,6 +406,19 @@ export function CalendarModule() {
           </div>
         ) : null}
       </SideSheet>
+
+      <ClientViewSheet
+        client={viewingClient}
+        onClose={() => setViewingClient(null)}
+        onOpenContact={(contactId) => {
+          setViewingClient(null);
+          onOpenContact(contactId);
+        }}
+        onOpenPayments={(clientId) => {
+          setViewingClient(null);
+          onOpenPayments(clientId);
+        }}
+      />
 
       <ConfirmRemoveDialog
         open={Boolean(removeTarget)}

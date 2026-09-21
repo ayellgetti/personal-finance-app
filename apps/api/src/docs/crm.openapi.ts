@@ -491,7 +491,7 @@ export const crmOpenApiPaths = {
       tags: ["CRM Enquiries"],
       summary: "Convert an enquiry to a client",
       description:
-        "Runs in a short transaction: sets enquiry closed (Booked), contact type=client, creates CrmClient if missing, and creates a calendar event linked to the enquiry. First convert requires startsAt and either endsAt or slot (morning / evening / full_day). Idempotent when already closed, a client exists, and a booking event is present.",
+        "Runs in a short transaction: sets enquiry closed (Booked), contact type=client, creates CrmClient if missing, and creates a calendar event linked to the enquiry. The booking notes are seeded from the enquiry's latest follow-up note, falling back to the enquiry notes; edit them later through PATCH /api/crm/calendar/events/{id}. First convert requires startsAt and either endsAt or slot (morning / evening / full_day). Idempotent when already closed, a client exists, and a booking event is present.",
       security: [{ bearerAuth: [] }],
       parameters: [requestId, idParam],
       requestBody: jsonBody("ConvertCrmEnquiryRequest"),

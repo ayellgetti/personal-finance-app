@@ -93,9 +93,13 @@ function toInput(form: FormState, enquiryId: string | null): CreatePaymentInput 
 export function PaymentsModule({
   clientId,
   onClearClientFilter,
+  createOnDate,
+  onCreateOpened,
 }: {
   clientId?: string | null;
   onClearClientFilter?: () => void;
+  createOnDate?: string | null;
+  onCreateOpened?: () => void;
 }) {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
@@ -143,6 +147,13 @@ export function PaymentsModule({
     setErrors({});
     setSheetOpen(true);
   };
+
+  useEffect(() => {
+    if (!createOnDate) return;
+    openCreate();
+    onCreateOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createOnDate]);
 
   const openEdit = (payment: CrmPayment) => {
     setEditing(payment);

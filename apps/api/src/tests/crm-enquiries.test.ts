@@ -73,6 +73,8 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
   const followUps = fakeCrud<{
     id: string;
     isActive: number;
+    enquiryId: string;
+    dueAt: Date;
     notes: string | null;
     stage: string;
   }>("followup", []);
@@ -84,6 +86,7 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
     slot: "morning" | "evening" | "full_day" | null;
     contactId: string | null;
     enquiryId: string | null;
+    notes: string | null;
     isActive: number;
   }>("event", []);
   const payments = fakeCrud<{
@@ -130,6 +133,7 @@ function setup(contactSeed: FakeContact[] = [], enquirySeed: FakeEnquiry[] = [])
         startsAt: input.booking.startsAt,
         endsAt: input.booking.endsAt,
         slot: input.booking.slot,
+        notes: input.booking.notes,
         contactId: input.contactId,
         enquiryId: input.enquiryId,
         isActive: 1,
@@ -236,6 +240,51 @@ test("convert sets closed + client type and creates a linked booking event; seco
   assert.equal(second.event.id, first.event.id);
   assert.equal(clients.rows.length, 1);
   assert.equal(events.rows.length, 1);
+});
+
+test("convert seeds the booking notes from the latest enquiry update", async () => {
+  const { service, events } = setup([
+    { id: "c-1", name: "Ada Lovelace", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const enquiry = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Wedding",
+    source: "web",
+    dueDate: DUE_DATE,
+    notes: "Menu: Veg deluxe",
+  });
+  await service.update("user-1", enquiry.id, { notes: "Menu: Mix deluxe, 250 guests" });
+
+  const converted = await service.convert("user-1", enquiry.id, {
+    startsAt: BOOKING_START,
+    endsAt: BOOKING_END,
+  });
+
+  assert.equal(converted.event.notes, "Menu: Mix deluxe, 250 guests");
+  assert.equal(events.rows[0]?.notes, "Menu: Mix deluxe, 250 guests");
+});
+
+test("convert falls back to the enquiry notes when no follow-up carries one", async () => {
+  const { service, followUps } = setup([
+    { id: "c-1", name: "Ada Lovelace", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const enquiry = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Sangeet",
+    source: "web",
+    dueDate: DUE_DATE,
+    notes: "Lawn, evening",
+  });
+  const seeded = followUps.rows[0];
+  assert.ok(seeded);
+  await followUps.model.update({ id: seeded.id }, { notes: null });
+
+  const converted = await service.convert("user-1", enquiry.id, {
+    startsAt: BOOKING_START,
+    endsAt: BOOKING_END,
+  });
+
+  assert.equal(converted.event.notes, "Lawn, evening");
 });
 
 test("convert accepts a slot instead of an end datetime", async () => {

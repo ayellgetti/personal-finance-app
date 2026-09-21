@@ -69,6 +69,7 @@ import type {
   CreateFollowUpInput,
   CreatePaymentInput,
   CreateTaskInput,
+  CrmCalendarEvent,
   CrmCalendarItem,
   CrmClient,
   CrmContact,
@@ -167,7 +168,10 @@ type CrmContextValue = {
   calendar: ListCache<CrmCalendarItem>;
   loadCalendar: (query: ListCalendarQuery) => Promise<void>;
   createCalendarEvent: (input: CreateCalendarEventInput) => Promise<void>;
-  updateCalendarEvent: (id: string, input: Partial<CreateCalendarEventInput>) => Promise<void>;
+  updateCalendarEvent: (
+    id: string,
+    input: Partial<CreateCalendarEventInput>,
+  ) => Promise<CrmCalendarEvent>;
   removeCalendarEvent: (id: string) => Promise<void>;
   users: ListCache<CrmStaffUser>;
   loadUsers: (query?: ListCrmUsersQuery) => Promise<void>;
@@ -385,6 +389,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
           title: converted.event.title,
           at: converted.event.startsAt,
           endsAt: converted.event.endsAt,
+          contactId: converted.event.contactId,
+          enquiryId: converted.event.enquiryId,
         }),
       }));
       toast.success("Enquiry converted");
@@ -622,9 +628,10 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const updateCalendarEvent = useCallback(
     async (id: string, input: Partial<CreateCalendarEventInput>) => {
       try {
-        await updateCalendarEventRemote(id, input);
+        const event = await updateCalendarEventRemote(id, input);
         toast.success("Event updated");
         await refreshCalendar();
+        return event;
       } catch (error) {
         toast.error(mutationMessage(error));
         throw error;
