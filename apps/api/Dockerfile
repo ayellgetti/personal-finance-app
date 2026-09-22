@@ -11,7 +11,14 @@ COPY apps/website/package.json apps/website/
 COPY apps/crm/package.json apps/crm/
 COPY packages/tsconfig packages/tsconfig
 COPY apps/api/prisma apps/api/prisma
-RUN pnpm install --frozen-lockfile --filter api...
+# Docker's path to the npm registry is often slow enough to hit pnpm's 60s
+# fetch timeout (error 23) during metadata checks and tarball downloads.
+RUN pnpm install --frozen-lockfile --filter api... \
+    --fetch-timeout=300000 \
+    --fetch-retries=5 \
+    --fetch-retry-mintimeout=10000 \
+    --fetch-retry-maxtimeout=120000 \
+    --network-concurrency=4
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
