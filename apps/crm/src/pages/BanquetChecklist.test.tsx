@@ -56,6 +56,7 @@ describe("Banquet public handover checklist", () => {
       screen.getByRole("heading", { name: /Final Handover Checklist/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Print checklist" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "WhatsApp message" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reset" })).toBeInTheDocument();
     expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
 
@@ -328,5 +329,36 @@ describe("Banquet public handover checklist", () => {
     expect(screen.getByRole("textbox", { name: "Instruction" })).toHaveValue(
       "Jain thali for 12 guests",
     );
+  });
+
+  it("opens a WhatsApp handover message in a dialog", async () => {
+    const open = vi.fn();
+    vi.stubGlobal("open", open);
+
+    render(<BanquetChecklist />);
+    fireEvent.change(screen.getByLabelText("Client Name"), { target: { value: "Ramesh" } });
+    fireEvent.change(screen.getByLabelText("Mobile No."), { target: { value: "9876543210" } });
+    fireEvent.change(screen.getByLabelText("Menu"), { target: { value: "gold" } });
+    fireEvent.change(screen.getByLabelText("Row 1 item"), {
+      target: { value: "Special Thandai (स्पेशल ठंडाई)" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp message" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "WhatsApp message" })).toBeInTheDocument();
+    const message = within(dialog).getByLabelText("WhatsApp message") as HTMLTextAreaElement;
+    expect(message.value).toContain("Client: Ramesh");
+    expect(message.value).toContain("Menu: Gold");
+    expect(message.value).toContain("Special Thandai (स्पेशल ठंडाई)");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Open WhatsApp" }));
+    expect(open).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/wa\.me\/919876543210\?text=/),
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    vi.unstubAllGlobals();
   });
 });

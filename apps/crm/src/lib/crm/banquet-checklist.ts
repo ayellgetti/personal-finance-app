@@ -93,6 +93,151 @@ export function paymentOptionName(
   return options.find((option) => option.slug === slug)?.name ?? "";
 }
 
+export type WhatsAppMenuLine = {
+  category: string;
+  item: string;
+  requirement: string;
+};
+
+export type WhatsAppPaymentLine = {
+  particular: string;
+  amount: string;
+  mode: string;
+  remarks: string;
+};
+
+export type WhatsAppStaffLine = {
+  role: string;
+  quantity: string;
+  names: string;
+};
+
+export type WhatsAppHandoverDraft = {
+  clientName: string;
+  mobileNo: string;
+  menuPackage: string;
+  eventDate: string;
+  eventTime: string;
+  guests: string;
+  menu: readonly WhatsAppMenuLine[];
+  decoration: string;
+  payments: readonly WhatsAppPaymentLine[];
+  staff: readonly WhatsAppStaffLine[];
+  instruction: string;
+  remarks: string;
+};
+
+function trimmed(value: string): string {
+  return value.trim();
+}
+
+function labelled(label: string, value: string): string | undefined {
+  const text = trimmed(value);
+  return text ? `${label}: ${text}` : undefined;
+}
+
+function rupees(amount: string): string {
+  const text = trimmed(amount);
+  if (!text) return "";
+  return text.startsWith("₹") ? text : `₹${text}`;
+}
+
+function menuLines(menu: readonly WhatsAppMenuLine[]): string[] {
+  const order: string[] = [];
+  const byCategory = new Map<string, string[]>();
+
+  for (const row of menu) {
+    const item = trimmed(row.item);
+    const requirement = trimmed(row.requirement);
+    if (!item && !requirement) continue;
+    const category = trimmed(row.category) || "Menu";
+    const detail = item && requirement ? `${item} — ${requirement}` : item || requirement;
+    const current = byCategory.get(category);
+    if (current) {
+      current.push(detail);
+    } else {
+      order.push(category);
+      byCategory.set(category, [detail]);
+    }
+  }
+
+  return order.map((category) => {
+    const items = byCategory.get(category) ?? [];
+    return `• ${category}: ${items.join("; ")}`;
+  });
+}
+
+function paymentLines(payments: readonly WhatsAppPaymentLine[]): string[] {
+  const lines: string[] = [];
+  for (const row of payments) {
+    const particular = trimmed(row.particular) || "Payment";
+    const amount = rupees(row.amount);
+    const mode = trimmed(row.mode);
+    const remarks = trimmed(row.remarks);
+    if (!amount && !mode && !remarks && !trimmed(row.particular)) continue;
+    const bits = [amount, mode ? `(${mode})` : ""].filter(Boolean).join(" ");
+    const suffix = remarks ? ` — ${remarks}` : "";
+    lines.push(`• ${particular}${bits ? `: ${bits}` : ""}${suffix}`);
+  }
+  return lines;
+}
+
+function staffLines(staff: readonly WhatsAppStaffLine[]): string[] {
+  const lines: string[] = [];
+  for (const row of staff) {
+    const quantity = trimmed(row.quantity);
+    const names = trimmed(row.names);
+    if (!quantity && !names) continue;
+    const assigned = names ? ` (${names})` : "";
+    lines.push(`• ${row.role}: ${quantity || "—"}${assigned}`);
+  }
+  return lines;
+}
+
+function section(title: string, body: string | readonly string[]): string | undefined {
+  const lines = typeof body === "string" ? (trimmed(body) ? [trimmed(body)] : []) : [...body];
+  if (lines.length === 0) return undefined;
+  return [`*${title}*`, ...lines].join("\n");
+}
+
+/** Compact WhatsApp handover from the filled checklist. */
+export function buildWhatsAppHandoverMessage(draft: WhatsAppHandoverDraft): string {
+  const header = [
+    labelled("Client", draft.clientName),
+    labelled("Mobile", draft.mobileNo),
+    labelled("Date", draft.eventDate),
+    labelled("Time", draft.eventTime),
+    labelled("Guests", draft.guests),
+    labelled("Menu", draft.menuPackage),
+  ].filter((line): line is string => Boolean(line));
+
+  const blocks = [
+    ["*Event handover*", ...header].join("\n"),
+    section("Menu", menuLines(draft.menu)),
+    section("Decoration", draft.decoration),
+    section("Payment", paymentLines(draft.payments)),
+    section("Staff", staffLines(draft.staff)),
+    section("Instructions", draft.instruction),
+    section("Remarks", draft.remarks),
+  ].filter((block): block is string => Boolean(block));
+
+  return blocks.join("\n\n");
+}
+
+/** Digits for wa.me; 10-digit Indian numbers get a 91 prefix. */
+export function whatsAppChatDigits(mobile: string): string {
+  const digits = mobile.replace(/\D/g, "");
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`;
+  return digits;
+}
+
+export function whatsAppHandoverUrl(mobile: string, text: string): string {
+  const query = `text=${encodeURIComponent(text)}`;
+  const digits = whatsAppChatDigits(mobile);
+  return digits ? `https://wa.me/${digits}?${query}` : `https://wa.me/?${query}`;
+}
+
 export type EventTimeSlot = {
   slug: string;
   name: string;

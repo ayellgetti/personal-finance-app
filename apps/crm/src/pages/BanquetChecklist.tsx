@@ -1,10 +1,19 @@
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { NativeSelect } from "@/components/modules/shared";
+import { copyToClipboard } from "@/lib/clipboard";
 import { formatDate } from "@/lib/crm/display";
 import {
   BANQUET_CHECKLIST_CATEGORIES,
@@ -13,12 +22,15 @@ import {
   BANQUET_PAYMENT_MODES,
   BANQUET_PAYMENT_PARTICULARS,
   BANQUET_STAFF_ROLES,
+  buildWhatsAppHandoverMessage,
   checklistItemGroups,
   eventTimeBySlug,
   menuPackageBySlug,
   packageRowCount,
   packagedCategories,
   paymentOptionName,
+  whatsAppHandoverUrl,
+  type WhatsAppHandoverDraft,
 } from "@/lib/crm/banquet-checklist";
 
 type ItemRow = {
@@ -238,6 +250,8 @@ export default function BanquetChecklist() {
   const [instruction, setInstruction] = useState("");
   const [remarks, setRemarks] = useState("");
   const [signature, setSignature] = useState("");
+  const [whatsAppOpen, setWhatsAppOpen] = useState(false);
+  const [whatsAppDraft, setWhatsAppDraft] = useState("");
 
   const setEvent = (key: keyof EventInfo, value: string) => {
     setEventInfo((current) => ({ ...current, [key]: value }));
@@ -301,6 +315,52 @@ export default function BanquetChecklist() {
   );
 
   const rowsInCategory = (slug: string) => rows.filter((row) => row.categorySlug === slug);
+
+  const handoverDraft = (): WhatsAppHandoverDraft => ({
+    clientName: eventInfo.clientName,
+    mobileNo: eventInfo.mobileNo,
+    menuPackage: menuPackageBySlug(eventInfo.menuPackage)?.name ?? "",
+    eventDate: eventInfo.eventDate ? formatDate(eventInfo.eventDate) : "",
+    eventTime: eventTimeBySlug(eventInfo.eventTime)?.name ?? "",
+    guests: eventInfo.guests,
+    menu: rows.map((row) => ({
+      category: categoryBySlug.get(row.categorySlug)?.name ?? "",
+      item: row.item,
+      requirement: row.requirement,
+    })),
+    decoration,
+    payments: payments.map((row) => ({
+      particular: paymentOptionName(BANQUET_PAYMENT_PARTICULARS, row.particular),
+      amount: row.amount,
+      mode: paymentOptionName(BANQUET_PAYMENT_MODES, row.mode),
+      remarks: row.remarks,
+    })),
+    staff: BANQUET_STAFF_ROLES.map((role) => ({
+      role: role.name,
+      quantity: staff[role.slug]?.quantity ?? "",
+      names: staff[role.slug]?.names ?? "",
+    })),
+    instruction,
+    remarks,
+  });
+
+  const openWhatsAppMessage = () => {
+    setWhatsAppDraft(buildWhatsAppHandoverMessage(handoverDraft()));
+    setWhatsAppOpen(true);
+  };
+
+  const copyWhatsAppMessage = async () => {
+    const ok = await copyToClipboard(whatsAppDraft);
+    if (!ok) {
+      toast.error("Unable to copy message");
+      return;
+    }
+    toast.success("Message copied");
+  };
+
+  const sendWhatsAppMessage = () => {
+    window.open(whatsAppHandoverUrl(eventInfo.mobileNo, whatsAppDraft), "_blank", "noopener,noreferrer");
+  };
 
   const confirmReset = () => {
     toast("Reset the complete checklist?", {
@@ -808,6 +868,14 @@ export default function BanquetChecklist() {
           </Button>
           <Button
             type="button"
+            variant="outline"
+            className="h-9 rounded-full border-stone-200 px-5 text-sm"
+            onClick={openWhatsAppMessage}
+          >
+            WhatsApp message
+          </Button>
+          <Button
+            type="button"
             className="h-9 rounded-full bg-amber-400 px-6 text-sm font-semibold text-stone-900 hover:bg-amber-500"
             onClick={() => window.print()}
           >
@@ -815,6 +883,41 @@ export default function BanquetChecklist() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={whatsAppOpen} onOpenChange={setWhatsAppOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>WhatsApp message</DialogTitle>
+            <DialogDescription>
+              Short handover text from this checklist. Edit if needed, then copy or open WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={whatsAppDraft}
+            onChange={(event) => setWhatsAppDraft(event.target.value)}
+            rows={16}
+            aria-label="WhatsApp message"
+            className="min-h-[16rem] rounded-xl border-stone-200 font-mono text-sm"
+          />
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 rounded-full"
+              onClick={() => void copyWhatsAppMessage()}
+            >
+              Copy
+            </Button>
+            <Button
+              type="button"
+              className="h-9 rounded-full bg-amber-400 font-semibold text-stone-900 hover:bg-amber-500"
+              onClick={sendWhatsAppMessage}
+            >
+              Open WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

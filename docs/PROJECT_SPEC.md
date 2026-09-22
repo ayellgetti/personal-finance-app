@@ -111,7 +111,7 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 | --- | --- | --- |
 | Web | `apps/web` | Authenticated Freedom Planner UI (`8080` in Compose) |
 | Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
-| CRM | `apps/crm` | Sales CRM UI (`8082`); extra Compose copies on `8083` (travel) and `8084` (banquet). Dashboard, pipeline, tasks, calendar, users/roles. Public pages (no auth): walkthroughs `/banquet`, `/real-estate`, `/freedom`, banquet intake `/banquet-enquiry`, banquet handover checklist `/banquet-checklist`, and travel intake `/travel-enquiry`. |
+| CRM | `apps/crm` | Sales CRM UI (`8082`); extra Compose copies on `8083` (travel) and `8084` (banquet). Dashboard, pipeline, tasks, calendar, users/roles. Public pages (no auth): walkthroughs `/banquet`, `/real-estate`, `/freedom`, banquet intake `/banquet-enquiry`, banquet handover checklist `/banquet-checklist` (fill, print, or copy a WhatsApp handover message; no API), and travel intake `/travel-enquiry`. |
 | API | `apps/api` | Express backend (`5001`), Swagger `/docs`; finance + `/api/crm` |
 
 Do not import `apps/web` source from `apps/website`, `apps/crm`, or the reverse.
