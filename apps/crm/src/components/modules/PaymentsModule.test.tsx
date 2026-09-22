@@ -89,4 +89,50 @@ describe("PaymentsModule", () => {
       expect.objectContaining({ referenceType: "vendor", referenceId: vendor.id, type: "INCOME" }),
     );
   });
+
+  it("switches payments between table and cards", async () => {
+    listClients.mockResolvedValue(
+      emptyPage([
+        {
+          id: "client-1",
+          contactId: "contact-1",
+          status: "active",
+          billingName: "Acme Events",
+          gstin: null,
+          convertedFromEnquiryId: null,
+          startsAt: null,
+          endsAt: null,
+        },
+      ]),
+    );
+    listPayments.mockResolvedValue(
+      emptyPage([
+        {
+          id: "payment-1",
+          referenceType: "client",
+          referenceId: "client-1",
+          enquiryId: null,
+          amount: 25000,
+          currency: "INR",
+          type: "INCOME",
+          mode: "UPI",
+          status: "paid",
+          paidAt: "2026-09-20T10:00:00.000Z",
+          reference: "TXN-4421",
+        },
+      ]),
+    );
+    renderCrm(<PaymentsModule />);
+
+    expect(await screen.findByRole("columnheader", { name: "Payee" })).toBeInTheDocument();
+    expect(screen.getByText("TXN-4421")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Card view" }));
+    expect(await screen.findByText("Acme Events")).toBeInTheDocument();
+    expect(screen.getByText("TXN-4421")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Payee" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+    expect(await screen.findByRole("columnheader", { name: "Payee" })).toBeInTheDocument();
+  });
 });

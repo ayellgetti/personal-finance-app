@@ -6,6 +6,7 @@ import {
   Building2,
   Wallet,
   ListTodo,
+  Bell,
   CalendarDays,
   Shield,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export const NAV: NavItem[] = [
   { id: "clients", label: "Booked", icon: Building2, group: "Pipeline" },
   { id: "payments", label: "Payments", icon: Wallet, group: "Pipeline" },
   { id: "tasks", label: "Tasks", icon: ListTodo, group: "Work" },
+  { id: "reminders", label: "Reminders", icon: Bell, group: "Work" },
   { id: "users", label: "Users", icon: Users, group: "Admin", permission: CRM_PERMISSIONS.usersRead },
   { id: "roles", label: "Roles", icon: Shield, group: "Admin", permission: CRM_PERMISSIONS.rolesRead },
 ];

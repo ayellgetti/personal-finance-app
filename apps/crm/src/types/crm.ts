@@ -68,6 +68,7 @@ export type CrmViewId =
   | "clients"
   | "payments"
   | "tasks"
+  | "reminders"
   | "calendar"
   | "users"
   | "roles"
@@ -215,6 +216,8 @@ export type CrmCalendarItem = {
   endsAt: string | null;
   contactId: string | null;
   enquiryId: string | null;
+  slot?: CrmEventSlot | null;
+  notes?: string | null;
 };
 
 export type CrmCalendarEvent = {

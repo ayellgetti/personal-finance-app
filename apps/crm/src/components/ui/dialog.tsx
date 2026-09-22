@@ -41,7 +41,8 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      {/* Scrolling body keeps the dialog's own spacing between header, content, and footer. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pr-1">
         {children}
       </div>
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">

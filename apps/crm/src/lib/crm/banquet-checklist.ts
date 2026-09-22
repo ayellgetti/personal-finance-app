@@ -115,6 +115,7 @@ export type WhatsAppStaffLine = {
 export type WhatsAppHandoverDraft = {
   clientName: string;
   mobileNo: string;
+  eventType: string;
   menuPackage: string;
   eventDate: string;
   eventTime: string;
@@ -205,6 +206,7 @@ export function buildWhatsAppHandoverMessage(draft: WhatsAppHandoverDraft): stri
   const header = [
     labelled("Client", draft.clientName),
     labelled("Mobile", draft.mobileNo),
+    labelled("Event", draft.eventType),
     labelled("Date", draft.eventDate),
     labelled("Time", draft.eventTime),
     labelled("Guests", draft.guests),

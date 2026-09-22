@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ClientViewSheet } from "@/components/modules/ClientViewSheet";
@@ -27,6 +28,8 @@ import {
   type CrmClient,
   type CrmClientStatus,
 } from "@/types/crm";
+
+type ViewMode = "table" | "card";
 
 type FormState = {
   contactId: string;
@@ -83,6 +86,7 @@ export function ClientsModule({
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.clientsRead);
+  const [view, setView] = useState<ViewMode>("table");
   const [statusFilter, setStatusFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -168,6 +172,34 @@ export function ClientsModule({
     setSheetOpen(true);
   };
 
+  const clientActions = (client: CrmClient) => (
+    <RowActions>
+      <ViewAction onClick={() => setViewing(client)} />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="rounded-xl"
+        onClick={() => onOpenContact(client.contactId)}
+      >
+        Contact
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="rounded-xl"
+        onClick={() => onOpenPayments(client.id)}
+      >
+        Payments
+      </Button>
+      {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? <EditAction onClick={() => openEdit(client)} /> : null}
+      {crm.hasPermission(CRM_PERMISSIONS.clientsDelete) ? (
+        <RemoveAction onClick={() => setRemoveId(client.id)} />
+      ) : null}
+    </RowActions>
+  );
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors = validate(form);
@@ -188,6 +220,8 @@ export function ClientsModule({
   return (
     <ModulePage
       crumb="Booked"
+      view={view}
+      onViewChange={(next) => setView(next as ViewMode)}
       toolbar={
         <form
           className="flex flex-1 flex-wrap items-end gap-3"
@@ -253,73 +287,89 @@ export function ClientsModule({
         emptyLabel="No bookings yet"
         onRetry={reload}
       >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Billing name</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead>Start date</TableHead>
-              <TableHead>End date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>GSTIN</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {view === "card" ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {crm.clients.items.map((client) => {
               const dates = bookingDatesForClient(client, bookingsByContactId[client.contactId] ?? []);
               return (
-              <TableRow key={client.id}>
-                <TableCell className="font-medium">
-                  <button
-                    type="button"
-                    className="text-left underline-offset-2 hover:underline"
-                    onClick={() => setViewing(client)}
-                  >
-                    {client.billingName}
-                  </button>
-                </TableCell>
-                <TableCell>{contactName(client.contactId)}</TableCell>
-                <TableCell>{formatDateTime(dates.startsAt)}</TableCell>
-                <TableCell>{formatDateTime(dates.endsAt)}</TableCell>
-                <TableCell>
-                  <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
-                </TableCell>
-                <TableCell className="text-muted-foreground">{client.gstin ?? "—"}</TableCell>
-                <TableCell>
-                  <RowActions>
-                    <ViewAction onClick={() => setViewing(client)} />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="rounded-xl"
-                      onClick={() => onOpenContact(client.contactId)}
-                    >
-                      Contact
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="rounded-xl"
-                      onClick={() => onOpenPayments(client.id)}
-                    >
-                      Payments
-                    </Button>
-                    {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? (
-                      <EditAction onClick={() => openEdit(client)} />
-                    ) : null}
-                    {crm.hasPermission(CRM_PERMISSIONS.clientsDelete) ? (
-                      <RemoveAction onClick={() => setRemoveId(client.id)} />
-                    ) : null}
-                  </RowActions>
-                </TableCell>
-              </TableRow>
+                <Card key={client.id} className="rounded-2xl shadow-[var(--shadow-card)]">
+                  <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                    <div className="min-w-0">
+                      <CardTitle className="text-base leading-snug">
+                        <button
+                          type="button"
+                          className="text-left underline-offset-2 hover:underline"
+                          onClick={() => setViewing(client)}
+                        >
+                          {client.billingName}
+                        </button>
+                      </CardTitle>
+                      <CardDescription className="truncate">{contactName(client.contactId)}</CardDescription>
+                    </div>
+                    <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <dl className="space-y-1 text-sm">
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-muted-foreground">Start</dt>
+                        <dd className="text-right">{formatDateTime(dates.startsAt)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-muted-foreground">End</dt>
+                        <dd className="text-right">{formatDateTime(dates.endsAt)}</dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-muted-foreground">GSTIN</dt>
+                        <dd className="truncate text-right">{client.gstin ?? "—"}</dd>
+                      </div>
+                    </dl>
+                    {clientActions(client)}
+                  </CardContent>
+                </Card>
               );
             })}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Billing name</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Start date</TableHead>
+                <TableHead>End date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>GSTIN</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {crm.clients.items.map((client) => {
+                const dates = bookingDatesForClient(client, bookingsByContactId[client.contactId] ?? []);
+                return (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">
+                      <button
+                        type="button"
+                        className="text-left underline-offset-2 hover:underline"
+                        onClick={() => setViewing(client)}
+                      >
+                        {client.billingName}
+                      </button>
+                    </TableCell>
+                    <TableCell>{contactName(client.contactId)}</TableCell>
+                    <TableCell>{formatDateTime(dates.startsAt)}</TableCell>
+                    <TableCell>{formatDateTime(dates.endsAt)}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{client.gstin ?? "—"}</TableCell>
+                    <TableCell>{clientActions(client)}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </ModuleStatus>
 
       <SideSheet

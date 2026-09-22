@@ -103,6 +103,14 @@ export type ListCalendarQuery = {
   to: string;
 };
 
+export type ListCalendarEventsQuery = {
+  page?: number;
+  limit?: number;
+  from?: string;
+  to?: string;
+  assigneeId?: string;
+};
+
 export type ListCrmUsersQuery = {
   page?: number;
   limit?: number;
@@ -298,6 +306,11 @@ function mapCalendarItem(row: Record<string, unknown>): CrmCalendarItem {
         : source.enquiryId == null
           ? null
           : String(source.enquiryId),
+    slot: kind === "event" || kind === "booking" ? ((source.slot as CrmCalendarItem["slot"]) ?? null) : null,
+    notes:
+      source.notes == null && source.description == null
+        ? null
+        : String(source.notes ?? source.description ?? ""),
   };
 }
 
@@ -567,6 +580,13 @@ export async function updateTaskStatus(id: string, status: CrmTaskStatus): Promi
 
 export async function removeTask(id: string): Promise<void> {
   await api("/api/crm/tasks/remove", { method: "POST", body: { id } });
+}
+
+export async function listCalendarEvents(
+  query: ListCalendarEventsQuery = {},
+): Promise<CrmPaginated<CrmCalendarEvent>> {
+  const raw = await api<unknown>(`/api/crm/calendar/events${toSearchParams(query)}`);
+  return mapPaginated(raw, mapCalendarEvent);
 }
 
 export async function listCalendar(query: ListCalendarQuery): Promise<{ items: CrmCalendarItem[] }> {

@@ -12,6 +12,7 @@ import {
   packageRowCount,
   packagedCategories,
 } from "@/lib/crm/banquet-checklist";
+import { BANQUET_EVENT_TYPES } from "@/lib/crm/banquet-enquiry";
 import BanquetChecklist from "./BanquetChecklist";
 
 vi.mock("sonner", () => {
@@ -35,6 +36,25 @@ function menuTable() {
 
 function addItem() {
   fireEvent.click(within(menuTable()).getByRole("button", { name: "+ Add item" }));
+}
+
+function itemInput(row: number) {
+  return screen.getByLabelText(`Row ${row} item`);
+}
+
+/** The item field is a search box: click it to open its list of options. */
+function openItemList(row: number) {
+  const input = itemInput(row);
+  fireEvent.click(input);
+  const listId = input.getAttribute("aria-controls");
+  const list = listId ? document.getElementById(listId) : null;
+  if (!list) throw new Error(`Item list for row ${row} is not open`);
+  return { input, list };
+}
+
+function pickItem(row: number, item: string) {
+  const { list } = openItemList(row);
+  fireEvent.click(within(list).getByRole("option", { name: item }));
 }
 
 function pickedCategories() {
@@ -66,6 +86,13 @@ describe("Banquet public handover checklist", () => {
     expect(screen.getByLabelText("Event Date")).toBeInTheDocument();
     expect(screen.getByLabelText("Event Time")).toBeInTheDocument();
     expect(screen.getByLabelText("No. of Guests")).toBeInTheDocument();
+
+    const eventTypeSelect = screen.getByLabelText("Event Type");
+    for (const type of BANQUET_EVENT_TYPES) {
+      expect(within(eventTypeSelect).getByRole("option", { name: type })).toBeInTheDocument();
+    }
+    fireEvent.change(eventTypeSelect, { target: { value: "Sangeet" } });
+    expect(eventTypeSelect).toHaveValue("Sangeet");
 
     const timeSelect = screen.getByLabelText("Event Time");
     for (const slot of BANQUET_EVENT_TIMES) {
@@ -165,17 +192,66 @@ describe("Banquet public handover checklist", () => {
       target: { value: welcomeDrink.slug },
     });
 
-    const itemSelect = screen.getByLabelText("Row 1 item");
-    expect(itemSelect).not.toBeDisabled();
+    const { input, list } = openItemList(1);
+    expect(input).not.toBeDisabled();
     for (const group of checklistItemGroups(welcomeDrink)) {
       for (const item of group.items) {
-        expect(within(itemSelect).getByRole("option", { name: item })).toBeInTheDocument();
+        expect(within(list).getByRole("option", { name: item })).toBeInTheDocument();
       }
     }
     expect(screen.queryByLabelText("Row 1 subcategory")).not.toBeInTheDocument();
 
-    fireEvent.change(itemSelect, { target: { value: "Special Thandai (स्पेशल ठंडाई)" } });
-    expect(itemSelect).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
+    fireEvent.click(within(list).getByRole("option", { name: "Special Thandai (स्पेशल ठंडाई)" }));
+    expect(itemInput(1)).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
+  });
+
+  it("filters the item list as the user types instead of showing every item", () => {
+    render(<BanquetChecklist />);
+    fireEvent.change(screen.getByLabelText("Row 1 category"), {
+      target: { value: "main-course" },
+    });
+
+    const { input, list } = openItemList(1);
+    fireEvent.change(input, { target: { value: "paneer kadai" } });
+    expect(within(list).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Paneer Kadai (पनीर कढ़ाई)",
+    ]);
+
+    fireEvent.change(input, { target: { value: "kofta" } });
+    fireEvent.click(within(list).getByRole("option", { name: "Veg Kofta (वेज कोफ्ता)" }));
+    expect(itemInput(1)).toHaveValue("Veg Kofta (वेज कोफ्ता)");
+
+    const reopened = openItemList(1);
+    fireEvent.change(reopened.input, { target: { value: "nothing here" } });
+    expect(within(reopened.list).queryAllByRole("option")).toHaveLength(0);
+    expect(within(reopened.list).getByText("No matching item")).toBeInTheDocument();
+  });
+
+  it("clears a picked item from the search field", () => {
+    render(<BanquetChecklist />);
+    fireEvent.change(screen.getByLabelText("Row 1 category"), { target: { value: "rice" } });
+    pickItem(1, "Jeera Rice (जीरा राइस)");
+    expect(itemInput(1)).toHaveValue("Jeera Rice (जीरा राइस)");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear Row 1 item" }));
+    expect(itemInput(1)).toHaveValue("");
+  });
+
+  it("disables an item already picked in the same category", () => {
+    render(<BanquetChecklist />);
+    fireEvent.change(screen.getByLabelText("Row 1 category"), { target: { value: "rice" } });
+    pickItem(1, "Jeera Rice (जीरा राइस)");
+
+    addItem();
+    fireEvent.change(screen.getByLabelText("Row 2 category"), { target: { value: "rice" } });
+    const { list } = openItemList(2);
+    expect(within(list).getByRole("option", { name: "Jeera Rice (जीरा राइस)" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+
+    fireEvent.click(within(list).getByRole("option", { name: "Jeera Rice (जीरा राइस)" }));
+    expect(itemInput(2)).toHaveValue("");
   });
 
   it("pre-fills one row per package category for Bronze and two for Silver", () => {
@@ -197,19 +273,19 @@ describe("Banquet public handover checklist", () => {
     if (!firstPackaged) throw new Error("No packaged categories");
 
     fireEvent.change(screen.getByLabelText("Menu"), { target: { value: "bronze" } });
-    fireEvent.change(screen.getByLabelText("Row 1 item"), { target: { value: "Special Thandai (स्पेशल ठंडाई)" } });
+    pickItem(1, "Special Thandai (स्पेशल ठंडाई)");
     fireEvent.change(screen.getByLabelText("Row 1 things required"), {
       target: { value: "Copper dispensers" },
     });
 
     fireEvent.change(screen.getByLabelText("Menu"), { target: { value: "silver" } });
     expect(pickedCategories()).toEqual(packageRowSlugs(2));
-    expect(screen.getByLabelText("Row 1 item")).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
+    expect(itemInput(1)).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
     expect(screen.getByLabelText("Row 1 things required")).toHaveValue("Copper dispensers");
-    expect(screen.getByLabelText("Row 2 item")).toHaveValue("");
+    expect(itemInput(2)).toHaveValue("");
 
     fireEvent.change(screen.getByLabelText("Menu"), { target: { value: "bronze" } });
-    expect(screen.getByLabelText("Row 1 item")).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
+    expect(itemInput(1)).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
     expect(pickedCategories().filter((slug) => slug === firstPackaged)).toHaveLength(2);
   });
 
@@ -235,9 +311,9 @@ describe("Banquet public handover checklist", () => {
     expect(pickedCategories()).toEqual([""]);
 
     fireEvent.change(screen.getByLabelText("Menu"), { target: { value: "bronze" } });
-    fireEvent.change(screen.getByLabelText("Row 1 item"), { target: { value: "Special Thandai (स्पेशल ठंडाई)" } });
+    pickItem(1, "Special Thandai (स्पेशल ठंडाई)");
     fireEvent.change(screen.getByLabelText("Menu"), { target: { value: "custom" } });
-    expect(screen.getByLabelText("Row 1 item")).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
+    expect(itemInput(1)).toHaveValue("Special Thandai (स्पेशल ठंडाई)");
     expect(pickedCategories().length).toBeGreaterThan(1);
   });
 
@@ -338,10 +414,9 @@ describe("Banquet public handover checklist", () => {
     render(<BanquetChecklist />);
     fireEvent.change(screen.getByLabelText("Client Name"), { target: { value: "Ramesh" } });
     fireEvent.change(screen.getByLabelText("Mobile No."), { target: { value: "9876543210" } });
+    fireEvent.change(screen.getByLabelText("Event Type"), { target: { value: "Sangeet" } });
     fireEvent.change(screen.getByLabelText("Menu"), { target: { value: "gold" } });
-    fireEvent.change(screen.getByLabelText("Row 1 item"), {
-      target: { value: "Special Thandai (स्पेशल ठंडाई)" },
-    });
+    pickItem(1, "Special Thandai (स्पेशल ठंडाई)");
 
     fireEvent.click(screen.getByRole("button", { name: "WhatsApp message" }));
 
@@ -349,6 +424,7 @@ describe("Banquet public handover checklist", () => {
     expect(within(dialog).getByRole("heading", { name: "WhatsApp message" })).toBeInTheDocument();
     const message = within(dialog).getByLabelText("WhatsApp message") as HTMLTextAreaElement;
     expect(message.value).toContain("Client: Ramesh");
+    expect(message.value).toContain("Event: Sangeet");
     expect(message.value).toContain("Menu: Gold");
     expect(message.value).toContain("Special Thandai (स्पेशल ठंडाई)");
 

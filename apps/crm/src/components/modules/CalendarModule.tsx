@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { CalendarClock, CalendarDays, CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   ConfirmRemoveDialog,
+  EditAction,
   ModulePage,
   ModuleStatus,
   RemoveAction,
@@ -17,12 +18,22 @@ import {
 } from "@/components/modules/shared";
 import { ClientViewSheet } from "@/components/modules/ClientViewSheet";
 import { LeadHistorySheet, type LeadHistoryTarget } from "@/components/modules/LeadHistorySheet";
+import { ReminderFields } from "@/components/modules/ReminderFields";
 import {
+  EVENT_SLOT_LABELS,
   formatDate,
   formatDateTime,
   formatTime,
   toLocalDateKey,
 } from "@/lib/crm/display";
+import {
+  EMPTY_REMINDER,
+  reminderFormForDay,
+  reminderFormFromRecord,
+  toReminderInput,
+  validateReminder,
+  type ReminderFormState,
+} from "@/lib/crm/reminder";
 import { listClients } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
 import { useCrm } from "@/lib/crm/store";
@@ -35,26 +46,32 @@ import {
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const KIND_LABELS: Record<CrmCalendarItem["kind"], string> = {
   task: "Task",
-  event: "Event",
+  event: "Reminder",
   booking: "Booked",
   followup: "Follow-up",
 };
 
 const KIND_CHIP_CLASSES: Record<CrmCalendarItem["kind"], string> = {
   task: "bg-primary/10",
-  event: "bg-primary/10",
+  event: "bg-sky-100 text-sky-900",
   booking: "bg-emerald-100 text-emerald-900",
   followup: "bg-amber-100 text-amber-900",
 };
 
-export type CalendarCreateTarget = "enquiries" | "followUps" | "clients" | "payments";
+export type CalendarCreateTarget = "enquiries" | "followUps" | "clients" | "payments" | "tasks";
 
 const CREATE_TARGETS: { target: CalendarCreateTarget; label: string; permission: string }[] = [
   { target: "enquiries", label: "Add enquiry", permission: CRM_PERMISSIONS.enquiriesCreate },
   { target: "followUps", label: "Add follow-up", permission: CRM_PERMISSIONS.followUpsCreate },
   { target: "clients", label: "Add booking", permission: CRM_PERMISSIONS.clientsCreate },
   { target: "payments", label: "Add payment", permission: CRM_PERMISSIONS.paymentsCreate },
+  { target: "tasks", label: "Add task", permission: CRM_PERMISSIONS.tasksCreate },
 ];
+
+function itemCaption(item: CrmCalendarItem): string {
+  const slot = item.slot ? EVENT_SLOT_LABELS[item.slot] : null;
+  return slot ? `${item.title} · ${slot}` : item.title;
+}
 
 type CalendarView = "day" | "week" | "month";
 
@@ -152,9 +169,18 @@ export function CalendarModule({
   const [historyLead, setHistoryLead] = useState<LeadHistoryTarget | null>(null);
   const [removeTarget, setRemoveTarget] = useState<CrmCalendarItem | null>(null);
   const [createDay, setCreateDay] = useState<Date | null>(null);
+  const [reminderSheetOpen, setReminderSheetOpen] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<CrmCalendarItem | null>(null);
+  const [reminderForm, setReminderForm] = useState<ReminderFormState>(EMPTY_REMINDER);
+  const [reminderErrors, setReminderErrors] = useState<Record<string, string>>({});
+  const [reminderBusy, setReminderBusy] = useState(false);
 
-  const createTargets = CREATE_TARGETS.filter((option) => crm.hasPermission(option.permission));
-  const canPickDay = Boolean(onCreateFor) && createTargets.length > 0;
+  const createTargets = onCreateFor
+    ? CREATE_TARGETS.filter((option) => crm.hasPermission(option.permission))
+    : [];
+  const canAddReminder = crm.hasPermission(CRM_PERMISSIONS.calendarCreate);
+  const canPickDay = (Boolean(onCreateFor) && createTargets.length > 0) || canAddReminder;
+  const canLinkContact = crm.hasPermission(CRM_PERMISSIONS.contactsRead);
 
   const cells = useMemo(() => visibleDays(view, cursor), [view, cursor]);
   const range = useMemo(() => {
@@ -221,6 +247,34 @@ export function CalendarModule({
     setCursor(startOfDay(day));
   };
 
+  const openReminderForm = (day: Date, item?: CrmCalendarItem) => {
+    setEditingReminder(item ?? null);
+    setReminderForm(item ? reminderFormFromRecord({ title: item.title, notes: item.notes, at: item.at, contactId: item.contactId }) : reminderFormForDay(day));
+    setReminderErrors({});
+    setReminderSheetOpen(true);
+    if (canLinkContact) void crm.loadContacts({ limit: 100 });
+  };
+
+  const submitReminder = async (event: FormEvent) => {
+    event.preventDefault();
+    const nextErrors = validateReminder(reminderForm);
+    setReminderErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    setReminderBusy(true);
+    try {
+      const input = toReminderInput(reminderForm);
+      if (editingReminder) await crm.updateCalendarEvent(editingReminder.id, input);
+      else await crm.createCalendarEvent(input);
+      setReminderSheetOpen(false);
+      setEditingReminder(null);
+      setDetail(null);
+    } catch {
+      // toast handled in store
+    } finally {
+      setReminderBusy(false);
+    }
+  };
+
   const todayKey = dayKey(new Date());
   const label = rangeLabel(view, cells, cursor);
   const dayItems = byDay.get(dayKey(cursor)) ?? [];
@@ -245,7 +299,6 @@ export function CalendarModule({
       view={view}
       onViewChange={(next) => changeView(next as CalendarView)}
       viewOptions={VIEW_OPTIONS}
-      showViewLabels
       toolbar={
         <div className="flex w-full items-center gap-2">
           <Button
@@ -335,7 +388,7 @@ export function CalendarModule({
                         itemChip(
                           item,
                           "block w-full truncate rounded-md px-1 py-0.5 text-left text-[10px] leading-tight sm:px-1.5 sm:py-1 sm:text-xs",
-                          item.title,
+                          itemCaption(item),
                         ),
                       )}
                       {hiddenCount > 0 ? (
@@ -392,7 +445,7 @@ export function CalendarModule({
                           <span className="block text-[10px] font-medium opacity-70">
                             {formatTime(item.at)}
                           </span>
-                          <span className="block break-words">{item.title}</span>
+                          <span className="block break-words">{itemCaption(item)}</span>
                         </>,
                       ),
                     )}
@@ -437,7 +490,7 @@ export function CalendarModule({
                       <span className="w-16 shrink-0 text-xs font-medium text-muted-foreground">
                         {formatTime(item.at)}
                       </span>
-                      <span className="min-w-0 flex-1 break-words text-sm">{item.title}</span>
+                      <span className="min-w-0 flex-1 break-words text-sm">{itemCaption(item)}</span>
                       <span
                         className={cn(
                           "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
@@ -472,9 +525,26 @@ export function CalendarModule({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{createDay ? formatDate(createDay.toISOString()) : "Add"}</DialogTitle>
-            <DialogDescription>Pick what to add. The form opens in its own tab.</DialogDescription>
+            <DialogDescription>
+              Pick what to add. Reminders stay on the calendar; other forms open in their own tab.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
+            {canAddReminder ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="justify-start rounded-xl"
+                onClick={() => {
+                  if (!createDay) return;
+                  const day = createDay;
+                  setCreateDay(null);
+                  openReminderForm(day);
+                }}
+              >
+                Reminder
+              </Button>
+            ) : null}
             {createTargets.map((option) => (
               <Button
                 key={option.target}
@@ -482,10 +552,10 @@ export function CalendarModule({
                 variant="outline"
                 className="justify-start rounded-xl"
                 onClick={() => {
-                  if (!createDay) return;
+                  if (!createDay || !onCreateFor) return;
                   const date = toLocalDateKey(createDay);
                   setCreateDay(null);
-                  onCreateFor?.(option.target, date);
+                  onCreateFor(option.target, date);
                 }}
               >
                 {option.label}
@@ -500,15 +570,23 @@ export function CalendarModule({
         onOpenChange={(open) => {
           if (!open) setDetail(null);
         }}
-        title={detail?.title ?? "Event"}
+        title={detail?.title ?? "Reminder"}
         footer={
-          detail &&
-          (detail.kind === "event" || detail.kind === "booking") &&
-          crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
-            <RemoveAction
-              label={detail.kind === "booking" ? "Remove booking" : "Remove event"}
-              onClick={() => setRemoveTarget(detail)}
-            />
+          detail && (detail.kind === "event" || detail.kind === "booking") ? (
+            <div className="flex flex-wrap gap-2">
+              {detail.kind === "event" && crm.hasPermission(CRM_PERMISSIONS.calendarUpdate) ? (
+                <EditAction
+                  label="Edit reminder"
+                  onClick={() => openReminderForm(new Date(detail.at), detail)}
+                />
+              ) : null}
+              {crm.hasPermission(CRM_PERMISSIONS.calendarDelete) ? (
+                <RemoveAction
+                  label={detail.kind === "booking" ? "Remove booking" : "Remove reminder"}
+                  onClick={() => setRemoveTarget(detail)}
+                />
+              ) : null}
+            </div>
           ) : null
         }
       >
@@ -518,16 +596,75 @@ export function CalendarModule({
               <span className="font-medium">Type:</span> {KIND_LABELS[detail.kind]}
             </p>
             <p>
-              <span className="font-medium">{detail.endsAt ? "Starts" : "Due"}:</span>{" "}
+              <span className="font-medium">{detail.kind === "event" ? "Remind at" : detail.endsAt ? "Starts" : "Due"}:</span>{" "}
               {formatDateTime(detail.at)}
             </p>
-            {detail.endsAt ? (
+            {detail.kind !== "event" && detail.endsAt ? (
               <p>
                 <span className="font-medium">Ends:</span> {formatDateTime(detail.endsAt)}
               </p>
             ) : null}
+            {detail.kind !== "event" && detail.slot ? (
+              <p>
+                <span className="font-medium">Slot:</span> {EVENT_SLOT_LABELS[detail.slot]}
+              </p>
+            ) : null}
+            {detail.contactId ? (
+              <p>
+                <span className="font-medium">Contact:</span>{" "}
+                {crm.contacts.items.find((contact) => contact.id === detail.contactId)?.name ?? detail.contactId}
+              </p>
+            ) : null}
+            {detail.notes ? (
+              <div>
+                <p className="font-medium">{detail.kind === "event" ? "Description" : "Notes"}</p>
+                <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{detail.notes}</p>
+              </div>
+            ) : null}
+            {detail.kind === "event" && detail.contactId ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => {
+                  const contactId = detail.contactId;
+                  if (!contactId) return;
+                  setDetail(null);
+                  onOpenContact(contactId);
+                }}
+              >
+                Open contact
+              </Button>
+            ) : null}
           </div>
         ) : null}
+      </SideSheet>
+
+      <SideSheet
+        open={reminderSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReminderSheetOpen(false);
+            setEditingReminder(null);
+          }
+        }}
+        title={editingReminder ? "Edit reminder" : "Add reminder"}
+        description="A short title, optional description, and when to be reminded. Link a contact if this is about someone."
+        onSubmit={submitReminder}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={reminderBusy}>
+            {editingReminder ? "Save" : "Create"}
+          </Button>
+        }
+      >
+        <ReminderFields
+          form={reminderForm}
+          errors={reminderErrors}
+          contacts={crm.contacts.items}
+          showContact={canLinkContact}
+          onChange={setReminderForm}
+        />
       </SideSheet>
 
       <LeadHistorySheet
@@ -554,11 +691,11 @@ export function CalendarModule({
 
       <ConfirmRemoveDialog
         open={Boolean(removeTarget)}
-        title={removeTarget?.kind === "booking" ? "Remove booking" : "Remove event"}
+        title={removeTarget?.kind === "booking" ? "Remove booking" : "Remove reminder"}
         description={
           removeTarget?.kind === "booking"
             ? "The enquiry linked to this booking is removed with it. A booking with a paid payment cannot be removed."
-            : "This standalone meeting will be hidden from the calendar."
+            : "This reminder will be hidden from the calendar."
         }
         onCancel={() => setRemoveTarget(null)}
         onConfirm={() => {

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -36,6 +37,8 @@ import {
   type CrmPaymentStatus,
   type CrmPaymentType,
 } from "@/types/crm";
+
+type ViewMode = "table" | "card";
 
 type FormState = {
   referenceType: CrmPaymentReferenceType;
@@ -104,6 +107,7 @@ export function PaymentsModule({
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.paymentsRead);
+  const [view, setView] = useState<ViewMode>("table");
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -172,6 +176,17 @@ export function PaymentsModule({
     setSheetOpen(true);
   };
 
+  const paymentActions = (payment: CrmPayment) => (
+    <RowActions>
+      {crm.hasPermission(CRM_PERMISSIONS.paymentsUpdate) ? (
+        <EditAction onClick={() => openEdit(payment)} />
+      ) : null}
+      {crm.hasPermission(CRM_PERMISSIONS.paymentsDelete) ? (
+        <RemoveAction onClick={() => setRemoveId(payment.id)} />
+      ) : null}
+    </RowActions>
+  );
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors = validate(form);
@@ -197,6 +212,8 @@ export function PaymentsModule({
   return (
     <ModulePage
       crumb="Payments"
+      view={view}
+      onViewChange={(next) => setView(next as ViewMode)}
       toolbar={
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <Field id="payment-status-filter" label="Status">
@@ -234,43 +251,79 @@ export function PaymentsModule({
         emptyLabel="No payments yet"
         onRetry={reload}
       >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Payee</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Mode</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Paid at</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {view === "card" ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {crm.payments.items.map((payment) => (
-              <TableRow key={payment.id}>
-                <TableCell className="font-medium">{payeeName(payment)}</TableCell>
-                <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
-                <TableCell><StatusBadge status={payment.type} label={PAYMENT_TYPE_LABELS[payment.type]} /></TableCell>
-                <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
-                <TableCell><StatusBadge status={payment.status} label={PAYMENT_STATUS_LABELS[payment.status]} /></TableCell>
-                <TableCell>{formatDateTime(payment.paidAt)}</TableCell>
-                <TableCell>{payment.reference ?? "—"}</TableCell>
-                <TableCell>
-                  <RowActions>
-                    {crm.hasPermission(CRM_PERMISSIONS.paymentsUpdate) ? (
-                      <EditAction onClick={() => openEdit(payment)} />
-                    ) : null}
-                    {crm.hasPermission(CRM_PERMISSIONS.paymentsDelete) ? (
-                      <RemoveAction onClick={() => setRemoveId(payment.id)} />
-                    ) : null}
-                  </RowActions>
-                </TableCell>
-              </TableRow>
+              <Card key={payment.id} className="rounded-2xl shadow-[var(--shadow-card)]">
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                  <div className="min-w-0">
+                    <CardTitle className="text-base leading-snug">
+                      {formatMoney(payment.amount, payment.currency)}
+                    </CardTitle>
+                    <CardDescription className="truncate">{payeeName(payment)}</CardDescription>
+                  </div>
+                  <StatusBadge status={payment.status} label={PAYMENT_STATUS_LABELS[payment.status]} />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <dl className="space-y-1 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Type</dt>
+                      <dd>
+                        <StatusBadge status={payment.type} label={PAYMENT_TYPE_LABELS[payment.type]} />
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Mode</dt>
+                      <dd className="text-right">{PAYMENT_MODE_LABELS[payment.mode]}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Paid at</dt>
+                      <dd className="text-right">{formatDateTime(payment.paidAt)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Reference</dt>
+                      <dd className="truncate text-right">{payment.reference ?? "—"}</dd>
+                    </div>
+                  </dl>
+                  {paymentActions(payment)}
+                </CardContent>
+              </Card>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Payee</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Mode</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Paid at</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {crm.payments.items.map((payment) => (
+                <TableRow key={payment.id}>
+                  <TableCell className="font-medium">{payeeName(payment)}</TableCell>
+                  <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={payment.type} label={PAYMENT_TYPE_LABELS[payment.type]} />
+                  </TableCell>
+                  <TableCell>{PAYMENT_MODE_LABELS[payment.mode]}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={payment.status} label={PAYMENT_STATUS_LABELS[payment.status]} />
+                  </TableCell>
+                  <TableCell>{formatDateTime(payment.paidAt)}</TableCell>
+                  <TableCell>{payment.reference ?? "—"}</TableCell>
+                  <TableCell>{paymentActions(payment)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </ModuleStatus>
 
       <SideSheet

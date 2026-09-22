@@ -203,22 +203,29 @@ export function RolesModule() {
         onRetry={reload}
       >
         {view === "card" ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {crm.roles.items.map((role) => (
               <Card key={role.id} className="rounded-2xl shadow-[var(--shadow-card)]">
-                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-                  <div>
-                    <CardTitle className="text-lg">{role.name}</CardTitle>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+                  <div className="min-w-0">
+                    <CardTitle className="text-base leading-snug">{role.name}</CardTitle>
                     <CardDescription className="font-mono">{role.slug}</CardDescription>
                   </div>
-                  {actionsFor(role)}
+                  {BUILT_IN_SLUGS.has(role.slug) ? <StatusBadge status="active" label="Built-in" /> : null}
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {BUILT_IN_SLUGS.has(role.slug) ? <StatusBadge status="active" label="Built-in" /> : null}
+                  <dl className="space-y-1 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Permissions</dt>
+                      <dd className="text-right">
+                        {role.permissionIds.length} permission{role.permissionIds.length === 1 ? "" : "s"}
+                      </dd>
+                    </div>
+                  </dl>
                   <p className="text-sm text-muted-foreground">
-                    {role.permissionIds.length} permission{role.permissionIds.length === 1 ? "" : "s"}
+                    {permissionNames(role, crm.permissionsCatalog.items)}
                   </p>
-                  <p className="text-sm">{permissionNames(role, crm.permissionsCatalog.items)}</p>
+                  {actionsFor(role)}
                 </CardContent>
               </Card>
             ))}

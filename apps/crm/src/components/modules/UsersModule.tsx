@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -15,6 +16,8 @@ import { EMAIL_PATTERN, MOBILE_PATTERN } from "@/lib/crm/display";
 import { COUNTRY_DIAL_CODES, DEFAULT_COUNTRY_ISO, dialForIso, toE164Mobile } from "@/lib/auth/country-dial-codes";
 import { useCrm } from "@/lib/crm/store";
 import { CRM_PERMISSIONS, type CreateCrmUserInput, type CrmStaffUser } from "@/types/crm";
+
+type ViewMode = "table" | "card";
 
 type FormState = {
   firstName: string;
@@ -73,6 +76,7 @@ export function UsersModule() {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.usersRead);
+  const [view, setView] = useState<ViewMode>("table");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmStaffUser | null>(null);
@@ -127,6 +131,14 @@ export function UsersModule() {
     setSheetOpen(true);
   };
 
+  const userActions = (user: CrmStaffUser) => (
+    <RowActions>
+      {crm.hasPermission(CRM_PERMISSIONS.usersUpdate) ? (
+        <EditAction label="Edit roles" onClick={() => openEdit(user)} />
+      ) : null}
+    </RowActions>
+  );
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors = validate(form, !editing);
@@ -159,6 +171,8 @@ export function UsersModule() {
   return (
     <ModulePage
       crumb="Users"
+      view={view}
+      onViewChange={(next) => setView(next as ViewMode)}
       actions={
         crm.hasPermission(CRM_PERMISSIONS.usersCreate) ? (
           <Button type="button" className="rounded-xl" onClick={openCreate}>
@@ -176,36 +190,58 @@ export function UsersModule() {
         emptyLabel="No users yet"
         onRetry={reload}
       >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Mobile</TableHead>
-              <TableHead>Roles</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {view === "card" ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {crm.users.items.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">
-                  {user.firstName} {user.lastName}
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.mobileNo}</TableCell>
-                <TableCell>{roleNames(user.roleIds) || "—"}</TableCell>
-                <TableCell>
-                  <RowActions>
-                    {crm.hasPermission(CRM_PERMISSIONS.usersUpdate) ? (
-                      <EditAction label="Edit roles" onClick={() => openEdit(user)} />
-                    ) : null}
-                  </RowActions>
-                </TableCell>
-              </TableRow>
+              <Card key={user.id} className="rounded-2xl shadow-[var(--shadow-card)]">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base leading-snug">
+                    {user.firstName} {user.lastName}
+                  </CardTitle>
+                  <CardDescription className="truncate">{user.email}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <dl className="space-y-1 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Mobile</dt>
+                      <dd className="text-right">{user.mobileNo}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted-foreground">Roles</dt>
+                      <dd className="text-right">{roleNames(user.roleIds) || "—"}</dd>
+                    </div>
+                  </dl>
+                  {userActions(user)}
+                </CardContent>
+              </Card>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Mobile</TableHead>
+                <TableHead>Roles</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {crm.users.items.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">
+                    {user.firstName} {user.lastName}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.mobileNo}</TableCell>
+                  <TableCell>{roleNames(user.roleIds) || "—"}</TableCell>
+                  <TableCell>{userActions(user)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </ModuleStatus>
 
       <SideSheet

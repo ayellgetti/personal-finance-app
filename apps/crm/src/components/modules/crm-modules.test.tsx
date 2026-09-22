@@ -8,18 +8,22 @@ import { ContactsModule } from "@/components/modules/ContactsModule";
 import { DashboardModule } from "@/components/modules/DashboardModule";
 import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
 import { FollowUpsModule } from "@/components/modules/FollowUpsModule";
+import { RemindersModule } from "@/components/modules/RemindersModule";
 import { RolesModule } from "@/components/modules/RolesModule";
 import { TasksModule } from "@/components/modules/TasksModule";
+import { UsersModule } from "@/components/modules/UsersModule";
 import { ApiError } from "@/lib/api";
 import {
   adminMe,
   convertEnquiry,
+  createCalendarEvent,
   createRole,
   emptyPage,
   fetchContactDetail,
   fetchCrmMe,
   fetchDashboard,
   listCalendar,
+  listCalendarEvents,
   listClients,
   listContacts,
   listEnquiries,
@@ -28,6 +32,7 @@ import {
   listPermissions,
   listRoles,
   listTasks,
+  listCrmUsers,
   updateCalendarEvent,
   updateRole,
   updateTaskStatus,
@@ -141,6 +146,7 @@ describe("CRM modules", () => {
     listClients.mockResolvedValue(emptyPage());
     listTasks.mockResolvedValue(emptyPage());
     listCalendar.mockResolvedValue({ items: [] });
+    listCalendarEvents.mockResolvedValue(emptyPage());
     listRoles.mockResolvedValue([]);
     listPermissions.mockResolvedValue([]);
     convertEnquiry.mockReset();
@@ -474,11 +480,215 @@ describe("CRM modules", () => {
     expect(await screen.findByRole("button", { name: "Add enquiry" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add follow-up" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add booking" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add task" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reminder" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add event" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Add event" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Add payment" }));
 
     expect(onCreateFor).toHaveBeenCalledWith("payments", expect.stringMatching(/^\d{4}-\d{2}-15$/));
+  });
+
+  it("opens a reminder form with title, description, time, and optional contact", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    createCalendarEvent.mockResolvedValue({
+      id: "event-new",
+      title: "Call florist",
+      startsAt: "2026-09-22T03:30:00.000Z",
+      endsAt: "2026-09-22T04:00:00.000Z",
+      slot: null,
+      contactId: contact.id,
+      enquiryId: null,
+      assigneeId: null,
+      notes: "Confirm marigold garlands",
+    });
+    const onCreateFor = vi.fn();
+    renderCrm(
+      <CalendarModule
+        onOpenContact={() => undefined}
+        onOpenPayments={() => undefined}
+        onCreateFor={onCreateFor}
+      />,
+    );
+
+    await screen.findAllByText("15");
+    await waitFor(() => {
+      expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    });
+    fireEvent.click(screen.getAllByText("15")[0]?.parentElement as HTMLElement);
+    fireEvent.click(await screen.findByRole("button", { name: "Reminder" }));
+
+    expect(await screen.findByRole("heading", { name: "Add reminder" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(await screen.findByText("Title is required")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Call florist" } });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Confirm marigold garlands" } });
+    fireEvent.change(screen.getByLabelText("Contact"), { target: { value: contact.id } });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => {
+      expect(createCalendarEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Call florist",
+          notes: "Confirm marigold garlands",
+          contactId: contact.id,
+          slot: null,
+        }),
+      );
+    });
+    expect(onCreateFor).not.toHaveBeenCalled();
+  });
+
+  it("opens the task form on the picked date", async () => {
+    renderCrm(<TasksModule createOnDate="2026-10-15" onCreateOpened={() => undefined} />);
+
+    expect(await screen.findByRole("heading", { name: "Add task" })).toBeInTheDocument();
+    const due = screen.getByLabelText("Due") as HTMLInputElement;
+    expect(due.value).toBe("2026-10-15T09:00");
+  });
+
+  it("adds a reminder from the work list", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    createCalendarEvent.mockResolvedValue({
+      id: "reminder-1",
+      title: "Call florist",
+      startsAt: "2026-10-15T03:30:00.000Z",
+      endsAt: "2026-10-15T04:00:00.000Z",
+      slot: null,
+      contactId: contact.id,
+      enquiryId: null,
+      assigneeId: null,
+      notes: "Confirm marigold garlands",
+    });
+    renderCrm(<RemindersModule onOpenContact={() => undefined} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add reminder" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(await screen.findByText("Title is required")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Call florist" } });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Confirm marigold garlands" } });
+    fireEvent.change(screen.getByLabelText("Contact"), { target: { value: contact.id } });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => {
+      expect(createCalendarEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Call florist",
+          notes: "Confirm marigold garlands",
+          contactId: contact.id,
+          slot: null,
+        }),
+      );
+    });
+  });
+
+  it("switches reminders between table, cards, and calendar", async () => {
+    const at = new Date();
+    at.setDate(Math.min(at.getDate(), 28));
+    at.setHours(9, 0, 0, 0);
+    listCalendarEvents.mockResolvedValue(
+      emptyPage([
+        {
+          id: "reminder-1",
+          title: "Call florist",
+          startsAt: at.toISOString(),
+          endsAt: new Date(at.getTime() + 30 * 60 * 1000).toISOString(),
+          slot: null,
+          contactId: contact.id,
+          enquiryId: null,
+          assigneeId: null,
+          notes: "Confirm marigold garlands",
+        },
+      ]),
+    );
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    renderCrm(<RemindersModule onOpenContact={() => undefined} />);
+
+    expect(await screen.findByText("Call florist")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Remind at" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Card view" }));
+    expect(await screen.findByText("Confirm marigold garlands")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Remind at" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Calendar view" }));
+    expect(await screen.findByText("Mon")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Call florist/ })).toBeInTheDocument();
+  });
+
+  it("switches bookings between table and cards", async () => {
+    listClients.mockResolvedValue(emptyPage([{ ...client, gstin: "29ABCDE1234F1Z5" }]));
+    listContacts.mockResolvedValue(emptyPage([{ ...contact, type: "client" as const }]));
+    renderCrm(<ClientsModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
+
+    expect(await screen.findByRole("columnheader", { name: "Billing name" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Card view" }));
+    expect(await screen.findByText("29ABCDE1234F1Z5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Acme Events" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Billing name" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+    expect(await screen.findByRole("columnheader", { name: "Billing name" })).toBeInTheDocument();
+  });
+
+  it("switches users between table and cards", async () => {
+    listCrmUsers.mockResolvedValue(
+      emptyPage([
+        {
+          id: "user-2",
+          firstName: "Grace",
+          lastName: "Hopper",
+          email: "grace@example.com",
+          mobileNo: "+919111122222",
+          dob: "1906-12-09",
+          gender: "female",
+          countryCode: "+91",
+          roleIds: ["role-admin"],
+        },
+      ]),
+    );
+    listRoles.mockResolvedValue([{ id: "role-admin", name: "Admin", slug: "admin", permissionIds: [] }]);
+    renderCrm(<UsersModule />);
+
+    expect(await screen.findByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+    expect(screen.getByText("grace@example.com")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Card view" }));
+    expect(await screen.findByText("Grace Hopper")).toBeInTheDocument();
+    expect(screen.getByText("grace@example.com")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Name" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+    expect(await screen.findByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+  });
+
+  it("switches roles between table and cards", async () => {
+    listRoles.mockResolvedValue([
+      { id: "role-sales", name: "Sales", slug: "sales", permissionIds: ["p-read"] },
+    ]);
+    listPermissions.mockResolvedValue([
+      {
+        id: "p-read",
+        code: "crm.roles.read",
+        name: "View roles",
+        description: "See roles and the permissions granted to each role.",
+      },
+    ]);
+    renderCrm(<RolesModule />);
+
+    expect(await screen.findByRole("columnheader", { name: "Role" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Card view" }));
+    expect(await screen.findByText("sales")).toBeInTheDocument();
+    expect(screen.getByText("View roles")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Role" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+    expect(await screen.findByRole("columnheader", { name: "Role" })).toBeInTheDocument();
   });
 
   it("opens the follow-up form on the picked date", async () => {
@@ -517,12 +727,14 @@ describe("CRM modules", () => {
           endsAt: new Date(at.getTime() + 60 * 60 * 1000).toISOString(),
           contactId: null,
           enquiryId: null,
+          slot: "evening",
+          notes: "Veg menu + live counter",
         },
       ],
     });
     renderCrm(<CalendarModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
 
-    const booking = await screen.findByRole("button", { name: "Wedding booking" });
+    const booking = await screen.findByRole("button", { name: "Wedding booking · Evening" });
     expect(booking).toHaveClass("bg-emerald-100");
   });
 
@@ -666,7 +878,7 @@ describe("CRM modules", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Day view" }));
     await settled(() => {
-      expect(screen.getByText("Event")).toBeInTheDocument();
+      expect(screen.getByText("Reminder")).toBeInTheDocument();
       expect(screen.queryByText("Nothing scheduled")).not.toBeInTheDocument();
     });
 

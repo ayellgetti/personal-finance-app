@@ -59,6 +59,13 @@ describe("admin nav", () => {
     expect(overview).toEqual(["dashboard", "calendar"]);
   });
 
+  it("lists Tasks and Reminders in the Work group", () => {
+    const work = visibleNavItems([CRM_PERMISSIONS.dashboardRead])
+      .filter((item) => item.group === "Work")
+      .map((item) => item.id);
+    expect(work).toEqual(["tasks", "reminders"]);
+  });
+
   it("filters admin items from the nav catalog without mutating other groups", () => {
     const items = visibleNavItems([CRM_PERMISSIONS.dashboardRead]);
     expect(items.some((item) => item.id === "users" || item.id === "roles")).toBe(false);

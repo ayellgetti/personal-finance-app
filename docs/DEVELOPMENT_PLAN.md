@@ -427,13 +427,13 @@ Enquiry Convert (`POST /api/crm/enquiries/:id/convert`) upserts the client in th
 
 **Status: COMPLETED**
 
-Four columns (Todo / In-Progress / In-Review / Done). Status changes via native select or “Move to …” actions. No drag-and-drop library.
+Four columns (Todo / In-Progress / In-Review / Done). Status changes via native select or “Move to …” actions. No drag-and-drop library. Work nav also includes **Reminders** (standalone calendar events: title, description, time, optional contact) with table, card, and calendar views.
 
 ### Phase D7 — Calendar
 
 **Status: COMPLETED**
 
-Month grid of `GET /api/crm/calendar?from&to` (tasks, booked enquiry events, and standalone events). Events linked to an enquiry are `booking` items; removing one also soft-deletes its enquiry, and it is blocked once a linked payment is `paid`. Click an item for detail; create-event sheet.
+Month grid of `GET /api/crm/calendar?from&to` (tasks, booked enquiry events, reminders, and scheduled follow-ups). Events linked to an enquiry are `booking` items; removing one also soft-deletes its enquiry, and it is blocked once a linked payment is `paid`. Click an item for detail. Clicking a day can add a reminder (title, description, time, optional contact) or open enquiry, follow-up, booking, payment, or task create forms on the picked date.
 
 Union of task due dates and `CrmCalendarEvent` rows, including events linked to booked enquiries. Follow-up contact dates live on the Follow-ups calendar (`GET /api/crm/followups/calendar`).
 

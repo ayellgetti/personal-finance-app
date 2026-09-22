@@ -12,9 +12,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { NativeSelect } from "@/components/modules/shared";
+import { NativeSelect, SearchableSelect, type SearchableGroup } from "@/components/modules/shared";
 import { copyToClipboard } from "@/lib/clipboard";
 import { formatDate } from "@/lib/crm/display";
+import { BANQUET_EVENT_TYPES } from "@/lib/crm/banquet-enquiry";
 import {
   BANQUET_CHECKLIST_CATEGORIES,
   BANQUET_EVENT_TIMES,
@@ -30,6 +31,7 @@ import {
   packagedCategories,
   paymentOptionName,
   whatsAppHandoverUrl,
+  type ChecklistCategory,
   type WhatsAppHandoverDraft,
 } from "@/lib/crm/banquet-checklist";
 
@@ -43,6 +45,7 @@ type ItemRow = {
 type EventInfo = {
   clientName: string;
   mobileNo: string;
+  eventType: string;
   menuPackage: string;
   eventDate: string;
   eventTime: string;
@@ -62,6 +65,7 @@ type PaymentRow = {
 const EMPTY_EVENT: EventInfo = {
   clientName: "",
   mobileNo: "",
+  eventType: "",
   menuPackage: "",
   eventDate: "",
   eventTime: "",
@@ -168,6 +172,21 @@ function rowsForPackage(packageSlug: string, existing: readonly ItemRow[]): Item
   });
 
   return extras.length > 0 ? [...packaged, ...extras] : packaged;
+}
+
+/** Menu items of a category as search groups; items already used in that category are disabled. */
+function itemSearchGroups(
+  category: ChecklistCategory,
+  usedItems: ReadonlySet<string>,
+): SearchableGroup[] {
+  return checklistItemGroups(category).map((group) => ({
+    name: group.name,
+    options: group.items.map((item) => ({
+      value: item,
+      label: item,
+      disabled: usedItems.has(item),
+    })),
+  }));
 }
 
 function Field({
@@ -319,6 +338,7 @@ export default function BanquetChecklist() {
   const handoverDraft = (): WhatsAppHandoverDraft => ({
     clientName: eventInfo.clientName,
     mobileNo: eventInfo.mobileNo,
+    eventType: eventInfo.eventType,
     menuPackage: menuPackageBySlug(eventInfo.menuPackage)?.name ?? "",
     eventDate: eventInfo.eventDate ? formatDate(eventInfo.eventDate) : "",
     eventTime: eventTimeBySlug(eventInfo.eventTime)?.name ?? "",
@@ -385,7 +405,7 @@ export default function BanquetChecklist() {
           Final checklist to be handed over to the Event Day Manager
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Field id="client-name" label="Client Name">
             <Input
               id="client-name"
@@ -407,27 +427,22 @@ export default function BanquetChecklist() {
             />
             <PrintValue value={eventInfo.mobileNo} className={printFieldClass} />
           </Field>
-          <Field id="menu-package" label="Menu">
+          <Field id="event-type" label="Event Type">
             <NativeSelect
-              id="menu-package"
-              value={eventInfo.menuPackage}
-              onChange={selectMenuPackage}
+              id="event-type"
+              value={eventInfo.eventType}
+              onChange={(value) => setEvent("eventType", value)}
               className={inputClass}
             >
-              <option value="">Select menu...</option>
-              {BANQUET_MENU_PACKAGES.map((option) => (
-                <option key={option.slug} value={option.slug}>
-                  {option.name}
+              <option value="">Select event...</option>
+              {BANQUET_EVENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </NativeSelect>
-            <PrintValue
-              value={menuPackageBySlug(eventInfo.menuPackage)?.name ?? ""}
-              className={printFieldClass}
-            />
+            <PrintValue value={eventInfo.eventType} className={printFieldClass} />
           </Field>
-        </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <Field id="event-date" label="Event Date">
             <Input
               id="event-date"
@@ -471,6 +486,25 @@ export default function BanquetChecklist() {
               className={inputClass}
             />
             <PrintValue value={eventInfo.guests} className={printFieldClass} />
+          </Field>
+          <Field id="menu-package" label="Menu">
+            <NativeSelect
+              id="menu-package"
+              value={eventInfo.menuPackage}
+              onChange={selectMenuPackage}
+              className={inputClass}
+            >
+              <option value="">Select menu...</option>
+              {BANQUET_MENU_PACKAGES.map((option) => (
+                <option key={option.slug} value={option.slug}>
+                  {option.name}
+                </option>
+              ))}
+            </NativeSelect>
+            <PrintValue
+              value={menuPackageBySlug(eventInfo.menuPackage)?.name ?? ""}
+              className={printFieldClass}
+            />
           </Field>
         </div>
 
@@ -529,34 +563,19 @@ export default function BanquetChecklist() {
                         <PrintValue value={category?.name ?? ""} />
                       </td>
                       <td className={cellClass}>
-                        <NativeSelect
+                        <SearchableSelect
                           id={`row-${index + 1}-item`}
                           value={row.item}
                           onChange={(value) => updateRow(row.id, { item: value })}
                           className={selectClass}
                           aria-label={`Row ${index + 1} item`}
                           disabled={!category}
-                        >
-                          <option value="">
-                            {category ? "Select item..." : "Select category first"}
-                          </option>
-                          {category
-                            ? checklistItemGroups(category).map((group) => {
-                                const options = group.items.map((item) => (
-                                  <option key={item} value={item} disabled={usedItems.has(item)}>
-                                    {item}
-                                  </option>
-                                ));
-                                return group.name ? (
-                                  <optgroup key={group.name} label={group.name}>
-                                    {options}
-                                  </optgroup>
-                                ) : (
-                                  options
-                                );
-                              })
-                            : null}
-                        </NativeSelect>
+                          placeholder={
+                            category ? "Search item..." : "Select category first"
+                          }
+                          emptyLabel="No matching item"
+                          groups={category ? itemSearchGroups(category, usedItems) : []}
+                        />
                         <PrintValue value={row.item} />
                       </td>
                       <td className={cellClass}>
@@ -885,7 +904,7 @@ export default function BanquetChecklist() {
       </div>
 
       <Dialog open={whatsAppOpen} onOpenChange={setWhatsAppOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="p-4 sm:max-w-lg sm:p-6">
           <DialogHeader>
             <DialogTitle>WhatsApp message</DialogTitle>
             <DialogDescription>
@@ -895,22 +914,22 @@ export default function BanquetChecklist() {
           <Textarea
             value={whatsAppDraft}
             onChange={(event) => setWhatsAppDraft(event.target.value)}
-            rows={16}
+            rows={12}
             aria-label="WhatsApp message"
-            className="min-h-[16rem] rounded-xl border-stone-200 font-mono text-sm"
+            className="min-h-[11rem] rounded-xl border-stone-200 font-mono text-sm sm:min-h-[16rem]"
           />
           <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-full"
+              className="h-9 w-full rounded-full sm:w-auto"
               onClick={() => void copyWhatsAppMessage()}
             >
               Copy
             </Button>
             <Button
               type="button"
-              className="h-9 rounded-full bg-amber-400 font-semibold text-stone-900 hover:bg-amber-500"
+              className="h-9 w-full rounded-full bg-amber-400 font-semibold text-stone-900 hover:bg-amber-500 sm:w-auto"
               onClick={sendWhatsAppMessage}
             >
               Open WhatsApp

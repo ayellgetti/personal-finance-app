@@ -24,6 +24,7 @@ import {
   fetchCrmMe,
   fetchDashboard,
   listCalendar,
+  listCalendarEvents,
   listClients,
   listContacts,
   listCrmUsers,
@@ -50,6 +51,7 @@ import {
   updateRole as updateRoleRemote,
   updateTask as updateTaskRemote,
   updateTaskStatus as updateTaskStatusRemote,
+  type ListCalendarEventsQuery,
   type ListCalendarQuery,
   type ListClientsQuery,
   type ListContactsQuery,
@@ -59,6 +61,7 @@ import {
   type ListPaymentsQuery,
   type ListTasksQuery,
 } from "@/lib/crm/remote";
+import { isReminderEvent } from "@/lib/crm/reminder";
 import type {
   ConvertedEnquiry,
   ConvertEnquiryInput,
@@ -170,6 +173,8 @@ type CrmContextValue = {
   removeTask: (id: string) => Promise<void>;
   calendar: ListCache<CrmCalendarItem>;
   loadCalendar: (query: ListCalendarQuery) => Promise<void>;
+  reminders: ListCache<CrmCalendarEvent>;
+  loadReminders: (query?: ListCalendarEventsQuery) => Promise<void>;
   createCalendarEvent: (input: CreateCalendarEventInput) => Promise<void>;
   updateCalendarEvent: (
     id: string,
@@ -209,6 +214,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const [payments, setPayments] = useState<ListCache<CrmPayment>>(idleList);
   const [tasks, setTasks] = useState<ListCache<CrmTask>>(idleList);
   const [calendar, setCalendar] = useState<ListCache<CrmCalendarItem>>(idleList);
+  const [reminders, setReminders] = useState<ListCache<CrmCalendarEvent>>(idleList);
   const [users, setUsers] = useState<ListCache<CrmStaffUser>>(idleList);
   const [roles, setRoles] = useState<ListCache<CrmRoleDetail>>(idleList);
   const [permissionsCatalog, setPermissionsCatalog] = useState<ListCache<CrmPermission>>(idleList);
@@ -231,6 +237,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       setPayments(idleList());
       setTasks(idleList());
       setCalendar(idleList());
+      setReminders(idleList());
       setUsers(idleList());
       setRoles(idleList());
       setPermissionsCatalog(idleList());
@@ -399,6 +406,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
             endsAt: converted.event.endsAt,
             contactId: converted.event.contactId,
             enquiryId: converted.event.enquiryId,
+            slot: converted.event.slot,
+            notes: converted.event.notes,
           },
         ),
       }));
@@ -603,6 +612,30 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loadReminders = useCallback(async (query?: ListCalendarEventsQuery) => {
+    setReminders((current) => ({ ...current, status: "loading", errorMessage: null }));
+    try {
+      const result = await listCalendarEvents({ limit: 100, ...query });
+      setReminders({
+        status: "ready",
+        items: result.items.filter(isReminderEvent),
+        errorMessage: null,
+      });
+    } catch (error) {
+      setReminders(failList(error));
+    }
+  }, []);
+
+  const syncReminder = useCallback((event: CrmCalendarEvent) => {
+    setReminders((current) => {
+      if (current.status === "idle") return current;
+      if (!isReminderEvent(event)) {
+        return { ...current, items: current.items.filter((item) => item.id !== event.id) };
+      }
+      return { ...current, items: upsertById(current.items, event) };
+    });
+  }, []);
+
   const loadCalendar = useCallback(async (query: ListCalendarQuery) => {
     setCalendarRange(query);
     setCalendar((current) => ({ ...current, status: "loading", errorMessage: null }));
@@ -623,15 +656,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const createCalendarEvent = useCallback(
     async (input: CreateCalendarEventInput) => {
       try {
-        await createCalendarEventRemote(input);
-        toast.success("Event created");
+        const event = await createCalendarEventRemote(input);
+        toast.success("Reminder created");
+        syncReminder(event);
         await refreshCalendar();
       } catch (error) {
         toast.error(mutationMessage(error));
         throw error;
       }
     },
-    [refreshCalendar],
+    [refreshCalendar, syncReminder],
   );
 
   const updateCalendarEvent = useCallback(
@@ -639,6 +673,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       try {
         const event = await updateCalendarEventRemote(id, input);
         toast.success("Event updated");
+        syncReminder(event);
         await refreshCalendar();
         return event;
       } catch (error) {
@@ -646,7 +681,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [refreshCalendar],
+    [refreshCalendar, syncReminder],
   );
 
   const removeCalendarEvent = useCallback(
@@ -657,6 +692,10 @@ export function CrmProvider({ children }: { children: ReactNode }) {
         setCalendar((current) => ({
           ...current,
           items: current.items.filter((item) => !(item.kind !== "task" && item.id === id)),
+        }));
+        setReminders((current) => ({
+          ...current,
+          items: current.items.filter((item) => item.id !== id),
         }));
       } catch (error) {
         toast.error(mutationMessage(error));
@@ -788,6 +827,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       removeTask,
       calendar,
       loadCalendar,
+      reminders,
+      loadReminders,
       createCalendarEvent,
       updateCalendarEvent,
       removeCalendarEvent,
@@ -843,6 +884,8 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       removeTask,
       calendar,
       loadCalendar,
+      reminders,
+      loadReminders,
       createCalendarEvent,
       updateCalendarEvent,
       removeCalendarEvent,

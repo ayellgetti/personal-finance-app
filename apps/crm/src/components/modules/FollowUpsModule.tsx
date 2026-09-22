@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDays, History, LayoutGrid, List } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import {
   ConfirmRemoveDialog,
   EditAction,
   Field,
+  MODULE_VIEWS,
   ModulePage,
   ModuleStatus,
   NativeSelect,
@@ -43,6 +44,8 @@ import {
 } from "@/types/crm";
 
 type ViewMode = "table" | "card" | "calendar" | "timeline";
+
+const VIEW_OPTIONS = [MODULE_VIEWS.table, MODULE_VIEWS.card, MODULE_VIEWS.calendar, MODULE_VIEWS.timeline];
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -618,138 +621,108 @@ export function FollowUpsModule({
         : filteredFollowUps.length === 0;
 
   return (
-    <ModulePage crumb="Follow-ups">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-wrap items-end gap-3">
-          {view !== "calendar" ? (
-            <>
-              <Field id="followup-enquiry-filter" label="Enquiry">
-                <NativeSelect
-                  id="followup-enquiry-filter"
-                  aria-label="Enquiry"
-                  value={enquiryFilter}
-                  onChange={setEnquiryFilter}
-                >
-                  <option value="">All enquiries</option>
-                  {crm.enquiries.items.map((enquiry) => (
-                    <option key={enquiry.id} value={enquiry.id}>
-                      {enquirySelectLabel(enquiry, contactById(enquiry.contactId))}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </Field>
-              {view === "timeline" ? (
-                <Field id="followup-outcome-filter" label="Outcome">
-                  <NativeSelect
-                    id="followup-outcome-filter"
-                    aria-label="Outcome"
-                    value={outcomeFilter}
-                    onChange={(value) => setOutcomeFilter(value as "all" | "open" | "closed")}
-                  >
-                    <option value="all">All leads</option>
-                    <option value="open">Open</option>
-                    <option value="closed">Closed</option>
-                  </NativeSelect>
-                </Field>
-              ) : (
-                <Field id="followup-stage-filter" label="Stage">
-                  <NativeSelect
-                    id="followup-stage-filter"
-                    aria-label="Stage"
-                    value={stageFilter}
-                    onChange={setStageFilter}
-                  >
-                    <option value="">All stages</option>
-                    {enquiryStatusOptions()}
-                  </NativeSelect>
-                </Field>
-              )}
-              <Field id="followup-due-filter" label="When">
-                <NativeSelect
-                  id="followup-due-filter"
-                  aria-label="When"
-                  value={dueFilter}
-                  onChange={(value) => setDueFilter(value as DueFilter)}
-                >
-                  <option value="all">All</option>
-                  <option value="today">Today</option>
-                  <option value="tomorrow">Tomorrow</option>
-                  <option value="upcoming">Upcoming</option>
-                </NativeSelect>
-              </Field>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-xl"
-                onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-              >
-                Previous
-              </Button>
-              <p className="min-w-[10rem] text-center font-display text-lg font-semibold">{monthLabel}</p>
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-xl"
-                onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-          <div className="flex items-center gap-0.5 rounded-lg border p-1">
-            <Button
-              type="button"
-              size="icon"
-              variant={view === "table" ? "secondary" : "ghost"}
-              className="h-7 w-7"
-              aria-label="Table view"
-              onClick={() => setView("table")}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant={view === "card" ? "secondary" : "ghost"}
-              className="h-7 w-7"
-              aria-label="Card view"
-              onClick={() => setView("card")}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant={view === "calendar" ? "secondary" : "ghost"}
-              className="h-7 w-7"
-              aria-label="Calendar view"
-              onClick={() => setView("calendar")}
-            >
-              <CalendarDays className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant={view === "timeline" ? "secondary" : "ghost"}
-              className="h-7 w-7"
-              aria-label="Timeline view"
-              onClick={() => setView("timeline")}
-            >
-              <History className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) ? (
+    <ModulePage
+      crumb="Follow-ups"
+      view={view}
+      onViewChange={(next) => setView(next as ViewMode)}
+      viewOptions={VIEW_OPTIONS}
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) ? (
           <Button type="button" className="rounded-xl" onClick={() => openCreate()}>
             Add follow-up
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+      toolbar={
+        view !== "calendar" ? (
+          <>
+            <Field id="followup-enquiry-filter" label="Enquiry">
+              <NativeSelect
+                id="followup-enquiry-filter"
+                aria-label="Enquiry"
+                value={enquiryFilter}
+                onChange={setEnquiryFilter}
+              >
+                <option value="">All enquiries</option>
+                {crm.enquiries.items.map((enquiry) => (
+                  <option key={enquiry.id} value={enquiry.id}>
+                    {enquirySelectLabel(enquiry, contactById(enquiry.contactId))}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            {view === "timeline" ? (
+              <Field id="followup-outcome-filter" label="Outcome">
+                <NativeSelect
+                  id="followup-outcome-filter"
+                  aria-label="Outcome"
+                  value={outcomeFilter}
+                  onChange={(value) => setOutcomeFilter(value as "all" | "open" | "closed")}
+                >
+                  <option value="all">All leads</option>
+                  <option value="open">Open</option>
+                  <option value="closed">Closed</option>
+                </NativeSelect>
+              </Field>
+            ) : (
+              <Field id="followup-stage-filter" label="Stage">
+                <NativeSelect
+                  id="followup-stage-filter"
+                  aria-label="Stage"
+                  value={stageFilter}
+                  onChange={setStageFilter}
+                >
+                  <option value="">All stages</option>
+                  {enquiryStatusOptions()}
+                </NativeSelect>
+              </Field>
+            )}
+            <Field id="followup-due-filter" label="When">
+              <NativeSelect
+                id="followup-due-filter"
+                aria-label="When"
+                value={dueFilter}
+                onChange={(value) => setDueFilter(value as DueFilter)}
+              >
+                <option value="all">All</option>
+                <option value="today">Today</option>
+                <option value="tomorrow">Tomorrow</option>
+                <option value="upcoming">Upcoming</option>
+              </NativeSelect>
+            </Field>
+          </>
+        ) : (
+          <div className="flex w-full items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 rounded-xl"
+              aria-label="Previous month"
+              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0 rounded-xl"
+              aria-label="Next month"
+              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <p className="min-w-0 flex-1 truncate font-display text-base font-semibold sm:text-lg">
+              {monthLabel}
+            </p>
+            <Button type="button" variant="outline" className="shrink-0 rounded-xl" onClick={() => setCursor(new Date())}>
+              Today
+            </Button>
+          </div>
+        )
+      }
+    >
       <ModuleStatus
         sessionReady={sessionReady}
         allowed={allowed}

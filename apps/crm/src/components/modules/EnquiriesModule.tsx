@@ -1,5 +1,5 @@
 import { DragEvent, FormEvent, useEffect, useState } from "react";
-import { CalendarPlus, CheckCircle2, Columns, Eye, LayoutGrid, List } from "lucide-react";
+import { CalendarPlus, CheckCircle2, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ import {
   EditAction,
   Field,
   IconAction,
+  MODULE_VIEWS,
   ModulePage,
   ModuleStatus,
   NativeSelect,
@@ -64,6 +65,8 @@ import {
 } from "@/types/crm";
 
 type ViewMode = "table" | "card" | "kanban";
+
+const VIEW_OPTIONS = [MODULE_VIEWS.table, MODULE_VIEWS.card, MODULE_VIEWS.kanban];
 
 // ─── Closed-reason helpers ────────────────────────────────────────────────────
 
@@ -983,64 +986,34 @@ export function EnquiriesModule({
   };
 
   return (
-    <ModulePage crumb="Enquiries">
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-wrap items-end gap-3">
-          {view !== "kanban" ? (
-            <Field id="enquiry-status-filter" label="Stage">
-              <NativeSelect
-                id="enquiry-status-filter"
-                aria-label="Stage"
-                value={statusFilter}
-                onChange={setStatusFilter}
-              >
-                <option value="">All stages</option>
-                {enquiryStatusOptions()}
-              </NativeSelect>
-            </Field>
-          ) : null}
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 rounded-lg border p-1">
-            <Button
-              type="button"
-              size="icon"
-              variant={view === "table" ? "secondary" : "ghost"}
-              className="h-7 w-7"
-              aria-label="Table view"
-              onClick={() => setView("table")}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant={view === "card" ? "secondary" : "ghost"}
-              className="h-7 w-7"
-              aria-label="Card view"
-              onClick={() => setView("card")}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant={view === "kanban" ? "secondary" : "ghost"}
-              className="h-7 w-7"
-              aria-label="Kanban view"
-              onClick={() => setView("kanban")}
-            >
-              <Columns className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        {crm.hasPermission(CRM_PERMISSIONS.enquiriesCreate) ? (
+    <ModulePage
+      crumb="Enquiries"
+      view={view}
+      onViewChange={(next) => setView(next as ViewMode)}
+      viewOptions={VIEW_OPTIONS}
+      actions={
+        crm.hasPermission(CRM_PERMISSIONS.enquiriesCreate) ? (
           <Button type="button" className="rounded-xl" onClick={() => openCreate()}>
             Add enquiry
           </Button>
-        ) : null}
-      </div>
-
+        ) : null
+      }
+      toolbar={
+        view !== "kanban" ? (
+          <Field id="enquiry-status-filter" label="Stage">
+            <NativeSelect
+              id="enquiry-status-filter"
+              aria-label="Stage"
+              value={statusFilter}
+              onChange={setStatusFilter}
+            >
+              <option value="">All stages</option>
+              {enquiryStatusOptions()}
+            </NativeSelect>
+          </Field>
+        ) : null
+      }
+    >
       {/* Content */}
       <ModuleStatus
         sessionReady={sessionReady}

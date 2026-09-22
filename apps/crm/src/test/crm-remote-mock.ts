@@ -125,6 +125,7 @@ export const updateTaskStatus = vi.fn(async (id: string, status: CrmTaskStatus):
 }));
 export const removeTask = vi.fn();
 export const listCalendar = vi.fn(async (): Promise<{ items: CrmCalendarItem[] }> => ({ items: [] }));
+export const listCalendarEvents = vi.fn(async () => emptyPage());
 export const createCalendarEvent = vi.fn();
 export const updateCalendarEvent = vi.fn();
 export const removeCalendarEvent = vi.fn();

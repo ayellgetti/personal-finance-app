@@ -8,6 +8,7 @@ import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
 import { FollowUpsModule, type FollowUpDueFilter } from "@/components/modules/FollowUpsModule";
 import { PaymentsModule } from "@/components/modules/PaymentsModule";
 import { ProfileModule } from "@/components/modules/ProfileModule";
+import { RemindersModule } from "@/components/modules/RemindersModule";
 import { RolesModule } from "@/components/modules/RolesModule";
 import { TasksModule } from "@/components/modules/TasksModule";
 import { UsersModule } from "@/components/modules/UsersModule";
@@ -23,6 +24,7 @@ const META: Record<CrmViewId, { title: string; description: string }> = {
   clients: { title: "Booked", description: "Converted bookings after an enquiry is closed" },
   payments: { title: "Payments", description: "Collections against booked records" },
   tasks: { title: "Tasks", description: "Work items across the team" },
+  reminders: { title: "Reminders", description: "Table, cards, and calendar of timed notes" },
   calendar: { title: "Calendar", description: "Tasks and meetings" },
   users: { title: "Users", description: "Staff accounts and role assignment" },
   roles: { title: "Roles", description: "Permission sets for CRM access" },
@@ -97,7 +99,17 @@ const Index = () => {
           onCreateOpened={clearCreateRequest}
         />
       ) : null}
-      {view === "tasks" ? <TasksModule /> : null}
+      {view === "tasks" ? (
+        <TasksModule createOnDate={createDateFor("tasks")} onCreateOpened={clearCreateRequest} />
+      ) : null}
+      {view === "reminders" ? (
+        <RemindersModule
+          onOpenContact={(contactId) => {
+            setContactHighlightId(contactId);
+            setView("contacts");
+          }}
+        />
+      ) : null}
       {view === "calendar" ? (
         <CalendarModule
           onOpenContact={(contactId) => {

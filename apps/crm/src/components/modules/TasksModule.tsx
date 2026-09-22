@@ -52,7 +52,13 @@ function toInput(form: FormState): CreateTaskInput {
   };
 }
 
-export function TasksModule() {
+export function TasksModule({
+  createOnDate,
+  onCreateOpened,
+}: {
+  createOnDate?: string | null;
+  onCreateOpened?: () => void;
+}) {
   const crm = useCrm();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.tasksRead);
@@ -72,12 +78,19 @@ export function TasksModule() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionReady, allowed]);
 
-  const openCreate = () => {
+  const openCreate = (dueDate?: string) => {
     setEditing(null);
-    setForm(EMPTY);
+    setForm({ ...EMPTY, dueAt: dueDate ? `${dueDate}T09:00` : "" });
     setErrors({});
     setSheetOpen(true);
   };
+
+  useEffect(() => {
+    if (!createOnDate) return;
+    openCreate(createOnDate);
+    onCreateOpened?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createOnDate]);
 
   const openEdit = (task: CrmTask) => {
     setEditing(task);
@@ -113,7 +126,7 @@ export function TasksModule() {
       crumb="Tasks"
       actions={
         crm.hasPermission(CRM_PERMISSIONS.tasksCreate) ? (
-          <Button type="button" className="rounded-xl" onClick={openCreate}>
+          <Button type="button" className="rounded-xl" onClick={() => openCreate()}>
             Add task
           </Button>
         ) : null

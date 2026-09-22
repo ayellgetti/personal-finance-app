@@ -9,6 +9,7 @@ import {
 const emptyDraft: WhatsAppHandoverDraft = {
   clientName: "",
   mobileNo: "",
+  eventType: "",
   menuPackage: "",
   eventDate: "",
   eventTime: "",
@@ -27,6 +28,7 @@ describe("WhatsApp handover message", () => {
       ...emptyDraft,
       clientName: "Ramesh",
       mobileNo: "9876543210",
+      eventType: "Sangeet",
       menuPackage: "Gold",
       eventDate: "22 Sep 2026",
       eventTime: "Evening 04:00 PM – 10:00 PM",
@@ -46,6 +48,7 @@ describe("WhatsApp handover message", () => {
 
     expect(message).toContain("*Event handover*");
     expect(message).toContain("Client: Ramesh");
+    expect(message).toContain("Event: Sangeet");
     expect(message).toContain("Menu: Gold");
     expect(message).toContain("• Welcome Drink: Special Thandai (स्पेशल ठंडाई)");
     expect(message).toContain(
