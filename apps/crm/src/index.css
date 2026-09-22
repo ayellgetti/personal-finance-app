@@ -169,3 +169,60 @@
   .bg-gradient-gold { background-image: var(--gradient-gold); }
   .bg-gradient-hero { background-image: var(--gradient-hero); }
 }
+
+@media print {
+  @page { size: A4 portrait; margin: 12mm 18mm; }
+
+  .banquet-checklist {
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: #000;
+  }
+
+  .banquet-checklist h1 {
+    font-size: 16px !important;
+    margin: 0 !important;
+  }
+
+  .banquet-checklist h2 {
+    font-size: 10.5px !important;
+    margin: 0 !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .banquet-checklist label {
+    font-size: 8.5px !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #44403c !important;
+  }
+
+  .banquet-checklist th {
+    font-size: 8.5px !important;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .banquet-checklist th,
+  .banquet-checklist td {
+    padding: 3px 6px !important;
+  }
+
+  /* Repeat the column headings when a long menu runs onto a second sheet. */
+  .banquet-checklist thead {
+    display: table-header-group;
+  }
+
+  .banquet-checklist tr,
+  .banquet-checklist section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* A long menu splits across sheets instead of pushing a near-empty first page. */
+  .banquet-checklist section[aria-labelledby="menu-heading"] {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+}
