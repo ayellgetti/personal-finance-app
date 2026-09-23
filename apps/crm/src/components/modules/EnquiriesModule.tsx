@@ -722,8 +722,8 @@ function EnquiryKanban({
 
   return (
     <div className="pb-4">
-      {/* 4 columns per row up to xl (so 8 stages wrap into 2 rows of 4); a single row on xl+ screens */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-8">
+      {/* 4 columns per row from xl up, so the 8 stages read as 2 rows of 4 on a laptop screen */}
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {CRM_ENQUIRY_STATUSES.map((stage) => {
           const columnItems = items.filter((e) => e.status === stage);
           const isDragTarget = dropTarget === stage && dragId !== null;
@@ -748,7 +748,8 @@ function EnquiryKanban({
                   <span className="font-normal text-muted-foreground">({columnItems.length})</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 px-3 pb-3 min-h-[60px]">
+              {/* Busy stages scroll inside the column so the second row stays on screen */}
+              <CardContent className="space-y-2 px-3 pb-3 min-h-[60px] xl:max-h-[34vh] xl:overflow-y-auto xl:overscroll-contain">
                 {columnItems.map((enquiry) => (
                   <div
                     key={enquiry.id}

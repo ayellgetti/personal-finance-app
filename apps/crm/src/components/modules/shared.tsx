@@ -51,14 +51,16 @@ export function Field({
   label,
   error,
   children,
+  className,
 }: {
   id?: string;
   label: string;
   error?: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className={cn("space-y-1.5", className)}>
       <Label htmlFor={id}>{label}</Label>
       {children}
       {error ? (
