@@ -16,6 +16,7 @@ docker run --rm \
   --no-eff-email \
   --non-interactive \
   --expand \
+  --force-renewal \
   --cert-name myfinancefreedom.com \
   -d myfinancefreedom.com \
   -d www.myfinancefreedom.com \
