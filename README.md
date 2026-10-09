@@ -7,13 +7,13 @@ pnpm + Turborepo monorepo with a TypeScript Express API, Vite React product app,
 - `apps/api` — Express API on port `5001` (Swagger UI at `http://localhost:5001/docs`)
 - `apps/web` — Product app (login, dashboard, planner). Vite on port `8080` in Compose (`5173` if you run Vite on the host). Walkthrough: `/guide`. Internal brief: `/why`. Course outline: `/course`
 - `apps/website` — Public marketing site only. No auth, no finance data. Vite on port `8081`. “Open the app” links to `VITE_APP_URL` (default `http://localhost:8080`)
-- `apps/crm` — Sales CRM UI. Vite on port `8082`. Login reuses `/api/auth`; session is `GET /api/crm/me`. Prefer the Vite `/api` proxy. Local/dev admin (migration `20260904093300_crm_admin_user`, not a production secret): `crm.admin@localhost.local` / `CrmAdmin#2026`. Public use-case walkthroughs (no login): `/banquet`, `/real-estate`, `/freedom`. Public banquet enquiry form (no login): `/banquet-enquiry`. Public travel enquiry form (no login): `/travel-enquiry`. Local Compose can run extra copies of this same UI for travel (`8083`) and banquet (`8084`), each with its own API process and Postgres database.
+- `apps/crm` — Sales CRM UI. Vite on port `8082`. Login reuses `/api/auth`; session is `GET /api/crm/me`. Prefer the Vite `/api` proxy. Local/dev admin (migration `20260904093300_crm_admin_user`, not a production secret): `crm.admin@localhost.local` / `CrmAdmin#2026`. Public use-case walkthroughs (no login): `/banquet`, `/real-estate`, `/freedom`. Public banquet enquiry form (no login): `/banquet-enquiry`. Public travel enquiry form (no login): `/travel-enquiry`. Production Compose runs extra copies of this same UI for travel and banquet, each with its own API process and Postgres database.
 - `apps/mobile` — CRM Mobile UI. Vite on port `8085`. A phone-first companion over the same `/api/crm` endpoints and permissions as `apps/crm`: Home, Enquiries, Calendar, Booked, and Payments tabs; Profile in the header and Contacts in the drawer.
 - `apps/mobile-fp` — Freedom Planner Mobile PWA. Vite on port `8086`. Bottom tabs are Home, My Plan, Wealth, Goals, and Advisor; Profile sits in the header. Session storage uses the separate `fp-*` namespace.
 
 Local Postgres is exposed on **5433** (avoids clashing with an existing 5432 instance). Connection string is in `apps/api/.env`. `docker-compose.dev.yml` publishes Postgres on **5432**.
 
-The Compose stack also runs nginx on **http://localhost** (port 80). Hosts: `local.uat` / `www.local.uat` → marketing (`apps/website`); `web.local.uat` → product app (`apps/web`, `/api` and `/health` still proxied); `crm.local.uat` → Sales CRM (`apps/crm`, `/api` → `example` DB); `travel.local.uat` → travel CRM (`/api` → `travel_crm` DB); `banquet.local.uat` → banquet CRM (`/api` → `banque_crm` DB); `mobile.local.uat` → CRM Mobile; `fp.local.uat` → Freedom Planner Mobile; `api.local.uat` → API. Direct app ports run from `8080` through `8086`.
+The Compose stack also runs nginx on **http://localhost** (port 80). Hosts: `local.uat` / `www.local.uat` → marketing (`apps/website`); `web.local.uat` → product app (`apps/web`, `/api` and `/health` still proxied); `crm.local.uat` → Sales CRM (`apps/crm`, `/api` → `example` DB); `mcrm.local.uat` → CRM Mobile; `mweb.local.uat` → Freedom Planner Mobile; `api.local.uat` → API. Direct app ports are `8080`, `8081`, `8082`, `8085`, and `8086`.
 
 These hostnames resolve only if they are in `/etc/hosts`. Without them the browser fails on DNS before nginx is reached:
 
@@ -21,8 +21,7 @@ These hostnames resolve only if they are in `/etc/hosts`. Without them the brows
 sudo tee -a /etc/hosts >/dev/null <<'EOF'
 127.0.0.1       local.uat www.local.uat website.local.uat
 127.0.0.1       web.local.uat crm.local.uat api.local.uat
-127.0.0.1       travel.local.uat banquet.local.uat mobile.local.uat fp.local.uat
-127.0.0.1       api-travel.local.uat api-banquet.local.uat
+127.0.0.1       mcrm.local.uat mweb.local.uat
 EOF
 ```
 

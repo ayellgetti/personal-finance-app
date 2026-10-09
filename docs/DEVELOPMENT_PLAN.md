@@ -311,7 +311,7 @@ cross-app source imports.
 Bottom tabs are Home, My Plan, Wealth, Goals, and Advisor, with Profile in the header. Home
 uses `GET /api/planner/report`; entity screens persist API-backed records only
 through their existing endpoints. Secondary tools live in the drawer. The PWA runs
-on port `8086` at `fp.local.uat`, uses `fp-*` session keys, and keeps the same
+on port `8086` at `mweb.local.uat`, uses `fp-*` session keys, and keeps the same
 safe-area, service-worker, and runtime-environment conventions as `apps/mobile`.
 
 Deliver incrementally: workspace/auth shell → six-section navigation and finance
@@ -379,7 +379,7 @@ Shared today: `packages/tsconfig` only.
 
 Do not add `tenantId`, a second Prisma schema, a second API codebase, `/api/v1`, or a new JSON envelope. The unused `Contact` stub stays unused; CRM parties are `Crm*` models.
 
-Local Compose (`docker-compose.dev.yml`) may run extra copies of the same API image against extra Postgres databases (`travel_crm`, `banque_crm`) so banquet and travel CRM data stay isolated. That is process isolation, not multi-tenancy and not a second API codebase.
+Production Compose (`docker-compose.prod.yml`) may run extra copies of the same API image against extra Postgres databases (`travel_crm`, `banque_crm`) so banquet and travel CRM data stay isolated. Local `docker-compose.dev.yml` does not start those copies. That is process isolation, not multi-tenancy and not a second API codebase.
 
 The system should stay modular without extra packages or an admin app until Track C is approved.
 
@@ -472,7 +472,7 @@ Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`) 
 
 **Status: COMPLETED**
 
-Vite app on port **8085** (`mobile.local.uat`): a phone-first companion over the same `/api/crm` endpoints and the same `requirePermission` codes. No API, Prisma, OpenAPI, or envelope changes — this phase is frontend only.
+Vite app on port **8085** (`mcrm.local.uat`): a phone-first companion over the same `/api/crm` endpoints and the same `requirePermission` codes. No API, Prisma, OpenAPI, or envelope changes — this phase is frontend only.
 
 Layout: sticky header with a menu button (left drawer for Follow-ups, Booked, Payments, Tasks, Reminders, Users, Roles, plus theme and sign out), centred title, and a plus-circle button opening a bottom quick-add sheet whose actions are filtered by the matching `crm.*.create` permissions. Fixed five-tab bottom nav — Home, Contacts, Enquiries, Calendar, Profile — where a tab the role cannot open renders disabled so the bar keeps five slots. One `max-w-md` column between the two bars, with `env(safe-area-inset-*)` padding on both.
 

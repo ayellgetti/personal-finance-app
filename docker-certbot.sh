@@ -23,4 +23,6 @@ docker run --rm \
   -d web.myfinancefreedom.com \
   -d crm.myfinancefreedom.com \
   -d travel.myfinancefreedom.com \
-  -d banquet.myfinancefreedom.com
+  -d banquet.myfinancefreedom.com \
+  -d mcrm.myfinancefreedom.com \
+  -d mweb.myfinancefreedom.com

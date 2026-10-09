@@ -2,11 +2,8 @@
 # nginx also fronts the stack on http://localhost so /api is same-origin.
 # AWS / public hosts: docker-compose.prod.yml — see docs/AWS_DEPLOY.md.
 #
-# Three CRM businesses share the apps/crm UI and apps/api image, but not data:
-#   myfinancefreedomcrm → api          → Postgres ${POSTGRES_DB} (also finance)
-#   travel-crm           → api-travel   → Postgres ${POSTGRES_TRAVEL_CRM_DB}
-#   banque-crm           → api-banque   → Postgres ${POSTGRES_BANQUE_CRM_DB}
-# Do not copy apps/crm or add tenantId; isolation is a second API process + database.
+# Local Compose runs one CRM: myfinancefreedomcrm → api → Postgres ${POSTGRES_DB}
+# (shared with finance). Travel and banquet CRM copies stay on docker-compose.prod.yml.
 
 x-api-healthcheck: &api-healthcheck
   test:
@@ -62,19 +59,11 @@ services:
     depends_on:
       api:
         condition: service_healthy
-      api-travel:
-        condition: service_healthy
-      api-banque:
-        condition: service_healthy
       web:
         condition: service_healthy
       website:
         condition: service_healthy
       myfinancefreedomcrm:
-        condition: service_healthy
-      travel-crm:
-        condition: service_healthy
-      banque-crm:
         condition: service_healthy
       mobile:
         condition: service_healthy
@@ -98,22 +87,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  postgres-init-crm-dbs:
-    image: postgres:16-alpine
-    container_name: docker-postgres-init-crm-dbs
-    restart: "no"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_TRAVEL_CRM_DB: ${POSTGRES_TRAVEL_CRM_DB}
-      POSTGRES_BANQUE_CRM_DB: ${POSTGRES_BANQUE_CRM_DB}
-    volumes:
-      - ./containers/postgres/init-crm-databases.sh:/init-crm-databases.sh:ro
-    command: ["sh", "/init-crm-databases.sh"]
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -180,56 +153,6 @@ services:
       redis:
         condition: service_healthy
     healthcheck: *api-healthcheck
-
-  api-travel:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: docker-api-travel
-    restart: unless-stopped
-    ports:
-      - "5002:5001"
-    env_file:
-      - ./.env.dev
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_TRAVEL_CRM_DB}
-      REDIS_URL: redis://redis:6379/1
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}-travel
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}-travel
-      CORS_ORIGIN: http://travel.local.uat
-    depends_on:
-      postgres-init-crm-dbs:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    healthcheck:
-      <<: *api-healthcheck
-      start_period: 60s
-
-  api-banque:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    container_name: docker-api-banque
-    restart: unless-stopped
-    ports:
-      - "5003:5001"
-    env_file:
-      - ./.env.dev
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_BANQUE_CRM_DB}
-      REDIS_URL: redis://redis:6379/2
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}-banque
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}-banque
-      CORS_ORIGIN: http://banquet.local.uat
-    depends_on:
-      postgres-init-crm-dbs:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-    healthcheck:
-      <<: *api-healthcheck
-      start_period: 60s
 
   web:
     build:
@@ -305,50 +228,6 @@ services:
         condition: service_healthy
     healthcheck: *crm-healthcheck
 
-  travel-crm:
-    build:
-      context: .
-      dockerfile: apps/crm/Dockerfile
-    container_name: docker-travel-crm
-    restart: unless-stopped
-    env_file:
-      - ./.env.dev
-    environment:
-      VITE_API_PROXY: http://api-travel:5001
-      VITE_DEV_ALLOWED_HOSTS: ${VITE_TRAVEL_CRM_DEV_ALLOWED_HOSTS:-travel.local.uat,localhost}
-      VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
-    ports:
-      - "8083:8082"
-    volumes:
-      - ./apps/crm:/app/apps/crm
-      - /app/apps/crm/node_modules
-    depends_on:
-      api-travel:
-        condition: service_healthy
-    healthcheck: *crm-healthcheck
-
-  banque-crm:
-    build:
-      context: .
-      dockerfile: apps/crm/Dockerfile
-    container_name: docker-banque-crm
-    restart: unless-stopped
-    env_file:
-      - ./.env.dev
-    environment:
-      VITE_API_PROXY: http://api-banque:5001
-      VITE_DEV_ALLOWED_HOSTS: ${VITE_BANQUE_CRM_DEV_ALLOWED_HOSTS:-banquet.local.uat,localhost}
-      VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
-    ports:
-      - "8084:8082"
-    volumes:
-      - ./apps/crm:/app/apps/crm
-      - /app/apps/crm/node_modules
-    depends_on:
-      api-banque:
-        condition: service_healthy
-    healthcheck: *crm-healthcheck
-
   mobile:
     build:
       context: .
@@ -359,7 +238,7 @@ services:
       - ./.env.dev
     environment:
       VITE_API_PROXY: http://api:5001
-      VITE_DEV_ALLOWED_HOSTS: ${VITE_MOBILE_DEV_ALLOWED_HOSTS:-mobile.local.uat,localhost}
+      VITE_DEV_ALLOWED_HOSTS: ${VITE_MOBILE_DEV_ALLOWED_HOSTS:-mcrm.local.uat,localhost}
       VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
     ports:
       - "8085:8085"
@@ -381,7 +260,7 @@ services:
       - ./.env.dev
     environment:
       VITE_API_PROXY: http://api:5001
-      VITE_DEV_ALLOWED_HOSTS: ${VITE_MOBILE_FP_DEV_ALLOWED_HOSTS:-fp.local.uat,localhost}
+      VITE_DEV_ALLOWED_HOSTS: ${VITE_MOBILE_FP_DEV_ALLOWED_HOSTS:-mweb.local.uat,localhost}
       VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
     ports:
       - "8086:8086"

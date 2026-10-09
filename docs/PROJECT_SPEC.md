@@ -8,7 +8,7 @@ Local setup: `README.md`.
 
 Existing implementation wins over generic platform boilerplate. Do not create `apps/admin`, empty `@repo/*` packages, or move Prisma until that work is approved in the development plan.
 
-Sales CRM (Track D) is an approved second product: `apps/crm` UI and `modules/sales-crm` in the existing `apps/api`. CRM-only Role/Permission RBAC is approved. Finance stays `userId` ownership. Do not add `tenantId`, a second Prisma schema, a second API codebase, `/api/v1`, or a new JSON envelope. Local Compose may run extra copies of the same API image against extra Postgres databases so banquet and travel CRM stay isolated. The unused `Contact` stub stays unused; CRM parties use `Crm*` models.
+Sales CRM (Track D) is an approved second product: `apps/crm` UI and `modules/sales-crm` in the existing `apps/api`. CRM-only Role/Permission RBAC is approved. Finance stays `userId` ownership. Do not add `tenantId`, a second Prisma schema, a second API codebase, `/api/v1`, or a new JSON envelope. Production Compose may run extra copies of the same API image against extra Postgres databases so banquet and travel CRM stay isolated. The unused `Contact` stub stays unused; CRM parties use `Crm*` models.
 
 ---
 
@@ -112,7 +112,7 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 | --- | --- | --- |
 | Web | `apps/web` | Authenticated Freedom Planner UI (`8080` in Compose) |
 | Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
-| CRM | `apps/crm` | Sales CRM UI (`8082`); extra Compose copies on `8083` (travel) and `8084` (banquet). Dashboard, pipeline, tasks, calendar, users/roles. Public pages (no auth): walkthroughs `/banquet`, `/real-estate`, `/freedom`, banquet intake `/banquet-enquiry`, banquet handover checklist `/banquet-checklist` (fill, print, or copy a WhatsApp handover message; no API), and travel intake `/travel-enquiry`. |
+| CRM | `apps/crm` | Sales CRM UI (`8082`). Production Compose also runs extra copies for travel and banquet. Dashboard, pipeline, tasks, calendar, users/roles. Public pages (no auth): walkthroughs `/banquet`, `/real-estate`, `/freedom`, banquet intake `/banquet-enquiry`, banquet handover checklist `/banquet-checklist` (fill, print, or copy a WhatsApp handover message; no API), and travel intake `/travel-enquiry`. |
 | Mobile | `apps/mobile` | CRM Mobile UI (`8085`); phone-first shell over the same `/api/crm`. Sticky header (menu drawer, profile, plus-circle quick add) and a five-tab bottom nav: Home, Enquiries, Calendar, Booked, Payments. Contacts stays in the drawer. No public pages. |
 | Mobile FP | `apps/mobile-fp` | Freedom Planner Mobile PWA (`8086`); bottom tabs Home, My Plan, Wealth, Goals, and Advisor, with Profile in the header. Uses existing `/api` finance routes and `requireAuth`, never CRM permissions. |
 | API | `apps/api` | Express backend (`5001`), Swagger `/docs`; finance + `/api/crm` |
@@ -563,9 +563,9 @@ Express (:5001)
 
 AWS (`docker-compose.prod.yml`): nginx serves the built SPA and proxies `/api` to Express (port 80, and 443 when `TLS_DOMAIN` is set). Postgres and Redis stay on the Compose network. See `docs/AWS_DEPLOY.md`.
 
-Local `docker-compose.dev.yml` can also run two extra CRM instances (same `apps/crm` UI, extra API processes): travel on `8083` / `travel.local.uat` (`travel_crm` database) and banquet on `8084` / `banquet.local.uat` (`banque_crm` database). The original CRM stays on `8082` / `crm.local.uat` and shares `${POSTGRES_DB}` with finance. CRM Mobile runs on `8085` / `mobile.local.uat`; Freedom Planner Mobile runs on `8086` / `fp.local.uat`. Both use the main `api` process and database.
+Local `docker-compose.dev.yml` runs one CRM on `8082` / `crm.local.uat`, sharing `${POSTGRES_DB}` with finance. CRM Mobile runs on `8085` / `mcrm.local.uat`; Freedom Planner Mobile runs on `8086` / `mweb.local.uat`. Both use the main `api` process and database.
 
-Production (`docker-compose.prod.yml`) uses the same split: `https://crm.myfinancefreedom.com` (shared finance DB), `https://travel.myfinancefreedom.com` (`travel_crm`), `https://banquet.myfinancefreedom.com` (`banque_crm`). Point those hostnames at the Elastic IP and expand the Let's Encrypt cert (`./docker-certbot.sh`) before nginx will serve HTTPS for the new names.
+Production (`docker-compose.prod.yml`) adds two extra CRM instances (same `apps/crm` UI, extra API processes): `https://crm.myfinancefreedom.com` (shared finance DB), `https://travel.myfinancefreedom.com` (`travel_crm`), `https://banquet.myfinancefreedom.com` (`banque_crm`). CRM Mobile is `https://mcrm.myfinancefreedom.com`; Freedom Planner Mobile is `https://mweb.myfinancefreedom.com`. Point those hostnames at the Elastic IP and expand the Let's Encrypt cert (`./docker-certbot.sh`) before nginx will serve HTTPS for the new names.
 
 Planner output is computed, not the source of truth. Advisor JSON lives in Redis, not a durable advice table. AI Chat threads and messages are stored in `AdvisorChat` / `AdvisorChatMessage` (not the unused `Conversation` stubs) so a paid user can reopen earlier chats.
 

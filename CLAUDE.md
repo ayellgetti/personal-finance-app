@@ -619,7 +619,7 @@ Do not use `--no-verify` as normal workflow if hooks are added later.
 
 Keep production images lean. Do not run as root in production images when changing Dockerfiles, where practical.
 
-Local Postgres is **5433** on the host (**5432** in `docker-compose.dev.yml`). Redis **6379**. API **5001** (travel CRM API **5002**, banquet CRM API **5003**). Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**. Travel CRM **8083**. Banquet CRM **8084**. CRM Mobile **8085**. Freedom Planner Mobile **8086**. Extra CRM instances reuse `apps/crm` and a second API process against a separate Postgres database; do not add `tenantId` or copy the CRM app.
+Local Postgres is **5433** on the host (**5432** in `docker-compose.dev.yml`). Redis **6379**. API **5001**. Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**. CRM Mobile **8085**. Freedom Planner Mobile **8086**. Local Compose does not run the travel or banquet CRM copies. Production Compose reuses `apps/crm` and a second API process against a separate Postgres database for those; do not add `tenantId` or copy the CRM app.
 
 Every app Dockerfile copies **all** workspace manifests before `pnpm install --frozen-lockfile`, because pnpm validates the lockfile against every workspace member. Adding an app means adding its `COPY apps/<name>/package.json` line to each existing Dockerfile too.
 
