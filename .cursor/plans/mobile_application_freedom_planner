@@ -1,0 +1,1538 @@
+# Freedom Planner — Mobile Application Development Specification
+
+## 1. Project Overview
+
+You are a senior mobile UX/UI designer, product architect, and full-stack engineer working on **Freedom Planner**, also known as **My Finance Freedom**.
+
+The application already exists as a web application. The backend, APIs, financial calculations, database models, and desktop web interface may already contain significant functionality.
+
+Your responsibility is to inspect the existing project and develop a polished, mobile-first application experience that makes personal financial planning simple, intuitive, and accessible.
+
+The objective is not to rebuild the entire application from scratch.
+
+The objective is to transform the existing application into a genuinely mobile-friendly financial planning experience while preserving existing functionality, data integrity, business logic, and desktop usability.
+
+### Product vision
+
+Freedom Planner is a personal financial planning platform for Indian households.
+
+It helps users understand their financial situation, manage debt, evaluate investments, plan insurance and taxes, establish financial goals, and work towards financial independence.
+
+It is not merely an expense tracker, investment tracker, or AI chatbot.
+
+It should help users answer five important questions:
+
+1. Where do I stand financially?
+2. How much money can I save or invest?
+3. What financial risks or gaps should I address?
+4. Am I on track to achieve my financial goals?
+5. What should I do next to improve my financial future?
+
+### Target audience
+
+Design for Indian users who may have different levels of financial knowledge:
+
+- Beginners who have never created a financial plan.
+- Salaried employees managing income, expenses, and EMIs.
+- Families managing household finances and dependants.
+- People managing multiple loans and credit obligations.
+- Investors planning SIPs and long-term wealth creation.
+- Parents saving for children's education.
+- Individuals planning retirement or financial independence.
+- Users who have limited investments, insufficient insurance, or no structured financial plan.
+
+The application must be easy to understand even for users who are unfamiliar with financial terminology.
+
+---
+
+# 2. Mandatory Instructions Before Development
+
+Before writing or modifying code, thoroughly inspect the existing repository.
+
+Do not immediately create new pages, components, APIs, or database tables.
+
+First establish what already exists.
+
+## 2.1 Inspect the existing application
+
+Review:
+
+- Frontend framework and version.
+- Application entry points and routing.
+- Existing desktop layouts and responsive styles.
+- Design system, typography, colours, spacing, and components.
+- Authentication and session management.
+- Existing API clients and endpoint definitions.
+- Backend architecture and financial calculation services.
+- Database models and relationships.
+- Existing financial modules.
+- AI advisor implementation and prompts.
+- Existing forms, validations, and onboarding flows.
+- Existing charts and financial visualisations.
+- Shared components and utilities.
+- Existing tests and build scripts.
+- Environment configuration and deployment setup.
+
+Identify which screens are already implemented, partially implemented, or missing.
+
+Create a concise implementation assessment before making significant changes.
+
+## 2.2 Preserve the existing architecture
+
+Follow these rules:
+
+1. Reuse existing API endpoints wherever possible.
+2. Reuse existing financial calculation services.
+3. Reuse existing authentication and authorisation mechanisms.
+4. Reuse existing database models.
+5. Reuse existing validation schemas.
+6. Reuse existing design tokens and reusable components when appropriate.
+7. Preserve existing business rules and financial assumptions.
+8. Preserve desktop functionality.
+9. Do not introduce duplicate financial calculation logic into the frontend.
+10. Do not create mock APIs when real APIs already exist.
+11. Do not hardcode financial values into production screens.
+12. Do not replace working functionality simply because a new implementation appears easier.
+
+If a capability is missing, document the gap and implement the smallest appropriate change that fits the existing architecture.
+
+Do not perform destructive database migrations or remove existing functionality without a demonstrated need.
+
+## 2.3 Decide the correct mobile delivery approach
+
+First determine whether the existing application can support the mobile experience through responsive web design or whether a separate native mobile application is required.
+
+Use the following decision criteria:
+
+- If the requirement is a mobile-friendly experience accessible through a browser, implement a mobile-first responsive interface in the existing application.
+- If the application is intended to be installed from an app store and the repository already contains a mobile application, extend that application.
+- If a native application is explicitly required but does not exist, assess the existing architecture and recommend the smallest maintainable approach that reuses the current backend.
+
+Do not introduce React Native, Expo, Capacitor, or another framework without first checking the existing stack and the actual deployment requirement.
+
+For a responsive web implementation, assess Progressive Web App capabilities where useful, but do not make PWA installation a substitute for native capabilities that are explicitly required.
+
+The existing desktop web application must continue to work.
+
+---
+
+# 3. Core UX/UI Principles
+
+The mobile experience must be designed specifically for phones rather than looking like a compressed desktop dashboard.
+
+Follow these principles.
+
+### Principle 1: Mobile-first
+
+Design for narrow screens first, then adapt to tablets and desktop.
+
+Recommended initial design targets:
+
+- Small phones: 320–359 CSS pixels.
+- Standard phones: 360–430 CSS pixels.
+- Larger phones: 431–600 CSS pixels.
+- Tablets: 601–1024 CSS pixels.
+- Desktop: above 1024 CSS pixels.
+
+These are design and testing ranges, not restrictions on supported screen sizes.
+
+The application must not have unintended horizontal scrolling at common phone widths.
+
+### Principle 2: Progressive disclosure
+
+Show essential information first.
+
+Let users open detailed calculations, breakdowns, charts, and explanations when needed.
+
+Do not display every financial metric on the same screen.
+
+### Principle 3: Clear financial language
+
+Prefer:
+
+- Money left each month.
+- Total loans remaining.
+- Current investments.
+- Savings needed for your goal.
+- Estimated retirement target.
+
+Avoid unexplained jargon.
+
+When technical terms are necessary, provide a concise explanation.
+
+### Principle 4: Action-oriented design
+
+Every major financial insight should help the user understand what to do next.
+
+Where appropriate, provide a clear action button that opens the relevant module.
+
+### Principle 5: Trust and transparency
+
+Clearly distinguish:
+
+- User-entered values.
+- Imported or synchronised data.
+- Calculated values.
+- Estimates and projections.
+- AI-generated explanations.
+
+Never present estimates as confirmed financial facts.
+
+### Principle 6: Accessible interactions
+
+Use appropriately sized touch targets, readable typography, visible focus states, accessible labels, and sufficient contrast.
+
+Aim for touch targets of approximately 44 × 44 CSS pixels or larger.
+
+Respect device safe areas and the mobile keyboard.
+
+---
+
+# 4. Mobile Navigation Architecture
+
+Implement six primary navigation destinations.
+
+1. Home
+2. My Plan
+3. Wealth
+4. Goals
+5. AI Advisor
+6. Profile
+
+Use the existing routing and navigation architecture where practical.
+
+For a responsive web application, use a persistent bottom navigation bar on mobile screens.
+
+On desktop, preserve or adapt the existing desktop navigation rather than forcing a phone-style bottom bar across the entire application.
+
+## 4.1 Home
+
+Purpose: Provide an immediate understanding of the user's financial position and most important next actions.
+
+Primary content:
+
+- Financial overview.
+- Monthly cash flow.
+- Net worth.
+- Outstanding debt.
+- Investments.
+- Emergency fund status.
+- Priority financial actions.
+- Important goal progress.
+- AI advisor insights.
+
+## 4.2 My Plan
+
+Purpose: Understand and manage financial health.
+
+Organise the existing capabilities into the following groups where supported:
+
+- Income.
+- Expenses and household cash flow.
+- Loans and EMIs.
+- Insurance and financial protection.
+- Tax planning.
+- Financial health analysis.
+
+Each group should have a clear summary, current status, and route to its detailed screen.
+
+## 4.3 Wealth
+
+Purpose: Understand the user's assets, investments, liabilities, and net worth.
+
+Include existing supported capabilities such as:
+
+- Investments.
+- SIPs.
+- Mutual funds.
+- Stocks and other recorded investment assets.
+- EPF, PPF, and retirement savings.
+- Gold.
+- Property.
+- Cash and bank savings.
+- Liabilities.
+- Net worth history.
+
+Only expose product-specific capabilities supported by the existing application or implement them when they are genuinely required.
+
+Do not imply that an investment is automatically updated if its value was manually entered.
+
+## 4.4 Goals
+
+Purpose: Help users plan and monitor financial milestones.
+
+Examples:
+
+- Emergency fund.
+- Debt freedom.
+- Home purchase.
+- Children's education.
+- Major purchases.
+- Retirement.
+- Lean FIRE.
+- Regular FIRE.
+- Fat FIRE.
+- Coast FIRE.
+
+Users should be able to view progress, understand the remaining funding gap, and explore the actions required to achieve a goal.
+
+## 4.5 AI Advisor
+
+Purpose: Provide personalised financial guidance based on the user's available financial information.
+
+Include:
+
+- Conversational interface.
+- Suggested questions.
+- Financial context.
+- Explanation of recommendations.
+- Supported scenario analysis.
+- Follow-up questions.
+- Relevant links to application modules.
+- Appropriate limitations and disclosures.
+
+The advisor must use the existing AI implementation where available.
+
+## 4.6 Profile
+
+Purpose: Manage personal details, household information, financial assumptions, preferences, privacy, and account settings.
+
+Include supported settings for:
+
+- Personal and household profile.
+- Dependants.
+- Currency and formatting.
+- Inflation assumptions.
+- Retirement age.
+- Other financial planning assumptions.
+- Data privacy and permissions.
+- Account management.
+- Subscription management, if supported.
+
+Avoid moving frequently used financial data-entry workflows into Profile when they belong inside My Plan, Wealth, or Goals.
+
+---
+
+# 5. Home Screen — Primary Product Experience
+
+The Home screen is the most important mobile screen.
+
+It should behave like a personal financial command centre, not a conventional reporting dashboard.
+
+Users should understand their financial position and identify their next action without navigating through several screens.
+
+## 5.1 Recommended screen hierarchy
+
+Implement the following order, adapting it to the available data and existing capabilities.
+
+### Section A: Welcome header
+
+Display:
+
+- A concise greeting.
+- Relevant financial profile status.
+- An optional notification or action indicator.
+- A clear route to profile settings.
+
+Do not occupy excessive vertical space with decorative headers.
+
+### Section B: Monthly financial summary
+
+Display the user's monthly financial position prominently.
+
+Where the existing calculation engine supports it, show:
+
+- Monthly household income.
+- Essential living expenses.
+- Discretionary expenses.
+- Loan EMI commitments.
+- Investments and other commitments.
+- Remaining unallocated cash.
+
+The most important figure should be the remaining unallocated cash or another clearly defined monthly surplus metric.
+
+Define the calculation consistently.
+
+For example:
+
+Income after taxes
+− living expenses
+− loan EMIs
+− investments
+− other relevant cash commitments
+= remaining unallocated cash.
+
+However, do not treat investments as ordinary consumption expenses.
+
+If the application already uses a different valid financial definition, preserve its business logic and label the metric accurately.
+
+Where useful, distinguish:
+
+1. Surplus before discretionary investments.
+2. Remaining cash after investments and other commitments.
+
+Allow users to tap the summary to see the full cash-flow breakdown.
+
+### Section C: Financial snapshot
+
+Display a small set of high-value metrics.
+
+Recommended metrics:
+
+1. Net worth.
+2. Outstanding loans.
+3. Current investments.
+4. Emergency fund coverage.
+
+Use compact cards that fit narrow screens.
+
+Each card should contain:
+
+- Metric name.
+- Value.
+- Brief explanation.
+- Relevant status or change, when supported.
+- Navigation to its detailed screen.
+
+Do not display percentage changes or historical trends without reliable underlying data.
+
+Calculate net worth using the application's established definition:
+
+Net worth = total assets − total liabilities.
+
+Do not double-count investments or assets.
+
+### Section D: Priority actions
+
+Display the most important financial actions requiring the user's attention.
+
+Examples, when supported by actual data:
+
+- Complete your financial profile.
+- Review your emergency fund.
+- Review your loan repayment strategy.
+- Evaluate your insurance coverage.
+- Check your retirement funding gap.
+- Review your tax planning options.
+
+Prioritise actions according to their importance, the user's goals, data confidence, and relevance.
+
+Each action should contain:
+
+- A concise title.
+- Why it matters.
+- A recommended next step.
+- An optional explanation.
+- A button that opens the relevant screen.
+
+Avoid presenting speculative risks as confirmed problems.
+
+### Section E: Financial goal progress
+
+Display the user's two or three most relevant goals.
+
+For each goal, show:
+
+- Goal name.
+- Target amount.
+- Current saved amount.
+- Target date.
+- Progress.
+- Funding gap, where calculable.
+
+Provide a clear route to the full Goals screen.
+
+Do not display invented progress percentages.
+
+### Section F: AI Advisor insight
+
+Display one high-value insight from the advisor, when available.
+
+Examples:
+
+- Your emergency fund needs attention.
+- Your current savings rate may affect your retirement target.
+- Your loan repayment strategy could be worth reviewing.
+
+Each insight should explain why it matters and offer an appropriate action.
+
+Provide a prominent entry point to the full AI Advisor.
+
+Do not show an empty or misleading AI insight card if there is no useful recommendation.
+
+### Section G: Additional shortcuts
+
+Where appropriate, provide compact shortcuts to commonly used tasks:
+
+- Update financial information.
+- Review loans.
+- Add an investment.
+- Explore goals.
+- Ask the advisor a question.
+
+Do not allow these shortcuts to overwhelm the primary financial summary.
+
+## 5.2 Home screen loading and empty states
+
+Support the following states:
+
+- New user with no financial data.
+- Partially completed financial profile.
+- Complete financial profile.
+- Loading financial information.
+- Temporary API failure.
+- Stale or incomplete data.
+- No active goals.
+- No recorded investments.
+- No available AI recommendation.
+
+For new users, show a clear onboarding card explaining how to establish their financial profile.
+
+Do not fill empty states with fabricated financial numbers.
+
+If only some information is available, display the available information and identify missing sections.
+
+---
+
+# 6. Financial Onboarding and Profile Completion
+
+A new user must be able to establish their financial profile without facing an overwhelming form.
+
+Use a progressive, mobile-friendly onboarding experience.
+
+Reuse existing onboarding workflows where possible.
+
+## Step 1: Personal and household profile
+
+Collect the information required by the existing financial model.
+
+Potential fields:
+
+- Age or date of birth.
+- Employment and income source.
+- Household composition.
+- Dependants.
+- Relevant financial planning preferences.
+
+Do not request sensitive information that is unnecessary for the product's functionality.
+
+## Step 2: Income and expenses
+
+Collect:
+
+- Monthly household income.
+- Income frequency.
+- Essential expenses.
+- Discretionary expenses.
+- Other regular commitments.
+- Existing savings.
+
+Use sensible validation and clear labels.
+
+## Step 3: Loans and liabilities
+
+Collect supported loan details:
+
+- Loan type.
+- Outstanding principal.
+- Interest rate.
+- EMI.
+- Remaining tenure.
+- Relevant repayment information.
+
+Allow multiple loans.
+
+Validate values and explain which fields are needed for particular calculations.
+
+## Step 4: Assets and investments
+
+Collect supported information about:
+
+- Cash and bank savings.
+- Investments.
+- Retirement assets.
+- Gold.
+- Property.
+- Other relevant assets.
+
+Distinguish the current value of an asset from its original purchase value.
+
+## Step 5: Insurance and protection
+
+Collect relevant details about:
+
+- Life insurance.
+- Health insurance.
+- Existing coverage.
+- Premiums.
+- Other supported protection products.
+
+Clearly distinguish missing information from confirmed absence of insurance.
+
+## Step 6: Financial goals
+
+Allow users to create their initial financial goals.
+
+Examples:
+
+- Emergency fund.
+- Debt repayment.
+- Home purchase.
+- Education.
+- Retirement.
+- Financial independence.
+
+Ask only the information required for the selected goal.
+
+## Step 7: Financial overview
+
+Once sufficient information is available, generate the financial overview using the existing calculation engine.
+
+Show:
+
+- Financial snapshot.
+- Cash-flow summary.
+- Important missing information.
+- Priority actions.
+- Initial goal status.
+
+Do not require the user to complete every optional field before using the application.
+
+### Onboarding requirements
+
+- Display progress.
+- Save progress using existing persistence mechanisms.
+- Support returning to incomplete steps.
+- Allow users to skip nonessential questions.
+- Validate inputs before submission.
+- Preserve entered values when moving between steps.
+- Explain why important information is requested.
+- Do not submit duplicate records because of repeated taps.
+- Do not silently discard changes.
+
+---
+
+# 7. My Plan — Functional Specification
+
+Organise the user's financial health information into clearly separated modules.
+
+## 7.1 Income and cash flow
+
+Support the existing capabilities for:
+
+- Household income.
+- Regular expenses.
+- Variable expenses.
+- Essential expenses.
+- Monthly surplus.
+- Savings rate, if supported.
+- Cash-flow history, if available.
+
+Provide a clear breakdown of monthly inflows and outflows.
+
+Use existing financial calculations rather than duplicating formulas in the frontend.
+
+## 7.2 Loans and EMIs
+
+Display each loan in a compact card.
+
+Show relevant fields such as:
+
+- Loan name or type.
+- Outstanding balance.
+- Interest rate.
+- EMI.
+- Remaining tenure.
+
+Support existing loan-management operations.
+
+Where the application supports repayment analysis, allow users to compare:
+
+- Current repayment schedule.
+- Additional monthly repayment.
+- Lump-sum repayment.
+- Debt avalanche.
+- Debt snowball.
+
+Explain the differences between strategies.
+
+Calculate interest savings and payoff dates using the existing calculation engine or an appropriately tested implementation.
+
+Clearly state relevant assumptions and limitations.
+
+## 7.3 Insurance and protection
+
+Show recorded insurance policies and their relevant details.
+
+Where the required information is available, provide a structured review of potential protection gaps.
+
+Do not conclude that coverage is adequate or inadequate without the information required to support that conclusion.
+
+## 7.4 Tax planning
+
+Reuse the existing tax calculation and comparison functionality.
+
+Where supported, allow users to compare the old and new tax regimes using relevant income, deductions, exemptions, and tax rules for the applicable financial year.
+
+Show:
+
+- Assumptions.
+- Estimated taxable income.
+- Estimated tax liability.
+- Comparison results.
+- Important limitations.
+
+Do not hardcode tax slabs without accounting for the applicable financial year and current tax rules.
+
+Do not invent deductions or eligibility.
+
+---
+
+# 8. Wealth — Functional Specification
+
+The Wealth section should give users a consolidated view of assets, investments, and liabilities.
+
+## 8.1 Wealth overview
+
+Display:
+
+- Total assets.
+- Total liabilities.
+- Net worth.
+- Asset allocation, when supported.
+- Investment portfolio value.
+- Historical changes, when reliable data exists.
+
+Use simple visualisations suitable for mobile screens.
+
+Charts must have clear labels and must not be the only way of communicating important values.
+
+## 8.2 Investment management
+
+Reuse existing investment and SIP functionality.
+
+Support relevant operations such as:
+
+- Viewing investment records.
+- Adding supported investment details.
+- Editing records.
+- Viewing current recorded values.
+- Reviewing SIP contributions.
+- Understanding investment allocations.
+- Exploring future investment projections.
+
+Do not present projected returns as guaranteed.
+
+Do not imply automatic investment tracking or live market prices without an actual integration.
+
+## 8.3 Assets and liabilities
+
+Allow users to review supported assets and liabilities.
+
+Ensure the net worth calculation is consistent with the existing financial model.
+
+Avoid double-counting assets represented in more than one category.
+
+---
+
+# 9. Goals — Functional Specification
+
+Goals should help users translate financial intentions into measurable plans.
+
+## 9.1 Goal creation
+
+Provide an accessible goal-creation workflow.
+
+Potential fields:
+
+- Goal name.
+- Goal category.
+- Target amount or required target calculation.
+- Target date.
+- Current savings or investments allocated to the goal.
+- Monthly contribution, if known.
+- Relevant assumptions.
+
+Use conditional fields so users see only the questions relevant to their selected goal.
+
+## 9.2 Goal details
+
+Each goal screen should show:
+
+- Target amount.
+- Current amount.
+- Target date.
+- Remaining amount.
+- Progress.
+- Projected outcome, if supported.
+- Estimated monthly contribution required.
+- Potential funding gap.
+
+Distinguish current values from future projections.
+
+## 9.3 Retirement and FIRE planning
+
+Support the existing retirement and FIRE functionality.
+
+Where implemented, include:
+
+- Retirement age.
+- Expected retirement expenses.
+- Inflation assumptions.
+- Existing retirement assets.
+- Future contributions.
+- Estimated retirement corpus.
+- Projected funding gap.
+- Lean FIRE.
+- Regular FIRE.
+- Fat FIRE.
+- Coast FIRE.
+
+Use the existing financial calculation methodology.
+
+Clearly expose important assumptions and allow users to change supported assumptions.
+
+Do not imply that retirement projections guarantee future outcomes.
+
+---
+
+# 10. AI Advisor — Functional Specification
+
+The AI Advisor is a major differentiator for Freedom Planner.
+
+It must behave as a financial planning assistant, not merely a generic conversational chatbot.
+
+Reuse the existing AI advisor architecture, APIs, prompts, and calculation services wherever possible.
+
+## 10.1 Advisor screen structure
+
+The mobile screen should contain:
+
+### Header
+
+- AI Financial Advisor.
+- Concise description.
+- Relevant status or context controls.
+
+### Financial context summary
+
+Show a compact summary of available financial information, such as:
+
+- Monthly surplus.
+- Outstanding debt.
+- Investment value.
+- Primary financial goal.
+
+Allow the user to expand or collapse the summary.
+
+Do not expose unnecessary personal data in the conversation header.
+
+### Conversation area
+
+Display user questions and advisor responses in readable message cards.
+
+Support:
+
+- Long responses.
+- Structured recommendations.
+- Follow-up questions.
+- Loading states.
+- Retry actions.
+- Error messages.
+- Relevant navigation actions.
+
+Avoid excessively long, unstructured answers.
+
+### Suggested questions
+
+Examples:
+
+- Review my financial health.
+- Should I repay my loan faster or invest?
+- Am I on track for retirement?
+- How much emergency savings do I need?
+- Help me plan for a home.
+- Compare my tax options.
+
+Suggestions should be relevant to the user's current financial information and profile completeness.
+
+### Message composer
+
+Provide:
+
+- Multiline text input.
+- Send button.
+- Keyboard-aware layout.
+- Clear sending and error states.
+- Safe handling of long messages.
+
+The input must remain usable when the mobile keyboard is open.
+
+## 10.2 Advisor entry points
+
+Provide three ways to access the advisor.
+
+**Entry point A: Home screen**
+
+Display a compact, relevant insight and a button to continue the conversation.
+
+**Entry point B: Bottom navigation**
+
+Provide the full conversational advisor.
+
+**Entry point C: Contextual assistance**
+
+Allow users to ask questions from relevant financial screens.
+
+Examples:
+
+- From Loans: Explain my repayment options.
+- From Investments: Help me understand my investment gap.
+- From Goals: How can I achieve this target?
+- From Tax: Explain this comparison.
+- From Retirement: What assumptions affect my retirement projection?
+
+Contextual entry points should pass the relevant supported context into the advisor workflow.
+
+Avoid making users repeat information already available to the application and authorised for use.
+
+## 10.3 AI reliability requirements
+
+The advisor must:
+
+1. Use actual supplied financial information.
+2. Avoid inventing missing income, assets, debts, interest rates, or returns.
+3. Identify missing information when it affects the result.
+4. Use the established calculation engine for financial calculations.
+5. Distinguish estimates from actual recorded values.
+6. Explain important assumptions.
+7. Explain uncertainty and material limitations.
+8. Avoid presenting projections as guarantees.
+9. Avoid unsupported claims about products, tax eligibility, or insurance coverage.
+10. Avoid claiming to have changed financial records unless the action actually succeeded.
+
+If the required information is unavailable, the advisor should ask a focused follow-up question or explain what can and cannot be concluded.
+
+## 10.4 Financial scenario analysis
+
+Where supported by the existing architecture, allow users to compare scenarios such as:
+
+- Increasing an EMI.
+- Making an additional loan repayment.
+- Increasing a monthly SIP.
+- Delaying retirement.
+- Changing a goal date.
+- Changing a supported inflation or return assumption.
+
+The calculation engine should produce the scenario results.
+
+The AI should explain the comparison and its implications.
+
+Do not allow the language model to fabricate numerical results.
+
+## 10.5 AI response design
+
+Prefer structured responses containing:
+
+- Summary.
+- Current situation.
+- Key findings.
+- Recommended next steps.
+- Assumptions.
+- Missing information.
+- Relevant limitations.
+
+Adapt the response format to the user's question rather than forcing every answer into an identical template.
+
+If the existing AI backend requires JSON output, preserve the established schema and validate its responses.
+
+Do not break existing AI contracts while redesigning the mobile interface.
+
+---
+
+# 11. Profile and Application Settings
+
+Create a clean settings experience.
+
+Organise settings into logical groups:
+
+### Personal profile
+
+Personal information and household details.
+
+### Financial assumptions
+
+Supported settings such as inflation, retirement age, and projection assumptions.
+
+### Preferences
+
+Currency formatting, relevant display preferences, and supported notification settings.
+
+### Privacy and security
+
+Account security, data permissions, and privacy controls supported by the existing system.
+
+### Account
+
+Account management and supported subscription features.
+
+Use confirmation dialogs for destructive operations.
+
+Do not make logout, account deletion, or sensitive security controls difficult to find.
+
+---
+
+# 12. Mobile Design System
+
+Use the existing design system when it is suitable.
+
+Do not introduce an entirely different visual language without a clear reason.
+
+If the current design system needs improvement, refine it consistently across the application.
+
+## 12.1 Visual direction
+
+The application should feel:
+
+- Trustworthy.
+- Calm.
+- Modern.
+- Professional.
+- Financially responsible.
+- Approachable to beginners.
+- Premium without unnecessary decoration.
+
+Avoid a crowded banking-dashboard appearance.
+
+Avoid excessive gradients, decorative animations, oversized illustrations, and unnecessary cards.
+
+## 12.2 Layout
+
+Use:
+
+- A consistent spacing scale.
+- Clear section hierarchy.
+- Compact but readable summaries.
+- Cards only where they communicate meaningful grouping.
+- Responsive grids for financial metrics.
+- Full-width forms where appropriate.
+- Sticky actions only when they improve a specific workflow.
+
+Do not force desktop-width tables into phone layouts.
+
+Convert tables into compact cards or responsive detail views when appropriate.
+
+## 12.3 Typography
+
+Prioritise readability.
+
+Use:
+
+- Clear page headings.
+- Readable section headings.
+- Consistent body text.
+- Distinct financial values.
+- Smaller but accessible secondary labels.
+
+Use Indian number formatting where appropriate.
+
+Examples:
+
+- ₹25,000.
+- ₹1,25,000.
+- ₹12,50,000.
+
+Support the existing currency and locale configuration.
+
+Do not hardcode display formatting separately in every component.
+
+## 12.4 Financial colours
+
+Use the existing application palette where appropriate.
+
+Provide a consistent visual language for:
+
+- Positive financial progress.
+- Caution.
+- Risks requiring attention.
+- Neutral information.
+- Selected navigation states.
+
+Never communicate financial status using colour alone.
+
+Pair meaningful colours with labels or explanatory text.
+
+## 12.5 Icons
+
+Use the existing icon library if one is already installed.
+
+Keep icons consistent in style and size.
+
+Do not mix unrelated icon systems.
+
+## 12.6 Responsive behaviour
+
+Ensure that:
+
+- Bottom navigation does not obscure content.
+- Forms remain usable on narrow screens.
+- Charts adapt to available width.
+- Modals fit smaller screens.
+- Long financial values wrap or scale appropriately.
+- Keyboard interactions do not hide important controls.
+- Device safe areas are respected.
+- Scrolling behaves naturally.
+- The desktop layout remains functional.
+
+---
+
+# 13. Forms and Data Entry
+
+Financial data entry is a critical workflow.
+
+Users should be able to add or update information quickly without completing unnecessarily complicated forms.
+
+## Requirements
+
+- Use appropriate numeric keyboards for monetary amounts.
+- Use suitable controls for dates, percentages, and durations.
+- Show clear field labels.
+- Provide contextual validation messages.
+- Preserve form values after validation errors.
+- Disable duplicate submissions while requests are pending.
+- Show successful save confirmation.
+- Show clear API error messages.
+- Support editing existing records.
+- Preserve existing backend validation rules.
+- Do not silently convert invalid values.
+- Handle empty, zero, negative, and unusually large values appropriately.
+- Explain when a field is optional.
+- Avoid requiring fields that are not needed for the selected calculation.
+
+Use the application's established validation library and schemas.
+
+Do not duplicate complex validation logic in unrelated components.
+
+---
+
+# 14. API Integration and State Management
+
+Use the existing API client, state management, caching, and authentication architecture.
+
+Do not create a parallel networking layer without a demonstrated need.
+
+## Requirements
+
+- Reuse existing endpoints.
+- Reuse authentication mechanisms.
+- Handle expired sessions correctly.
+- Handle loading and error states.
+- Prevent duplicate submissions.
+- Keep financial data consistent across screens.
+- Refresh relevant summaries after successful mutations.
+- Avoid unnecessary repeated requests.
+- Prevent stale data from being presented as current.
+- Handle partial API failures gracefully.
+- Preserve server-side authorisation.
+- Avoid logging sensitive financial information.
+- Do not expose API secrets in frontend code.
+
+If the application already uses React Query, TanStack Query, Redux, Zustand, or another state management solution, follow the established conventions.
+
+Do not introduce another state management library merely for convenience.
+
+## Data consistency
+
+When a user changes a loan, investment, income, expense, or goal:
+
+1. Save through the established API.
+2. Confirm the operation succeeded.
+3. Update or invalidate the relevant cached data.
+4. Refresh dependent summaries when necessary.
+5. Ensure Home and related modules reflect the change.
+6. Display a clear error if the update fails.
+
+Do not update the interface as if a financial change were saved when the server rejected it.
+
+---
+
+# 15. Security, Privacy, and Financial Data Protection
+
+Financial information is sensitive.
+
+Preserve and strengthen the existing security architecture.
+
+Requirements:
+
+- Enforce server-side authentication and authorisation.
+- Do not rely on hidden UI controls for access protection.
+- Do not expose one user's financial records to another user.
+- Do not store authentication secrets insecurely.
+- Avoid storing sensitive financial information in unnecessary browser storage.
+- Use secure session handling appropriate to the existing application.
+- Avoid sending unnecessary personal information to the AI service.
+- Respect user permissions and data-consent requirements.
+- Avoid logging passwords, tokens, or complete financial profiles.
+- Handle logout and expired sessions correctly.
+- Preserve applicable data deletion and retention behaviour.
+
+For a native application, review the appropriate secure storage mechanisms for the selected platform.
+
+For a web application, follow the existing secure authentication architecture and avoid introducing insecure token storage.
+
+Do not claim regulatory compliance without verifying the relevant implementation and requirements.
+
+---
+
+# 16. Performance Requirements
+
+The mobile application must remain responsive on ordinary devices and mobile networks.
+
+Prioritise:
+
+- Fast initial rendering.
+- Efficient API requests.
+- Lazy loading of less frequently used screens.
+- Lightweight charts.
+- Minimal unnecessary re-renders.
+- Reasonable image and asset sizes.
+- Efficient list rendering.
+- Stable scrolling.
+- Responsive form interactions.
+- Clear loading feedback.
+
+Do not load every financial module and historical dataset on the Home screen.
+
+Load additional details when users navigate to the relevant module.
+
+Use skeleton loaders only when they improve perceived performance.
+
+Avoid large animations that make financial screens feel slow.
+
+---
+
+# 17. Accessibility and Usability
+
+Implement accessible interactions throughout the mobile experience.
+
+Requirements:
+
+- Semantic headings.
+- Accessible labels for icon-only buttons.
+- Visible focus states.
+- Keyboard navigation where applicable.
+- Appropriate contrast.
+- Readable text sizing.
+- Accessible chart summaries.
+- Error messages associated with their fields.
+- Screen-reader announcements for important state changes.
+- Reduced-motion support where applicable.
+- Clear confirmation for destructive operations.
+
+Test important flows without relying solely on colour, hover, or gestures.
+
+Where swipe interactions are supported, provide an accessible alternative.
+
+---
+
+# 18. Error, Empty, and Loading States
+
+Every major screen and financial operation must have intentional states.
+
+## Loading
+
+Show a useful loading indicator or skeleton without making the application appear frozen.
+
+## Empty data
+
+Explain what the user can add and why it matters.
+
+## Incomplete profile
+
+Show available data and identify missing information.
+
+## Network failure
+
+Provide a clear message and a retry option where appropriate.
+
+## Validation failure
+
+Identify the field or input that needs correction.
+
+## Authentication failure
+
+Use the existing session-expiration and reauthentication flow.
+
+## AI failure
+
+Preserve the user's message, explain that the advisor could not complete the request, and offer a retry where appropriate.
+
+## Stale financial data
+
+Show the last-updated information when available.
+
+Do not silently replace missing API responses with fabricated values or misleading zeroes.
+
+A genuine zero balance must remain distinguishable from an unknown balance.
+
+---
+
+# 19. Testing Requirements
+
+Use the existing test framework and conventions.
+
+Do not replace working test infrastructure without justification.
+
+## 19.1 Unit tests
+
+Cover relevant functionality such as:
+
+- Financial value formatting.
+- Form validation.
+- Conditional UI rendering.
+- Data mapping.
+- Loading and error states.
+- API response handling.
+- Navigation logic.
+- Financial summary presentation.
+
+Financial calculations should be tested in their authoritative calculation layer rather than only through UI tests.
+
+## 19.2 Integration tests
+
+Test important workflows:
+
+- Loading the financial overview.
+- Updating income and expenses.
+- Adding and editing loans.
+- Updating investment information.
+- Creating and updating goals.
+- Accessing AI Advisor.
+- Submitting advisor questions.
+- Handling failed API requests.
+- Updating financial summaries after successful changes.
+
+Use the actual API contracts or controlled test fixtures consistent with the existing test architecture.
+
+## 19.3 Responsive testing
+
+Test the application at:
+
+- 320 px.
+- 360 px.
+- 390 px.
+- 430 px.
+- Tablet widths.
+- Desktop widths.
+
+Verify:
+
+- No unintended horizontal scrolling.
+- Bottom navigation remains usable.
+- Cards adapt appropriately.
+- Text does not overflow.
+- Buttons remain accessible.
+- Forms remain usable.
+- Charts remain legible.
+- Desktop functionality is preserved.
+
+## 19.4 End-to-end testing
+
+Where the existing project supports browser automation, test these flows:
+
+1. User signs in.
+2. User sees the correct Home state.
+3. User completes or resumes onboarding.
+4. User reviews monthly cash flow.
+5. User opens and edits a loan.
+6. User views investments and net worth.
+7. User opens a financial goal.
+8. User asks the AI Advisor a question.
+9. User navigates between the six primary sections.
+10. User encounters and recovers from an API failure.
+11. User refreshes the application without losing persisted data.
+
+Do not claim tests passed unless they were actually executed.
+
+---
+
+# 20. Implementation Plan
+
+Work in structured phases.
+
+## Phase 1: Repository assessment
+
+Inspect the project.
+
+Identify:
+
+- Existing screens.
+- Available APIs.
+- Existing financial calculations.
+- Current navigation.
+- Current design system.
+- Existing AI capabilities.
+- Missing functionality.
+- Mobile usability problems.
+
+Document findings and a proposed implementation sequence.
+
+## Phase 2: Mobile foundation
+
+Implement or refine:
+
+- Responsive layout.
+- Mobile navigation.
+- Safe-area handling.
+- Shared spacing and typography.
+- Responsive cards.
+- Reusable buttons and inputs.
+- Loading, empty, and error components.
+
+Verify that desktop behaviour remains intact.
+
+## Phase 3: Home screen
+
+Implement the financial command centre.
+
+Prioritise:
+
+- Monthly financial summary.
+- Financial snapshot.
+- Priority actions.
+- Goal progress.
+- AI insight.
+
+Integrate real APIs and existing calculations.
+
+## Phase 4: My Plan and Wealth
+
+Adapt existing financial modules into mobile-friendly experiences.
+
+Avoid duplicating business logic.
+
+## Phase 5: Goals
+
+Implement the goal overview, goal details, creation workflows, and supported projections.
+
+## Phase 6: AI Advisor
+
+Adapt the existing AI experience to mobile.
+
+Implement contextual entry points, readable responses, reliable loading and error states, and supported scenario interactions.
+
+## Phase 7: Profile and onboarding
+
+Refine progressive onboarding, profile completion, preferences, and account settings.
+
+## Phase 8: Testing and refinement
+
+Perform responsive testing, workflow testing, accessibility checks, and regression testing.
+
+Fix identified problems before considering the implementation complete.
+
+### Execution rule
+
+Do not stop after producing a plan or a list of recommendations.
+
+Once the repository has been assessed, proceed with implementation unless a genuine architectural blocker or an important product decision requires clarification.
+
+Work in small, verifiable changes.
+
+Do not attempt a risky rewrite of the entire application in one operation.
+
+---
+
+# 21. Definition of Done
+
+The mobile application is considered ready for review when all applicable criteria below are satisfied.
+
+### Navigation
+
+- Six primary destinations are accessible.
+- Navigation is consistent across mobile screens.
+- The active destination is clearly identified.
+- Desktop navigation remains appropriate.
+
+### Home
+
+- Financial data comes from the existing backend.
+- Monthly cash flow uses consistent definitions.
+- Net worth is calculated correctly by the existing financial engine.
+- Missing information is handled honestly.
+- Important actions navigate to the correct screens.
+- No fabricated production values are displayed.
+
+### Financial modules
+
+- Existing functionality remains available.
+- Financial forms work on narrow screens.
+- Existing validation rules are preserved.
+- Successful changes update relevant summaries.
+- Failed changes do not falsely appear successful.
+
+### AI Advisor
+
+- Existing AI capabilities are preserved.
+- Users can access the advisor from Home and navigation.
+- Contextual entry points work where implemented.
+- Financial calculations use the authoritative calculation layer.
+- Missing information and uncertainty are communicated appropriately.
+- API failures are handled gracefully.
+
+### User experience
+
+- Common phone widths are supported.
+- No unintended horizontal scrolling occurs.
+- Bottom navigation does not obscure content.
+- Touch targets are appropriately sized.
+- Loading, empty, and error states are implemented.
+- The application is usable by people with limited financial knowledge.
+
+### Engineering
+
+- Existing architecture is preserved where practical.
+- No unnecessary duplicate APIs or calculation engines are introduced.
+- Existing tests continue to pass.
+- New tests cover important functionality.
+- Linting, type checking, and production builds pass where configured.
+- Security and authorisation behaviour remain intact.
+- Desktop functionality is regression-tested.
+
+---
+
+# 22. Final Instructions to Cursor
+
+Act as a senior engineer responsible for delivering production-quality changes to an existing financial planning application.
+
+Follow this sequence:
+
+1. Inspect the repository and understand the current implementation.
+2. Identify the actual mobile delivery target.
+3. Map existing features and APIs to the proposed mobile navigation.
+4. Identify missing capabilities and avoid duplicating existing ones.
+5. Establish the mobile design approach using the current design system.
+6. Implement the mobile experience incrementally.
+7. Reuse the backend, calculation engine, validation, and authentication.
+8. Test the implemented workflows.
+9. Fix regressions and responsive layout problems.
+10. Provide an implementation report.
+
+The final report must include:
+
+- Summary of changes.
+- Screens and components implemented.
+- Existing APIs and services reused.
+- Any backend changes required.
+- New dependencies, with justification.
+- Tests executed and their actual results.
+- Known limitations.
+- Remaining work, if any.
+
+Do not mark incomplete features as completed.
+
+Do not invent API endpoints, database fields, or financial calculations when the existing implementation can be inspected.
+
+If an important feature cannot be implemented because a required API or business rule is missing, explain the dependency and implement the available UI states without pretending the feature works.
+
+**Primary objective: Deliver a genuinely mobile-friendly Freedom Planner experience that helps users understand their financial situation, make informed financial decisions, and act on personalised guidance, while preserving the integrity of the existing web application and backend.**

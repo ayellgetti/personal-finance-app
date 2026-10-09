@@ -106,7 +106,7 @@ Package commands:
 pnpm --filter <package-name> <command>
 ```
 
-Workspace names today: `api`, `web`, `website`, `crm`, `mobile` (not `@repo/api`).
+Workspace names today: `api`, `web`, `website`, `crm`, `mobile`, `mobile-fp` (not `@repo/api`).
 
 Examples:
 
@@ -258,6 +258,7 @@ apps/web      Freedom Planner React app
 apps/website  Public marketing site (no auth / finance)
 apps/crm      Sales CRM React app (Track D)
 apps/mobile   CRM Mobile React app (phone-first shell over the same /api/crm)
+apps/mobile-fp Freedom Planner Mobile PWA (phone-first shell over finance /api)
 packages/tsconfig
 ```
 
@@ -307,6 +308,16 @@ apps/mobile/src/
 ├── pages/
 ├── types/crm.ts
 └── main.tsx
+
+apps/mobile-fp/src/
+├── components/layout/ # five-tab shell, header profile, drawer, quick add
+├── components/ui/
+├── lib/api.ts
+├── lib/auth/
+├── lib/finance/ # remote.ts, store.tsx, formatting
+├── pages/
+├── types/finance.ts
+└── main.tsx
 ```
 
 `apps/mobile` is phone-first: a sticky header (menu drawer plus a plus-circle
@@ -318,6 +329,12 @@ has five slots. It keeps its own copies of `lib/api.ts` and `lib/auth/*` (apps
 never import another app's source) and namespaces its session keys
 `mobile-access-token` / `mobile-refresh-token` / `mobile-user` so both apps can
 run on the same host.
+
+`apps/mobile-fp` is the phone-first Freedom Planner PWA on port 8086. Bottom
+tabs are Home, My Plan, Wealth, Goals, and Advisor, with Profile in the header.
+It uses the existing finance endpoints with `requireAuth` only, stores sessions
+under `fp-access-token` / `fp-refresh-token` / `fp-user`, and does not import
+source from `apps/web` or duplicate API-backed finance records in localStorage.
 
 Do not put business logic or API calls in components when `lib/finance/remote.ts`, `lib/crm/remote.ts`, `lib/mobile/remote.ts`, or a service already exists.
 
@@ -602,7 +619,7 @@ Do not use `--no-verify` as normal workflow if hooks are added later.
 
 Keep production images lean. Do not run as root in production images when changing Dockerfiles, where practical.
 
-Local Postgres is **5433** on the host (**5432** in `docker-compose.dev.yml`). Redis **6379**. API **5001** (travel CRM API **5002**, banquet CRM API **5003**). Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**. Travel CRM **8083**. Banquet CRM **8084**. CRM Mobile **8085**. Extra CRM instances reuse `apps/crm` and a second API process against a separate Postgres database; do not add `tenantId` or copy the CRM app.
+Local Postgres is **5433** on the host (**5432** in `docker-compose.dev.yml`). Redis **6379**. API **5001** (travel CRM API **5002**, banquet CRM API **5003**). Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**. Travel CRM **8083**. Banquet CRM **8084**. CRM Mobile **8085**. Freedom Planner Mobile **8086**. Extra CRM instances reuse `apps/crm` and a second API process against a separate Postgres database; do not add `tenantId` or copy the CRM app.
 
 Every app Dockerfile copies **all** workspace manifests before `pnpm install --frozen-lockfile`, because pnpm validates the lockfile against every workspace member. Adding an app means adding its `COPY apps/<name>/package.json` line to each existing Dockerfile too.
 

@@ -298,6 +298,31 @@ Routes: `/api/calculators`. Web: Calculators sidebar group.
 
 **Validate:** `pnpm --filter api test`, `pnpm --filter web test`, `pnpm typecheck`, `pnpm --filter web lint`, migrate `20260831100000_calculator_scenarios`.
 
+### Phase B7 — Freedom Planner mobile PWA
+
+**Status: COMPLETED**
+
+Approved phone-first finance client in `apps/mobile-fp`, alongside the unchanged CRM
+phone app in `apps/mobile`. It reuses the existing `/api` finance contracts,
+authentication, planner engine, advisor, statements, tax, and calculators. It does
+not add Prisma models, a second calculation engine, CRM permissions, `/api/v1`, or
+cross-app source imports.
+
+Bottom tabs are Home, My Plan, Wealth, Goals, and Advisor, with Profile in the header. Home
+uses `GET /api/planner/report`; entity screens persist API-backed records only
+through their existing endpoints. Secondary tools live in the drawer. The PWA runs
+on port `8086` at `fp.local.uat`, uses `fp-*` session keys, and keeps the same
+safe-area, service-worker, and runtime-environment conventions as `apps/mobile`.
+
+Deliver incrementally: workspace/auth shell → six-section navigation and finance
+remote layer → Home → My Plan → Wealth and Goals → Advisor/Profile/Setup and
+secondary tools → Docker/nginx/docs and regression validation.
+
+**Validate:** `pnpm --filter mobile-fp typecheck`, `lint`, `test`, and `build`;
+relevant API tests; `pnpm --filter web test && pnpm --filter web build`;
+`pnpm --filter mobile test && pnpm --filter mobile build`; manual responsive checks
+at 320, 360, 390, and 430 CSS pixels. Playwright remains deferred.
+
 ---
 
 # Track C — Engineering platform (optional)

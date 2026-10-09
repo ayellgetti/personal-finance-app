@@ -10,6 +10,7 @@ COPY apps/web/package.json apps/web/
 COPY apps/website/package.json apps/website/
 COPY apps/crm/package.json apps/crm/
 COPY apps/mobile/package.json apps/mobile/
+COPY apps/mobile-fp/package.json apps/mobile-fp/
 COPY packages/tsconfig packages/tsconfig
 COPY apps/api/prisma apps/api/prisma
 # Docker's path to the npm registry is often slow enough to hit pnpm's 60s
@@ -45,6 +46,7 @@ COPY apps/web/package.json apps/web/
 COPY apps/website/package.json apps/website/
 COPY apps/crm/package.json apps/crm/
 COPY apps/mobile/package.json apps/mobile/
+COPY apps/mobile-fp/package.json apps/mobile-fp/
 RUN mkdir -p apps/api/uploads
 EXPOSE 5001
 WORKDIR /app/apps/api

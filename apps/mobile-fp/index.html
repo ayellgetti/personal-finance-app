@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover exposes env(safe-area-inset-*) so the fixed header and tab bar clear the notch and home indicator. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Freedom Planner Mobile</title>
+    <meta name="description" content="Phone-first personal financial planning for Indian households." />
+    <meta name="author" content="Freedom Planner Mobile" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#1c9b6a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Freedom Planner Mobile" />
+    <script>
+      (function () {
+        var FLAG = "fp-mobile-stale-recovery";
+        window.addEventListener(
+          "error",
+          function (event) {
+            var el = event.target;
+            if (!el || el.tagName !== "SCRIPT" || !el.src) return;
+            if (sessionStorage.getItem(FLAG)) return;
+            sessionStorage.setItem(FLAG, "1");
+            var jobs = [];
+            if (window.caches && caches.keys) {
+              jobs.push(
+                caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                })
+              );
+            }
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+              jobs.push(
+                navigator.serviceWorker.getRegistrations().then(function (regs) {
+                  return Promise.all(regs.map(function (r) { return r.unregister(); }));
+                })
+              );
+            }
+            Promise.all(jobs.map(function (p) { return p.catch(function () {}); })).then(function () {
+              var url = new URL(window.location.href);
+              url.searchParams.set("v", Date.now().toString());
+              window.location.replace(url.toString());
+            });
+          },
+          true
+        );
+        window.addEventListener("load", function () {
+          setTimeout(function () { sessionStorage.removeItem(FLAG); }, 5000);
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/env.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

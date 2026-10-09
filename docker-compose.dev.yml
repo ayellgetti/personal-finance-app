@@ -35,6 +35,13 @@ x-mobile-healthcheck: &mobile-healthcheck
   retries: 5
   start_period: 30s
 
+x-mobile-fp-healthcheck: &mobile-fp-healthcheck
+  test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8086/"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 30s
+
 services:
   nginx:
     image: nginx:latest
@@ -70,6 +77,8 @@ services:
       banque-crm:
         condition: service_healthy
       mobile:
+        condition: service_healthy
+      mobile-fp:
         condition: service_healthy
 
   postgres:
@@ -361,3 +370,25 @@ services:
       api:
         condition: service_healthy
     healthcheck: *mobile-healthcheck
+
+  mobile-fp:
+    build:
+      context: .
+      dockerfile: apps/mobile-fp/Dockerfile
+    container_name: docker-mobile-fp
+    restart: unless-stopped
+    env_file:
+      - ./.env.dev
+    environment:
+      VITE_API_PROXY: http://api:5001
+      VITE_DEV_ALLOWED_HOSTS: ${VITE_MOBILE_FP_DEV_ALLOWED_HOSTS:-fp.local.uat,localhost}
+      VITE_DEV_POLLING: ${VITE_DEV_POLLING:-}
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./apps/mobile-fp:/app/apps/mobile-fp
+      - /app/apps/mobile-fp/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck: *mobile-fp-healthcheck

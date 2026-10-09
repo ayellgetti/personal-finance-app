@@ -55,6 +55,8 @@ services:
         condition: service_healthy
       mobile:
         condition: service_healthy
+      mobile-fp:
+        condition: service_healthy
 
   certbot:
     image: certbot/certbot:latest
@@ -316,6 +318,21 @@ services:
       - ./.env.prod
     ports:
       - "8085:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck: *crm-prod-healthcheck
+
+  mobile-fp:
+    build:
+      context: .
+      dockerfile: apps/mobile-fp/Dockerfile.prod
+    container_name: docker-mobile-fp
+    restart: unless-stopped
+    env_file:
+      - ./.env.prod
+    ports:
+      - "8086:80"
     depends_on:
       api:
         condition: service_healthy
