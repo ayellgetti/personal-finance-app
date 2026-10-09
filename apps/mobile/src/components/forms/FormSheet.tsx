@@ -26,7 +26,7 @@ export function FormSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-3xl pb-safe">
-        <form onSubmit={onSubmit} className="mx-auto w-full max-w-md space-y-4 pb-4">
+        <form onSubmit={onSubmit} className="mx-auto w-full max-w-tablet space-y-4 pb-4">
           <SheetHeader className="text-left">
             <SheetTitle className="font-display text-lg">{title}</SheetTitle>
             <SheetDescription>{description}</SheetDescription>

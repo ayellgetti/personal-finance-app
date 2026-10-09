@@ -68,7 +68,7 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-background px-5 py-10 pb-safe pt-safe">
-      <div className="mx-auto w-full max-w-md">
+      <div className="mx-auto w-full max-w-tablet">
         <div className="mb-6 text-center">
           <WalletCards className="mx-auto h-10 w-10 text-primary" />
           <h1 className="mt-3 font-display text-2xl font-bold">Create your Freedom Planner</h1>

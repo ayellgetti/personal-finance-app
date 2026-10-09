@@ -167,6 +167,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    image: personal-finance-api:prod
     container_name: docker-api
     restart: unless-stopped
     ports:
@@ -181,9 +182,9 @@ services:
     healthcheck: *api-healthcheck
 
   api-travel:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    # Reuses the image built by `api`; building it again triples disk usage.
+    image: personal-finance-api:prod
+    pull_policy: never
     container_name: docker-api-travel
     restart: unless-stopped
     env_file:
@@ -204,9 +205,8 @@ services:
       start_period: 60s
 
   api-banque:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: personal-finance-api:prod
+    pull_policy: never
     container_name: docker-api-banque
     restart: unless-stopped
     env_file:
@@ -267,6 +267,7 @@ services:
     build:
       context: .
       dockerfile: apps/crm/Dockerfile.prod
+    image: personal-finance-crm:prod
     container_name: docker-crm
     restart: unless-stopped
     env_file:
@@ -279,9 +280,9 @@ services:
     healthcheck: *crm-prod-healthcheck
 
   travel-crm:
-    build:
-      context: .
-      dockerfile: apps/crm/Dockerfile.prod
+    # Reuses the image built by `crm`.
+    image: personal-finance-crm:prod
+    pull_policy: never
     container_name: docker-travel-crm
     restart: unless-stopped
     env_file:
@@ -294,9 +295,8 @@ services:
     healthcheck: *crm-prod-healthcheck
 
   banque-crm:
-    build:
-      context: .
-      dockerfile: apps/crm/Dockerfile.prod
+    image: personal-finance-crm:prod
+    pull_policy: never
     container_name: docker-banque-crm
     restart: unless-stopped
     env_file:

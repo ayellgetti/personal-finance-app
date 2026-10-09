@@ -37,7 +37,7 @@ function PaymentDetailSheet({ payment, onClose }: { payment: CrmPayment | null; 
     <Sheet open={Boolean(payment)} onOpenChange={(next) => (next ? undefined : onClose())}>
       <SheetContent side="bottom" className="rounded-t-3xl pb-safe">
         {payment ? (
-          <div className="mx-auto w-full max-w-md space-y-4 pb-4">
+          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
             <SheetHeader className="text-left">
               <SheetTitle className="font-display text-lg">
                 {formatMoney(payment.amount, payment.currency)}

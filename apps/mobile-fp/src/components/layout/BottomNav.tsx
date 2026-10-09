@@ -6,9 +6,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-safe backdrop-blur-xl"
+      className="fixed bottom-0 left-0 right-0 z-40 mx-auto w-full max-w-tablet border-t border-border bg-background/95 pb-safe backdrop-blur-xl"
     >
-      <ul className="mx-auto grid w-full max-w-md grid-cols-5 items-stretch gap-1 px-2 py-1.5">
+      <ul className="mx-auto grid w-full grid-cols-5 items-stretch gap-1 px-2 py-1.5 md:px-4">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const shell =

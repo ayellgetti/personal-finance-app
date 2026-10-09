@@ -83,7 +83,7 @@ function EnquiryDetailSheet({
     <Sheet open={Boolean(enquiry)} onOpenChange={(next) => (next ? undefined : onClose())}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-3xl pb-safe">
         {enquiry ? (
-          <div className="mx-auto w-full max-w-md space-y-4 pb-4">
+          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
             <SheetHeader className="text-left">
               <SheetTitle className="font-display text-lg">{enquiry.title}</SheetTitle>
               <SheetDescription>{humanize(enquiry.status)}</SheetDescription>

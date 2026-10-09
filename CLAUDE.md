@@ -322,7 +322,7 @@ apps/mobile-fp/src/
 
 `apps/mobile` is phone-first: a sticky header (menu drawer plus a plus-circle
 quick-add sheet), a five-tab bottom nav (Home, Enquiries, Calendar, Booked, Payments), Profile in the
-header beside the plus button, and a single max-width column with safe-area insets. It reads the same
+header beside the plus button, and a single column that grows with the screen up to tablet width (48rem) with safe-area insets. It reads the same
 `/api/crm` endpoints and the same `requirePermission` codes as `apps/crm`; tabs
 the role cannot open render disabled rather than disappearing, so the bar always
 has five slots. It keeps its own copies of `lib/api.ts` and `lib/auth/*` (apps
@@ -330,7 +330,8 @@ never import another app's source) and namespaces its session keys
 `mobile-access-token` / `mobile-refresh-token` / `mobile-user` so both apps can
 run on the same host.
 
-`apps/mobile-fp` is the phone-first Freedom Planner PWA on port 8086. Bottom
+`apps/mobile-fp` is the phone-first Freedom Planner PWA on port 8086. The column
+grows with the screen and stops at tablet width. Bottom
 tabs are Home, My Plan, Wealth, Goals, and Advisor, with Profile in the header.
 It uses the existing finance endpoints with `requireAuth` only, stores sessions
 under `fp-access-token` / `fp-refresh-token` / `fp-user`, and does not import

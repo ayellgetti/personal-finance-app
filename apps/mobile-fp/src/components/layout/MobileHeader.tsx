@@ -14,7 +14,7 @@ export function MobileHeader({
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 pt-safe backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-md items-center gap-2 py-2.5 pl-3 pr-2">
+      <div className="mx-auto flex w-full items-center gap-2 py-2.5 pl-3 pr-2 md:px-4">
         <Button
           type="button"
           variant="ghost"

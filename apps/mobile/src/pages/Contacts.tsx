@@ -59,7 +59,7 @@ function ContactDetailSheet({
     <Sheet open={Boolean(contact)} onOpenChange={(next) => (next ? undefined : onClose())}>
       <SheetContent side="bottom" className="rounded-t-3xl pb-safe">
         {contact ? (
-          <div className="mx-auto w-full max-w-md space-y-4 pb-4">
+          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
             <SheetHeader className="text-left">
               <SheetTitle className="font-display text-lg">{contact.name}</SheetTitle>
               <SheetDescription>{humanize(contact.type)}</SheetDescription>
@@ -159,7 +159,7 @@ function CreateContactSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-3xl pb-safe">
-        <form onSubmit={onSubmit} className="mx-auto w-full max-w-md space-y-4 pb-4">
+        <form onSubmit={onSubmit} className="mx-auto w-full max-w-tablet space-y-4 pb-4">
           <SheetHeader className="text-left">
             <SheetTitle className="font-display text-lg">New contact</SheetTitle>
             <SheetDescription>Add a lead, client, or vendor.</SheetDescription>

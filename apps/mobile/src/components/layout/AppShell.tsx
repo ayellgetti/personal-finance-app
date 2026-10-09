@@ -21,21 +21,23 @@ export function AppShell() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
-      <MobileHeader
-        title={titleFor(pathname)}
-        onOpenMenu={() => setMenuOpen(true)}
-        onOpenQuickAdd={() => setQuickAddOpen(true)}
-      />
+    <div className="min-h-screen bg-muted/40">
+      <div className="relative mx-auto min-h-screen w-full max-w-tablet bg-background shadow-[var(--shadow-elevated)]">
+        <MobileHeader
+          title={titleFor(pathname)}
+          onOpenMenu={() => setMenuOpen(true)}
+          onOpenQuickAdd={() => setQuickAddOpen(true)}
+        />
 
-      <main className="mx-auto w-full max-w-md px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-4">
-        <Outlet />
-      </main>
+        <main className="mx-auto w-full px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-4 md:px-6">
+          <Outlet />
+        </main>
 
-      <BottomNav permissions={permissions} />
+        <BottomNav permissions={permissions} />
 
-      <AppDrawer open={menuOpen} onOpenChange={setMenuOpen} permissions={permissions} />
-      <QuickAddSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} permissions={permissions} />
+        <AppDrawer open={menuOpen} onOpenChange={setMenuOpen} permissions={permissions} />
+        <QuickAddSheet open={quickAddOpen} onOpenChange={setQuickAddOpen} permissions={permissions} />
+      </div>
     </div>
   );
 }

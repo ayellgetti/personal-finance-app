@@ -36,7 +36,7 @@ export default function Login() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.18),transparent_55%)]"
       />
 
-      <div className="relative mx-auto w-full max-w-md animate-fade-in">
+      <div className="relative mx-auto w-full max-w-tablet animate-fade-in">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-primary shadow-[var(--shadow-glow)]">
             <WalletCards className="h-7 w-7 text-primary-foreground" aria-hidden />

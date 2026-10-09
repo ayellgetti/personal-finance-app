@@ -60,7 +60,7 @@ export function QuickAddSheet({
           <SheetDescription>Pick what you want to add.</SheetDescription>
         </SheetHeader>
 
-        <div className="mx-auto mt-4 flex w-full max-w-md flex-col gap-2 pb-4">
+        <div className="mx-auto mt-4 flex w-full max-w-tablet flex-col gap-2 pb-4">
           {ACTIONS.map((action) => {
             const Icon = action.icon;
             return (

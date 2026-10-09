@@ -23,7 +23,7 @@ export function DaySheet({
     <Sheet open={Boolean(day)} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-3xl pb-safe">
         {day ? (
-          <div className="mx-auto w-full max-w-md space-y-4 pb-4">
+          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
             <SheetHeader className="text-left">
               <SheetTitle className="font-display text-lg">
                 {day.toLocaleDateString(undefined, {
