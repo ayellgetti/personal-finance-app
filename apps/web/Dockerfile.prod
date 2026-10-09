@@ -8,6 +8,7 @@ COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY apps/website/package.json apps/website/
 COPY apps/crm/package.json apps/crm/
+COPY apps/mobile/package.json apps/mobile/
 COPY packages/tsconfig/package.json packages/tsconfig/
 # Docker's path to the npm registry is often slow enough to hit pnpm's 60s
 # fetch timeout (error 23) during metadata checks and tarball downloads.

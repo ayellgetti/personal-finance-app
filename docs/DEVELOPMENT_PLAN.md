@@ -443,3 +443,19 @@ Union of task due dates and `CrmCalendarEvent` rows, including events linked to 
 
 Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`) and patch roles. Roles: list, create, view, and edit name plus permission ids (catalog includes a description for each permission); hidden without `crm.roles.read`, create/edit disabled without `crm.roles.update`. Admin nav still hidden without read permissions.
 
+### Phase D9 — `apps/mobile` shell
+
+**Status: COMPLETED**
+
+Vite app on port **8085** (`mobile.local.uat`): a phone-first companion over the same `/api/crm` endpoints and the same `requirePermission` codes. No API, Prisma, OpenAPI, or envelope changes — this phase is frontend only.
+
+Layout: sticky header with a menu button (left drawer for Follow-ups, Booked, Payments, Tasks, Reminders, Users, Roles, plus theme and sign out), centred title, and a plus-circle button opening a bottom quick-add sheet whose actions are filtered by the matching `crm.*.create` permissions. Fixed five-tab bottom nav — Home, Contacts, Enquiries, Calendar, Profile — where a tab the role cannot open renders disabled so the bar keeps five slots. One `max-w-md` column between the two bars, with `env(safe-area-inset-*)` padding on both.
+
+Screens: Home (dashboard stat tiles, next-up agenda card, due-today list), Contacts (debounced search, type chips, detail sheet with call/email, create sheet), Enquiries (stage chips, detail sheet with stage change, create sheet), Calendar (day agenda with prev/next and event create), Profile (account, roles, permission count, sign out). Lists page with "Load more" against the existing `{ items, pagination }` responses rather than fetching everything.
+
+The app keeps its own `lib/api.ts` and `lib/auth/*` (apps never import another app's source) and namespaces localStorage under `mobile-`. Quick-add navigates to `<tab>?new=1`; the tab reads that intent and opens its own create form. Drawer destinations without a mobile screen yet render a placeholder pointing at the web CRM.
+
+Adding this workspace also required a `COPY apps/mobile/package.json apps/mobile/` line in every existing Dockerfile, because `pnpm install --frozen-lockfile` validates the lockfile against all workspace members.
+
+**Validate:** `pnpm --filter mobile test` (19 passing), `pnpm --filter mobile typecheck`, `pnpm --filter mobile lint`, `pnpm --filter mobile build`; `pnpm --filter crm test` (102 passing) and `pnpm --filter crm build` unchanged.
+

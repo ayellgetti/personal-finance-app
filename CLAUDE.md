@@ -106,7 +106,7 @@ Package commands:
 pnpm --filter <package-name> <command>
 ```
 
-Workspace names today: `api`, `web` (not `@repo/api`).
+Workspace names today: `api`, `web`, `website`, `crm`, `mobile` (not `@repo/api`).
 
 Examples:
 
@@ -257,6 +257,7 @@ apps/api      Express API (finance + /api/crm)
 apps/web      Freedom Planner React app
 apps/website  Public marketing site (no auth / finance)
 apps/crm      Sales CRM React app (Track D)
+apps/mobile   CRM Mobile React app (phone-first shell over the same /api/crm)
 packages/tsconfig
 ```
 
@@ -296,9 +297,29 @@ apps/crm/src/
 ├── pages/
 ├── types/crm.ts
 └── main.tsx
+
+apps/mobile/src/
+├── components/layout/ # AppShell, MobileHeader, BottomNav, AppDrawer, QuickAddSheet
+├── components/ui/
+├── lib/api.ts
+├── lib/auth/
+├── lib/mobile/        # remote.ts, store.tsx, hooks, format
+├── pages/
+├── types/crm.ts
+└── main.tsx
 ```
 
-Do not put business logic or API calls in components when `lib/finance/remote.ts`, `lib/crm/remote.ts`, or a service already exists.
+`apps/mobile` is phone-first: a sticky header (menu drawer plus a plus-circle
+quick-add sheet), a five-tab bottom nav (Home, Enquiries, Calendar, Booked, Payments), Profile in the
+header beside the plus button, and a single max-width column with safe-area insets. It reads the same
+`/api/crm` endpoints and the same `requirePermission` codes as `apps/crm`; tabs
+the role cannot open render disabled rather than disappearing, so the bar always
+has five slots. It keeps its own copies of `lib/api.ts` and `lib/auth/*` (apps
+never import another app's source) and namespaces its session keys
+`mobile-access-token` / `mobile-refresh-token` / `mobile-user` so both apps can
+run on the same host.
+
+Do not put business logic or API calls in components when `lib/finance/remote.ts`, `lib/crm/remote.ts`, `lib/mobile/remote.ts`, or a service already exists.
 
 Keep server round-trips in `remote.ts`. Keep planner/display math in `lib/finance/calculations.ts` or the API planner.
 
@@ -561,7 +582,7 @@ Do not reformat unrelated files.
 
 # 39. ESLint
 
-Web and CRM ESLint are the frontend linters. API typecheck is `tsc`.
+Web, CRM, and Mobile ESLint are the frontend linters. API typecheck is `tsc`.
 
 Do not disable rules globally. Do not ignore lint in the area you changed.
 
@@ -581,7 +602,9 @@ Do not use `--no-verify` as normal workflow if hooks are added later.
 
 Keep production images lean. Do not run as root in production images when changing Dockerfiles, where practical.
 
-Local Postgres is **5433** on the host (**5432** in `docker-compose.dev.yml`). Redis **6379**. API **5001** (travel CRM API **5002**, banquet CRM API **5003**). Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**. Travel CRM **8083**. Banquet CRM **8084**. Extra CRM instances reuse `apps/crm` and a second API process against a separate Postgres database; do not add `tenantId` or copy the CRM app.
+Local Postgres is **5433** on the host (**5432** in `docker-compose.dev.yml`). Redis **6379**. API **5001** (travel CRM API **5002**, banquet CRM API **5003**). Web **8080** (Compose) / **5173** (host Vite). Marketing website **8081**. Sales CRM **8082**. Travel CRM **8083**. Banquet CRM **8084**. CRM Mobile **8085**. Extra CRM instances reuse `apps/crm` and a second API process against a separate Postgres database; do not add `tenantId` or copy the CRM app.
+
+Every app Dockerfile copies **all** workspace manifests before `pnpm install --frozen-lockfile`, because pnpm validates the lockfile against every workspace member. Adding an app means adding its `COPY apps/<name>/package.json` line to each existing Dockerfile too.
 
 ---
 

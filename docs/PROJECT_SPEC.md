@@ -82,7 +82,8 @@ Redis is already used for advisor caching. Do not add BullMQ or a second queue u
 │   ├── api/                 # Express API (finance + /api/crm)
 │   ├── web/                 # Freedom Planner React app
 │   ├── website/             # Public marketing site
-│   └── crm/                 # Sales CRM React app (Track D)
+│   ├── crm/                 # Sales CRM React app (Track D)
+│   └── mobile/              # CRM Mobile React app (phone-first, same /api/crm)
 ├── packages/
 │   └── tsconfig/
 ├── docs/
@@ -112,9 +113,10 @@ Env examples: root `.env.example` (Compose / `.env.dev`) and `apps/api/.env.exam
 | Web | `apps/web` | Authenticated Freedom Planner UI (`8080` in Compose) |
 | Website | `apps/website` | Public marketing site (`8081`); links into the product via `VITE_APP_URL` |
 | CRM | `apps/crm` | Sales CRM UI (`8082`); extra Compose copies on `8083` (travel) and `8084` (banquet). Dashboard, pipeline, tasks, calendar, users/roles. Public pages (no auth): walkthroughs `/banquet`, `/real-estate`, `/freedom`, banquet intake `/banquet-enquiry`, banquet handover checklist `/banquet-checklist` (fill, print, or copy a WhatsApp handover message; no API), and travel intake `/travel-enquiry`. |
+| Mobile | `apps/mobile` | CRM Mobile UI (`8085`); phone-first shell over the same `/api/crm`. Sticky header (menu drawer, profile, plus-circle quick add) and a five-tab bottom nav: Home, Enquiries, Calendar, Booked, Payments. Contacts stays in the drawer. No public pages. |
 | API | `apps/api` | Express backend (`5001`), Swagger `/docs`; finance + `/api/crm` |
 
-Do not import `apps/web` source from `apps/website`, `apps/crm`, or the reverse.
+Do not import `apps/web` source from `apps/website`, `apps/crm`, `apps/mobile`, or the reverse.
 
 **Admin (`apps/admin`)** does not exist. Do not scaffold it unless requested. CRM admin (users/roles) lives inside `apps/crm`, not a third app. Roles can be created after bootstrap; built-in slugs stay `admin` / `manager` / `sales` / `viewer`.
 
@@ -143,6 +145,8 @@ Do not reshape into `src/features/*` in an unrelated PR.
 Marketing site (`apps/website`) is a second Vite app: `src/pages`, `src/components`. It has no auth store and must not import `apps/web`.
 
 Sales CRM (`apps/crm`) copies the web auth/API/shadcn pattern. LocalStorage keys are prefixed `crm-`. Do not import `apps/web` source.
+
+CRM Mobile (`apps/mobile`) copies the same auth/API/shadcn pattern with localStorage keys prefixed `mobile-`, so it can be installed alongside the CRM on one host. It is a phone layout, not a second product: one max-width column between a sticky header and a fixed five-tab bottom nav (Home, Enquiries, Calendar, Booked, Payments), with Profile beside the plus button. Each tab has a search field. Safe-area insets sit on both edges, and lists page with "Load more" instead of fetching everything. Tabs and quick-add actions are gated on the same `crm.*` permission codes; a tab the role cannot open renders disabled so the bar keeps five slots. Server round-trips live in `lib/mobile/remote.ts`. The Calendar tab mirrors the CRM: day, week and month views over the same `/api/crm/calendar` feed (tasks, reminders, booked and follow-ups; booked is a green square and follow-ups an amber diamond, with the same colour on the row edge), and tapping a date opens that day's items plus the create actions the role is allowed — reminder, enquiry, follow-up, task. Date helpers live in `lib/mobile/calendar.ts` and the create sheets in `components/forms/`, shared with the list tabs. Booking and payment creation stay in `apps/crm`. Do not import `apps/crm` source.
 
 Both product SPAs ship a web app manifest and service worker (UI shell only). Chrome/Edge can **Install** them as standalone windows; iOS uses Share → Add to Home Screen (no `beforeinstallprompt`). Verify locally with `pnpm --filter web build` / `pnpm --filter crm build` then `preview` on localhost, or on the HTTPS production hosts. Do not cache JWT `/api` responses in the service worker.
 
@@ -550,7 +554,7 @@ Express (:5001)
 
 AWS (`docker-compose.prod.yml`): nginx serves the built SPA and proxies `/api` to Express (port 80, and 443 when `TLS_DOMAIN` is set). Postgres and Redis stay on the Compose network. See `docs/AWS_DEPLOY.md`.
 
-Local `docker-compose.dev.yml` can also run two extra CRM instances (same `apps/crm` UI, extra API processes): travel on `8083` / `travel.local.uat` (`travel_crm` database) and banquet on `8084` / `banquet.local.uat` (`banque_crm` database). The original CRM stays on `8082` / `crm.local.uat` and shares `${POSTGRES_DB}` with finance.
+Local `docker-compose.dev.yml` can also run two extra CRM instances (same `apps/crm` UI, extra API processes): travel on `8083` / `travel.local.uat` (`travel_crm` database) and banquet on `8084` / `banquet.local.uat` (`banque_crm` database). The original CRM stays on `8082` / `crm.local.uat` and shares `${POSTGRES_DB}` with finance. CRM Mobile runs on `8085` / `mobile.local.uat` against the same `api` process and database as the original CRM.
 
 Production (`docker-compose.prod.yml`) uses the same split: `https://crm.myfinancefreedom.com` (shared finance DB), `https://travel.myfinancefreedom.com` (`travel_crm`), `https://banquet.myfinancefreedom.com` (`banque_crm`). Point those hostnames at the Elastic IP and expand the Let's Encrypt cert (`./docker-certbot.sh`) before nginx will serve HTTPS for the new names.
 
