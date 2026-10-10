@@ -12,7 +12,7 @@ export const enquiryIdParamsSchema = crmIdParamsSchema;
 export const removeEnquiryBodySchema = crmRemoveBodySchema;
 
 export const listEnquiriesQuerySchema = crmListQuerySchema.extend({
-  status: crmEnquiryStatusSchema.optional(),
+  status: z.union([crmEnquiryStatusSchema, z.literal("open")]).optional(),
   contactId: z.string().uuid().optional(),
   assignedToId: z.string().uuid().optional(),
 });

@@ -10,7 +10,9 @@ import type {
   CrmCalendarItem,
   CrmClient,
   CrmClientStatus,
+  ConvertEnquiryInput,
   CrmContact,
+  CrmContactDetail,
   CrmContactType,
   CrmDashboard,
   CrmEnquiry,
@@ -37,7 +39,7 @@ export type ListContactsQuery = {
 export type ListEnquiriesQuery = {
   page?: number;
   limit?: number;
-  status?: CrmEnquiryStatus;
+  status?: CrmEnquiryStatus | "open";
   contactId?: string;
 };
 
@@ -174,6 +176,24 @@ function mapEnquiry(row: Record<string, unknown>): CrmEnquiry {
     nextFollowupDate: asIsoOrNull(row.nextFollowupDate),
     createdAt: asIsoOrNull(row.createdAt),
     updatedAt: asIsoOrNull(row.updatedAt),
+  };
+}
+
+function mapEnquiryWithFollowUps(row: Record<string, unknown>): CrmEnquiry & { followUps: CrmFollowUp[] } {
+  const followUps = Array.isArray(row.followUps)
+    ? row.followUps.map((item) => mapFollowUp(asRecord(item)))
+    : [];
+  return { ...mapEnquiry(row), followUps };
+}
+
+function mapContactDetail(row: Record<string, unknown>): CrmContactDetail {
+  return {
+    contact: mapContact(asRecord(row.contact)),
+    enquiries: Array.isArray(row.enquiries)
+      ? row.enquiries.map((item) => mapEnquiryWithFollowUps(asRecord(item)))
+      : [],
+    payments: Array.isArray(row.payments) ? row.payments.map((item) => mapPayment(asRecord(item))) : [],
+    bookings: Array.isArray(row.bookings) ? row.bookings.map((item) => mapCalendarEvent(asRecord(item))) : [],
   };
 }
 
@@ -332,6 +352,19 @@ export async function updateEnquiry(id: string, input: Partial<CreateEnquiryInpu
   return mapEnquiry(asRecord(requireField(data, "enquiry")));
 }
 
+export async function removeEnquiry(id: string): Promise<void> {
+  await api("/api/crm/enquiries/remove", { method: "POST", body: { id } });
+}
+
+export async function convertEnquiry(id: string, body: ConvertEnquiryInput): Promise<void> {
+  await api(`/api/crm/enquiries/${id}/convert`, { method: "POST", body });
+}
+
+export async function fetchContactDetail(id: string): Promise<CrmContactDetail> {
+  const data = await api<Record<string, unknown>>(`/api/crm/contacts/${id}`);
+  return mapContactDetail(data);
+}
+
 export async function listFollowUps(query: ListFollowUpsQuery = {}): Promise<CrmPaginated<CrmFollowUp>> {
   const raw = await api<unknown>(`/api/crm/followups${toSearchParams(query)}`);
   return mapPaginated(raw, mapFollowUp);
@@ -340,6 +373,14 @@ export async function listFollowUps(query: ListFollowUpsQuery = {}): Promise<Crm
 export async function createFollowUp(input: CreateFollowUpInput): Promise<CrmFollowUp> {
   const data = await api<Record<string, unknown>>("/api/crm/followups", { method: "POST", body: input });
   return mapFollowUp(asRecord(requireField(data, "followUp")));
+}
+
+export async function updateClient(
+  id: string,
+  input: { billingName?: string; status?: CrmClientStatus; gstin?: string | null },
+): Promise<CrmClient> {
+  const data = await api<Record<string, unknown>>(`/api/crm/clients/${id}`, { method: "PATCH", body: input });
+  return mapClient(asRecord(requireField(data, "client")));
 }
 
 export async function listClients(query: ListClientsQuery = {}): Promise<CrmPaginated<CrmClient>> {
@@ -355,6 +396,15 @@ export async function listPayments(query: ListPaymentsQuery = {}): Promise<CrmPa
 export async function createPayment(input: CreatePaymentInput): Promise<CrmPayment> {
   const data = await api<Record<string, unknown>>("/api/crm/payments", { method: "POST", body: input });
   return mapPayment(asRecord(requireField(data, "payment")));
+}
+
+export async function updatePayment(id: string, input: Partial<CreatePaymentInput>): Promise<CrmPayment> {
+  const data = await api<Record<string, unknown>>(`/api/crm/payments/${id}`, { method: "PATCH", body: input });
+  return mapPayment(asRecord(requireField(data, "payment")));
+}
+
+export async function removePayment(id: string): Promise<void> {
+  await api("/api/crm/payments/remove", { method: "POST", body: { id } });
 }
 
 export async function listTasks(query: ListTasksQuery = {}): Promise<CrmPaginated<CrmTask>> {
@@ -373,6 +423,17 @@ export async function listCalendar(query: ListCalendarQuery): Promise<{ items: C
   );
   const items = Array.isArray(raw.items) ? raw.items.map((item) => mapCalendarItem(asRecord(item))) : [];
   return { items };
+}
+
+export async function updateCalendarEvent(
+  id: string,
+  input: Partial<CreateCalendarEventInput>,
+): Promise<CrmCalendarEvent> {
+  const data = await api<Record<string, unknown>>(`/api/crm/calendar/events/${id}`, {
+    method: "PATCH",
+    body: input,
+  });
+  return mapCalendarEvent(asRecord(requireField(data, "event")));
 }
 
 export async function createCalendarEvent(input: CreateCalendarEventInput): Promise<CrmCalendarEvent> {

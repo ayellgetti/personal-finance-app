@@ -468,9 +468,11 @@ export const crmOpenApiPaths = {
         {
           name: "status",
           in: "query",
+          description: "A pipeline stage, or open for every enquiry that is not closed.",
           schema: {
             type: "string",
             enum: [
+              "open",
               "new",
               "contacted",
               "qualified",

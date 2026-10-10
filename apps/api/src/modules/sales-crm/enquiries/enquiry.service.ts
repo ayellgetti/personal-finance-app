@@ -16,6 +16,7 @@ import {
   type CrmFollowUpModel,
   type CrmPaymentModel,
 } from "../../../models/index";
+import { OPEN_ENQUIRY_STATUSES } from "../crm.request";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
 import { isBookedAndPaid } from "../booking-lock";
 import { resolveEventRange } from "../calendar/event-slot";
@@ -128,7 +129,9 @@ export class EnquiryService {
 
   list(query: ListEnquiriesQuery) {
     const where: Prisma.CrmEnquiryWhereInput = { isActive: 1 };
-    if (query.status) {
+    if (query.status === "open") {
+      where.status = { in: [...OPEN_ENQUIRY_STATUSES] };
+    } else if (query.status) {
       where.status = query.status;
     }
     if (query.contactId) {

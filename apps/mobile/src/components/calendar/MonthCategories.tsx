@@ -1,5 +1,6 @@
 import { Wallet } from "lucide-react";
 import { AgendaItem } from "@/components/calendar/AgendaItem";
+import { ListRow } from "@/components/ListRow";
 import { Badge } from "@/components/ui/badge";
 import {
   MONTH_CATEGORIES,
@@ -9,7 +10,12 @@ import {
 } from "@/lib/mobile/calendar";
 import { formatMoney, humanize, matchesQuery } from "@/lib/mobile/format";
 import { cn } from "@/lib/utils";
-import type { CrmCalendarItem, CrmPayment } from "@/types/crm";
+import type { CrmCalendarItem, CrmPayment, CrmPaymentType } from "@/types/crm";
+
+const TYPE_LABELS: Record<CrmPaymentType, string> = {
+  INCOME: "Income",
+  EXPENSE: "Expense",
+};
 
 type MonthRow =
   | { kind: "item"; at: string; item: CrmCalendarItem }
@@ -61,26 +67,26 @@ function dayHeading(at: string): string {
 }
 
 function PaymentRow({ payment }: { payment: CrmPayment }) {
+  const detail = payment.reference
+    ? [TYPE_LABELS[payment.type], humanize(payment.mode)].join(" · ")
+    : humanize(payment.mode);
+
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-l-4 border-border border-l-violet-500 bg-card px-4 py-3 shadow-[var(--shadow-card)]">
-      <span className="w-14 shrink-0 pt-0.5 text-xs font-semibold text-muted-foreground">
-        {humanize(payment.type)}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{formatMoney(payment.amount, payment.currency)}</p>
-        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-          {humanize(payment.mode)}
-          {payment.reference ? ` · ${payment.reference}` : ""}
-        </p>
-      </div>
-      <Badge
-        variant="secondary"
-        className="shrink-0 gap-1 rounded-lg border-0 bg-violet-500/15 text-[10px] text-violet-700 dark:text-violet-300"
-      >
-        <Wallet className="h-3 w-3" aria-hidden />
-        {humanize(payment.status)}
-      </Badge>
-    </div>
+    <ListRow
+      title={payment.reference || TYPE_LABELS[payment.type]}
+      detail={detail}
+      value={formatMoney(payment.amount, payment.currency)}
+      accentClassName="border-l-violet-500"
+      badge={
+        <Badge
+          variant="secondary"
+          className="gap-1 rounded-lg border-0 bg-violet-500/15 text-[10px] text-violet-700 dark:text-violet-300"
+        >
+          <Wallet className="h-3 w-3" aria-hidden />
+          {humanize(payment.status)}
+        </Badge>
+      }
+    />
   );
 }
 

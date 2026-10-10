@@ -172,6 +172,38 @@ export function isToday(date: Date, now = new Date()): boolean {
   return dayKey(date) === dayKey(now);
 }
 
+export const DUE_DATE_SHORTCUTS = [
+  { id: "7d", label: "7 days", days: 7, months: 0 },
+  { id: "1m", label: "1 month", days: 0, months: 1 },
+  { id: "3m", label: "3 months", days: 0, months: 3 },
+  { id: "6m", label: "6 months", days: 0, months: 6 },
+] as const;
+
+export type DueDateShortcutId = (typeof DUE_DATE_SHORTCUTS)[number]["id"];
+
+/** Adds the shortcut onto the local calendar day, letting month length roll over. */
+export function applyDueDateShortcut(id: DueDateShortcutId, from = new Date()): Date {
+  const shortcut = DUE_DATE_SHORTCUTS.find((item) => item.id === id);
+  const base = startOfDay(from);
+  if (!shortcut) return base;
+  return new Date(base.getFullYear(), base.getMonth() + shortcut.months, base.getDate() + shortcut.days);
+}
+
+export function dueDateShortcutKey(id: DueDateShortcutId, from = new Date()): string {
+  return dayKey(applyDueDateShortcut(id, from));
+}
+
+export function parseDateKey(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+}
+
 export function groupByDay(items: readonly CrmCalendarItem[]): Map<string, CrmCalendarItem[]> {
   const grouped = new Map<string, CrmCalendarItem[]>();
   for (const item of items) {

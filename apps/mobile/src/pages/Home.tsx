@@ -1,13 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
-import { SearchBar } from "@/components/SearchBar";
 import { SectionCard } from "@/components/SectionCard";
 import { useAuth } from "@/lib/auth/store";
-import { KIND_LABELS } from "@/lib/mobile/calendar";
-import { endOfDayIso, formatDate, formatTime, humanize, matchesQuery, startOfDayIso } from "@/lib/mobile/format";
-import { fetchDashboard, listCalendar } from "@/lib/mobile/remote";
+import { endOfDayIso, formatDate, formatTime, humanize, startOfDayIso } from "@/lib/mobile/format";
+import { fetchDashboard, listCalendar, listClients } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
 import { useResource } from "@/lib/mobile/use-resource";
 import { CRM_PERMISSIONS, type CrmCalendarItem, type CrmDashboard } from "@/types/crm";
@@ -43,14 +41,64 @@ function NextUpCard({ item }: { item: CrmCalendarItem }) {
   );
 }
 
-function DueList({ dashboard, query }: { dashboard: CrmDashboard; query: string }) {
-  const items = dashboard.customerDueItems.filter((item) => matchesQuery(query, item.title));
+function PipelineCounts({
+  openCount,
+  bookedCount,
+  bookedLoading,
+  canOpenEnquiries,
+  canOpenBooked,
+}: {
+  openCount: number;
+  bookedCount: number | null;
+  bookedLoading: boolean;
+  canOpenEnquiries: boolean;
+  canOpenBooked: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <PipelineCount
+        label="Open"
+        value={openCount}
+        to={canOpenEnquiries ? "/enquiries?status=open" : null}
+      />
+      <PipelineCount
+        label="Booked"
+        value={bookedLoading ? null : bookedCount}
+        to={canOpenBooked ? "/booked" : null}
+      />
+    </div>
+  );
+}
+
+function PipelineCount({
+  label,
+  value,
+  to,
+}: {
+  label: string;
+  value: number | null;
+  to: string | null;
+}) {
+  const body = (
+    <>
+      <p className="font-display text-xl font-bold tabular-nums">{value ?? "—"}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
+    </>
+  );
+  const className =
+    "rounded-xl border border-border bg-background px-3 py-3 text-left transition-colors tap-highlight-none";
+  if (!to) return <div className={className}>{body}</div>;
+  return (
+    <Link to={to} className={`${className} hover:bg-secondary`}>
+      {body}
+    </Link>
+  );
+}
+
+function DueList({ dashboard }: { dashboard: CrmDashboard }) {
+  const items = dashboard.customerDueItems;
   if (items.length === 0) {
-    return (
-      <p className="py-2 text-sm text-muted-foreground">
-        {query.trim() ? "Nothing matches your search." : "Nothing is due today."}
-      </p>
-    );
+    return <p className="py-2 text-sm text-muted-foreground">Nothing is due today.</p>;
   }
 
   return (
@@ -71,9 +119,12 @@ export default function Home() {
 
   const canReadDashboard = permissions.includes(CRM_PERMISSIONS.dashboardRead);
   const canReadCalendar = permissions.includes(CRM_PERMISSIONS.calendarRead);
-  const [query, setQuery] = useState("");
+  const canReadEnquiries = permissions.includes(CRM_PERMISSIONS.enquiriesRead);
+  const canReadClients = permissions.includes(CRM_PERMISSIONS.clientsRead);
 
   const dashboard = useResource(fetchDashboard, canReadDashboard);
+  const loadBooked = useCallback(() => listClients({ page: 1, limit: 1 }), []);
+  const booked = useResource(loadBooked, canReadClients);
 
   const loadAgenda = useCallback(() => {
     const now = new Date();
@@ -86,13 +137,9 @@ export default function Home() {
   const nextUp = useMemo(
     () =>
       agenda.data?.items
-        .filter(
-          (item) =>
-            new Date(item.at).getTime() >= Date.now() &&
-            matchesQuery(query, item.title, item.notes, KIND_LABELS[item.kind]),
-        )
+        .filter((item) => new Date(item.at).getTime() >= Date.now())
         .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())[0],
-    [agenda.data, query],
+    [agenda.data],
   );
 
   if (!canReadDashboard) return <ForbiddenState label="the dashboard" />;
@@ -106,8 +153,6 @@ export default function Home() {
 
   return (
     <div className="space-y-5">
-      <SearchBar value={query} onChange={setQuery} placeholder="Search your day" label="Search home" />
-
       <div>
         <p className="eyebrow">Today</p>
         <h2 className="font-display text-xl font-bold tracking-tight">
@@ -143,20 +188,17 @@ export default function Home() {
       ) : null}
 
       <SectionCard eyebrow="Pipeline" title="Due today" tone="primary">
-        <DueList dashboard={data} query={query} />
+        <DueList dashboard={data} />
       </SectionCard>
 
-      <SectionCard eyebrow="Pipeline" title="Enquiries" tone="neutral">
-        <dl className="grid grid-cols-2 gap-3">
-          <div>
-            <dt className="text-xs text-muted-foreground">Open</dt>
-            <dd className="font-display text-xl font-bold tabular-nums">{data.enquiries.open}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Closed</dt>
-            <dd className="font-display text-xl font-bold tabular-nums">{data.enquiries.closed}</dd>
-          </div>
-        </dl>
+      <SectionCard eyebrow="Pipeline" title="Open and booked" tone="neutral">
+        <PipelineCounts
+          openCount={data.enquiries.open}
+          bookedCount={booked.data?.pagination.total ?? null}
+          bookedLoading={booked.status === "loading"}
+          canOpenEnquiries={canReadEnquiries}
+          canOpenBooked={canReadClients}
+        />
       </SectionCard>
     </div>
   );

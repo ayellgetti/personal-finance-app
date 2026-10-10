@@ -26,15 +26,21 @@ export const CRM_PERMISSIONS = {
   enquiriesRead: "crm.enquiries.read",
   enquiriesCreate: "crm.enquiries.create",
   enquiriesUpdate: "crm.enquiries.update",
+  enquiriesDelete: "crm.enquiries.delete",
+  enquiriesConvert: "crm.enquiries.convert",
   followUpsRead: "crm.followups.read",
   followUpsCreate: "crm.followups.create",
   clientsRead: "crm.clients.read",
+  clientsUpdate: "crm.clients.update",
   paymentsRead: "crm.payments.read",
   paymentsCreate: "crm.payments.create",
+  paymentsUpdate: "crm.payments.update",
+  paymentsDelete: "crm.payments.delete",
   tasksRead: "crm.tasks.read",
   tasksCreate: "crm.tasks.create",
   calendarRead: "crm.calendar.read",
   calendarCreate: "crm.calendar.create",
+  calendarUpdate: "crm.calendar.update",
   usersRead: "crm.users.read",
   rolesRead: "crm.roles.read",
 } as const;
@@ -127,6 +133,20 @@ export type CrmFollowUp = {
 
 export type CrmEnquiryWithFollowUps = CrmEnquiry & {
   followUps: CrmFollowUp[];
+};
+
+export type CrmContactDetail = {
+  contact: CrmContact;
+  enquiries: CrmEnquiryWithFollowUps[];
+  payments: CrmPayment[];
+  bookings: CrmCalendarEvent[];
+};
+
+export type ConvertEnquiryInput = {
+  billingName?: string;
+  startsAt?: string;
+  endsAt?: string | null;
+  slot?: CrmEventSlot | null;
 };
 
 export type CrmClient = {

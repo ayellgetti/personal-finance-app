@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyDueDateShortcut,
   dayKey,
+  dueDateShortcutKey,
   filterMonthItems,
   groupByDay,
   itemsInMonth,
   monthBounds,
   monthCategoryForKind,
   monthGrid,
+  parseDateKey,
   rangeFor,
   rangeLabel,
   shiftCursor,
@@ -52,6 +55,22 @@ describe("calendar grids", () => {
 
   it("shows a single day in day view", () => {
     expect(visibleDays("day", new Date(2026, 9, 9))).toHaveLength(1);
+  });
+});
+
+describe("due date shortcuts", () => {
+  const from = new Date(2026, 9, 10);
+
+  it("adds 7 days, 1 month, 3 months, and 6 months on the local calendar", () => {
+    expect(dayKey(applyDueDateShortcut("7d", from))).toBe("2026-10-17");
+    expect(dayKey(applyDueDateShortcut("1m", from))).toBe("2026-11-10");
+    expect(dayKey(applyDueDateShortcut("3m", from))).toBe("2027-01-10");
+    expect(dueDateShortcutKey("6m", from)).toBe("2027-04-10");
+  });
+
+  it("rejects a calendar key that is not a real day", () => {
+    expect(parseDateKey("2026-02-31")).toBeNull();
+    expect(dayKey(parseDateKey("2026-10-10") as Date)).toBe("2026-10-10");
   });
 });
 

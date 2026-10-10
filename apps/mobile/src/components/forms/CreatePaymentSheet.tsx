@@ -1,16 +1,17 @@
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormSheet } from "@/components/forms/FormSheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { humanize } from "@/lib/mobile/format";
-import { createPayment, listClients, listContacts } from "@/lib/mobile/remote";
+import { humanize, toDateInputValue } from "@/lib/mobile/format";
+import { createPayment, listClients, listContacts, updatePayment } from "@/lib/mobile/remote";
 import { useResource } from "@/lib/mobile/use-resource";
 import {
   CRM_PAYMENT_MODES,
   CRM_PAYMENT_STATUSES,
   CRM_PAYMENT_TYPES,
+  type CrmPayment,
   type CrmPaymentMode,
   type CrmPaymentReferenceType,
   type CrmPaymentStatus,
@@ -21,10 +22,12 @@ export function CreatePaymentSheet({
   open,
   onOpenChange,
   onCreated,
+  payment,
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   onCreated: () => void;
+  payment?: CrmPayment | null;
 }) {
   const [referenceType, setReferenceType] = useState<CrmPaymentReferenceType>("client");
   const [referenceId, setReferenceId] = useState("");
@@ -35,6 +38,18 @@ export function CreatePaymentSheet({
   const [paidAt, setPaidAt] = useState("");
   const [reference, setReference] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open || !payment) return;
+    setReferenceType(payment.referenceType);
+    setReferenceId(payment.referenceId);
+    setAmount(String(payment.amount));
+    setType(payment.type);
+    setMode(payment.mode);
+    setStatus(payment.status);
+    setPaidAt(payment.paidAt ? toDateInputValue(new Date(payment.paidAt)) : "");
+    setReference(payment.reference ?? "");
+  }, [open, payment]);
 
   const loadClients = useCallback(() => listClients({ page: 1, limit: 50 }), []);
   const loadVendors = useCallback(() => listContacts({ page: 1, limit: 50, type: "vendor" }), []);
@@ -62,18 +77,24 @@ export function CreatePaymentSheet({
     const selectedClient = clients.data?.items.find((client) => client.id === referenceId);
     setBusy(true);
     try {
-      await createPayment({
+      const body = {
         referenceType,
         referenceId,
-        enquiryId: referenceType === "client" ? (selectedClient?.convertedFromEnquiryId ?? null) : null,
+        enquiryId: referenceType === "client" ? (payment?.enquiryId ?? selectedClient?.convertedFromEnquiryId ?? null) : null,
         amount: parsedAmount,
         type,
         mode,
         status,
         paidAt: paidAt ? new Date(paidAt).toISOString() : null,
         reference: reference.trim() || null,
-      });
-      toast.success("Payment created");
+      };
+      if (payment) {
+        await updatePayment(payment.id, body);
+        toast.success("Payment updated");
+      } else {
+        await createPayment(body);
+        toast.success("Payment created");
+      }
       setReferenceId("");
       setAmount("");
       setPaidAt("");
@@ -91,9 +112,9 @@ export function CreatePaymentSheet({
     <FormSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Add payment"
-      description="Record money against a booked record or a vendor."
-      submitLabel="Create payment"
+      title={payment ? "Edit payment" : "Add payment"}
+      description={payment ? "Update this payment." : "Record money against a booked record or a vendor."}
+      submitLabel={payment ? "Save payment" : "Create payment"}
       busy={busy}
       onSubmit={onSubmit}
     >

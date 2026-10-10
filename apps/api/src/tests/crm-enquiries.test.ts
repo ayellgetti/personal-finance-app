@@ -166,6 +166,33 @@ test("enquiry create, list, update, and soft-delete hide the row", async () => {
   assert.equal(contacts.rows[0]?.type, "lead");
 });
 
+test("status open lists every enquiry that is not closed", async () => {
+  const { service } = setup([
+    { id: "c-1", name: "Ada", mobile: "111", type: "lead", isActive: 1 },
+  ]);
+  const dueDate = new Date("2026-12-01T12:00:00.000Z");
+  const open = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Still talking",
+    source: "web",
+    status: "negotiation",
+    dueDate,
+  });
+  const closed = await service.create("user-1", {
+    contactId: "c-1",
+    title: "Finished",
+    source: "web",
+    dueDate,
+  });
+  await service.update("user-1", closed.id, { status: "closed", closedReason: "Lost: budget" });
+
+  const listed = await service.list({ status: "open" });
+  assert.deepEqual(
+    listed.items.map((enquiry) => enquiry.id),
+    [open.id],
+  );
+});
+
 test("enquiry against a soft-deleted contact is 422", async () => {
   const { service } = setup([
     { id: "c-1", name: "Ada", mobile: "111", type: "lead", isActive: 0 },

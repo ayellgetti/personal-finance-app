@@ -15,11 +15,13 @@ export function CreateFollowUpSheet({
   onOpenChange,
   day,
   onCreated,
+  enquiry,
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
   day: Date;
   onCreated: () => void;
+  enquiry?: { id: string; title: string } | null;
 }) {
   const [enquiryId, setEnquiryId] = useState("");
   const [stage, setStage] = useState<CrmEnquiryStatus>("contacted");
@@ -30,14 +32,15 @@ export function CreateFollowUpSheet({
   const [busy, setBusy] = useState(false);
 
   const loadEnquiries = useCallback(() => listEnquiries({ page: 1, limit: 50 }), []);
-  const enquiries = useResource(loadEnquiries, open);
+  const enquiries = useResource(loadEnquiries, open && !enquiry);
 
   useEffect(() => {
     if (!open) return;
     const value = toDateInputValue(day);
     setDueDate(value);
     setNextDate(value);
-  }, [open, day]);
+    if (enquiry) setEnquiryId(enquiry.id);
+  }, [open, day, enquiry]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -76,21 +79,27 @@ export function CreateFollowUpSheet({
       busy={busy}
       onSubmit={onSubmit}
     >
-      <div className="space-y-2">
-        <Label htmlFor="followup-enquiry">Enquiry</Label>
-        <Select value={enquiryId} onValueChange={setEnquiryId}>
-          <SelectTrigger id="followup-enquiry" className="h-11 rounded-xl">
-            <SelectValue placeholder={enquiries.status === "loading" ? "Loading…" : "Pick an enquiry"} />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            {(enquiries.data?.items ?? []).map((enquiry) => (
-              <SelectItem key={enquiry.id} value={enquiry.id}>
-                {enquiry.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {enquiry ? (
+        <p className="text-sm text-muted-foreground">
+          Enquiry: <span className="font-medium text-foreground">{enquiry.title}</span>
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="followup-enquiry">Enquiry</Label>
+          <Select value={enquiryId} onValueChange={setEnquiryId}>
+            <SelectTrigger id="followup-enquiry" className="h-11 rounded-xl">
+              <SelectValue placeholder={enquiries.status === "loading" ? "Loading…" : "Pick an enquiry"} />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {(enquiries.data?.items ?? []).map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="followup-stage">Stage</Label>
         <Select value={stage} onValueChange={(next) => setStage(next as CrmEnquiryStatus)}>
