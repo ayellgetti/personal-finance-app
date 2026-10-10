@@ -1,12 +1,15 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MonthCalendar, MonthNav } from "@/components/modules/MonthCalendar";
+import { dayKey, monthRangeIso, type MonthChip } from "@/components/modules/month-calendar";
 import {
   ConfirmRemoveDialog,
   EditAction,
   Field,
+  MODULE_VIEWS,
   ModulePage,
   ModuleStatus,
   NativeSelect,
@@ -21,6 +24,7 @@ import {
   PAYMENT_TYPE_LABELS,
   formatDateTime,
   formatMoney,
+  formatTime,
   isoToLocalInput,
   localInputToIso,
   paymentModeOptions,
@@ -38,7 +42,10 @@ import {
   type CrmPaymentType,
 } from "@/types/crm";
 
-type ViewMode = "table" | "card";
+type ViewMode = "table" | "card" | "calendar";
+
+const VIEW_OPTIONS = [MODULE_VIEWS.table, MODULE_VIEWS.card, MODULE_VIEWS.calendar];
+const CALENDAR_PAGE_LIMIT = 500;
 
 type FormState = {
   referenceType: CrmPaymentReferenceType;
@@ -108,6 +115,7 @@ export function PaymentsModule({
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.paymentsRead);
   const [view, setView] = useState<ViewMode>("table");
+  const [cursor, setCursor] = useState(() => new Date());
   const [statusFilter, setStatusFilter] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -116,11 +124,16 @@ export function PaymentsModule({
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const calendarRange = view === "calendar" ? monthRangeIso(cursor) : null;
+
   const reload = () => {
     void crm.loadPayments({
       referenceType: clientId ? "client" : undefined,
       referenceId: clientId || undefined,
       status: statusFilter ? (statusFilter as CrmPaymentStatus) : undefined,
+      from: calendarRange?.from,
+      to: calendarRange?.to,
+      limit: calendarRange ? CALENDAR_PAGE_LIMIT : undefined,
     });
     if (crm.hasPermission(CRM_PERMISSIONS.clientsRead)) void crm.loadClients({ limit: 100 });
     if (crm.hasPermission(CRM_PERMISSIONS.contactsRead)) {
@@ -131,7 +144,7 @@ export function PaymentsModule({
   useEffect(() => {
     if (sessionReady && allowed) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionReady, allowed, statusFilter, clientId]);
+  }, [sessionReady, allowed, statusFilter, clientId, view, cursor]);
 
   const clientName = (id: string) =>
     crm.clients.items.find((client) => client.id === id)?.billingName ?? id;
@@ -139,6 +152,40 @@ export function PaymentsModule({
     crm.contacts.items.find((contact) => contact.id === id)?.name ?? id;
   const payeeName = (payment: CrmPayment) =>
     payment.referenceType === "vendor" ? vendorName(payment.referenceId) : clientName(payment.referenceId);
+
+  const calendarByDay = useMemo(() => {
+    const nameFor = (payment: CrmPayment) =>
+      payment.referenceType === "vendor"
+        ? (crm.contacts.items.find((contact) => contact.id === payment.referenceId)?.name ?? payment.referenceId)
+        : (crm.clients.items.find((client) => client.id === payment.referenceId)?.billingName ?? payment.referenceId);
+    const grouped = new Map<string, MonthChip[]>();
+    const dated = crm.payments.items
+      .filter((payment): payment is CrmPayment & { paidAt: string } => Boolean(payment.paidAt))
+      .sort((left, right) => new Date(left.paidAt).getTime() - new Date(right.paidAt).getTime());
+    for (const payment of dated) {
+      const key = dayKey(new Date(payment.paidAt));
+      const chips = grouped.get(key) ?? [];
+      chips.push({
+        id: payment.id,
+        label: `${formatTime(payment.paidAt)} ${formatMoney(payment.amount, payment.currency)} ${nameFor(payment)}`,
+        className:
+          payment.type === "EXPENSE" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900",
+      });
+      grouped.set(key, chips);
+    }
+    return grouped;
+  }, [crm.clients.items, crm.contacts.items, crm.payments.items]);
+
+  const calendarMonthCount = useMemo(() => {
+    let count = 0;
+    for (const [key, chips] of calendarByDay) {
+      const [year, month] = key.split("-");
+      if (Number(year) === cursor.getFullYear() && Number(month) === cursor.getMonth() + 1) {
+        count += chips.length;
+      }
+    }
+    return count;
+  }, [calendarByDay, cursor]);
 
   const openCreate = () => {
     setEditing(null);
@@ -214,7 +261,10 @@ export function PaymentsModule({
       crumb="Payments"
       view={view}
       onViewChange={(next) => setView(next as ViewMode)}
+      viewOptions={VIEW_OPTIONS}
       toolbar={
+        <>
+        {view === "calendar" ? <MonthNav cursor={cursor} onChange={setCursor} /> : null}
         <div className="flex flex-1 flex-wrap items-end gap-3">
           <Field id="payment-status-filter" label="Status">
             <NativeSelect
@@ -233,6 +283,7 @@ export function PaymentsModule({
             </Button>
           ) : null}
         </div>
+        </>
       }
       actions={
         crm.hasPermission(CRM_PERMISSIONS.paymentsCreate) ? (
@@ -247,10 +298,29 @@ export function PaymentsModule({
         allowed={allowed}
         status={crm.payments.status}
         errorMessage={crm.payments.errorMessage}
-        empty={crm.payments.items.length === 0}
+        empty={view === "calendar" ? false : crm.payments.items.length === 0}
         emptyLabel="No payments yet"
         onRetry={reload}
       >
+        {view === "calendar" ? (
+          <>
+            <MonthCalendar
+              cursor={cursor}
+              byDay={calendarByDay}
+              onOpen={
+                crm.hasPermission(CRM_PERMISSIONS.paymentsUpdate)
+                  ? (id) => {
+                      const payment = crm.payments.items.find((item) => item.id === id);
+                      if (payment) openEdit(payment);
+                    }
+                  : undefined
+              }
+            />
+            {calendarMonthCount === 0 ? (
+              <p className="text-sm text-muted-foreground">No payments this month</p>
+            ) : null}
+          </>
+        ) : null}
         {view === "card" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {crm.payments.items.map((payment) => (
@@ -290,7 +360,8 @@ export function PaymentsModule({
               </Card>
             ))}
           </div>
-        ) : (
+        ) : null}
+        {view === "table" ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -323,7 +394,7 @@ export function PaymentsModule({
               ))}
             </TableBody>
           </Table>
-        )}
+        ) : null}
       </ModuleStatus>
 
       <SideSheet

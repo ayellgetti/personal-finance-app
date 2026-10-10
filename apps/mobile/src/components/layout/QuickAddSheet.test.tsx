@@ -11,14 +11,21 @@ describe("quick add sheet", () => {
       <QuickAddSheet
         open
         onOpenChange={vi.fn()}
-        permissions={[CRM_PERMISSIONS.contactsCreate, CRM_PERMISSIONS.calendarCreate]}
+        permissions={[
+          CRM_PERMISSIONS.contactsCreate,
+          CRM_PERMISSIONS.paymentsCreate,
+          CRM_PERMISSIONS.calendarCreate,
+          CRM_PERMISSIONS.tasksCreate,
+        ]}
       />,
     );
 
     expect(screen.getByRole("button", { name: /New contact/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /New event/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add payment/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add reminder/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /New enquiry/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /New task/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /New event/ })).not.toBeInTheDocument();
   });
 
   it("explains when a role cannot create anything", () => {

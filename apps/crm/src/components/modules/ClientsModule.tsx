@@ -1,13 +1,22 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ClientViewSheet } from "@/components/modules/ClientViewSheet";
+import { MonthCalendar, MonthNav } from "@/components/modules/MonthCalendar";
+import {
+  coversLocalDay,
+  dayKey,
+  monthGrid,
+  monthRangeIso,
+  type MonthChip,
+} from "@/components/modules/month-calendar";
 import {
   ConfirmRemoveDialog,
   EditAction,
   Field,
+  MODULE_VIEWS,
   ModulePage,
   ModuleStatus,
   NativeSelect,
@@ -18,7 +27,13 @@ import {
   ViewAction,
 } from "@/components/modules/shared";
 import { bookingDatesForClient } from "@/lib/crm/booking";
-import { CLIENT_STATUS_LABELS, clientStatusOptions, formatDateTime, parseLocalDateKey } from "@/lib/crm/display";
+import {
+  CLIENT_STATUS_LABELS,
+  clientStatusOptions,
+  formatDateTime,
+  formatTime,
+  parseLocalDateKey,
+} from "@/lib/crm/display";
 import { fetchContactDetail } from "@/lib/crm/remote";
 import { useCrm } from "@/lib/crm/store";
 import {
@@ -29,7 +44,10 @@ import {
   type CrmClientStatus,
 } from "@/types/crm";
 
-type ViewMode = "table" | "card";
+type ViewMode = "table" | "card" | "calendar";
+
+const VIEW_OPTIONS = [MODULE_VIEWS.table, MODULE_VIEWS.card, MODULE_VIEWS.calendar];
+const CALENDAR_PAGE_LIMIT = 500;
 
 type FormState = {
   contactId: string;
@@ -87,6 +105,7 @@ export function ClientsModule({
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.clientsRead);
   const [view, setView] = useState<ViewMode>("table");
+  const [cursor, setCursor] = useState(() => new Date());
   const [statusFilter, setStatusFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -102,13 +121,15 @@ export function ClientsModule({
   const [bookingsByContactId, setBookingsByContactId] = useState<Record<string, CrmCalendarEvent[]>>({});
 
   const dateRangeInvalid = Boolean(fromDate && toDate && fromDate > toDate);
+  const calendarRange = view === "calendar" ? monthRangeIso(cursor) : null;
 
   const reload = () => {
     void crm.loadClients({
       status: statusFilter ? (statusFilter as CrmClientStatus) : undefined,
       search: appliedSearch || undefined,
-      from: !dateRangeInvalid ? startOfLocalDayIso(fromDate) : undefined,
-      to: !dateRangeInvalid ? endOfLocalDayIso(toDate) : undefined,
+      from: calendarRange ? calendarRange.from : !dateRangeInvalid ? startOfLocalDayIso(fromDate) : undefined,
+      to: calendarRange ? calendarRange.to : !dateRangeInvalid ? endOfLocalDayIso(toDate) : undefined,
+      limit: calendarRange ? CALENDAR_PAGE_LIMIT : undefined,
     });
     if (crm.hasPermission(CRM_PERMISSIONS.contactsRead)) void crm.loadContacts({ type: "client", limit: 100 });
   };
@@ -116,7 +137,7 @@ export function ClientsModule({
   useEffect(() => {
     if (sessionReady && allowed) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionReady, allowed, statusFilter, appliedSearch, fromDate, toDate]);
+  }, [sessionReady, allowed, statusFilter, appliedSearch, fromDate, toDate, view, cursor]);
 
   useEffect(() => {
     const missing = crm.clients.items.filter((client) => !client.startsAt || !client.endsAt);
@@ -143,6 +164,44 @@ export function ClientsModule({
   const contactFor = (id: string) => crm.contacts.items.find((contact) => contact.id === id) ?? null;
   const contactName = (id: string) => contactFor(id)?.name ?? id;
   const viewingContact = viewing ? contactFor(viewing.contactId) : null;
+
+  const calendarByDay = useMemo(() => {
+    const grouped = new Map<string, MonthChip[]>();
+    for (const day of monthGrid(cursor)) {
+      const key = dayKey(day);
+      const chips = crm.clients.items
+        .map((client) => ({
+          client,
+          dates: bookingDatesForClient(client, bookingsByContactId[client.contactId] ?? []),
+        }))
+        .filter(({ dates }) => coversLocalDay(dates.startsAt, dates.endsAt, day))
+        .sort(
+          (left, right) =>
+            new Date(left.dates.startsAt ?? 0).getTime() - new Date(right.dates.startsAt ?? 0).getTime(),
+        )
+        .map(({ client, dates }): MonthChip => {
+          const isStart = Boolean(dates.startsAt) && dayKey(new Date(dates.startsAt ?? 0)) === key;
+          return {
+            id: client.id,
+            label: isStart ? `${formatTime(dates.startsAt)} ${client.billingName}` : client.billingName,
+            className: "bg-emerald-100 text-emerald-900",
+          };
+        });
+      if (chips.length > 0) grouped.set(key, chips);
+    }
+    return grouped;
+  }, [bookingsByContactId, crm.clients.items, cursor]);
+
+  const calendarMonthCount = useMemo(() => {
+    let count = 0;
+    for (const [key, chips] of calendarByDay) {
+      const [year, month] = key.split("-");
+      if (Number(year) === cursor.getFullYear() && Number(month) === cursor.getMonth() + 1) {
+        count += chips.length;
+      }
+    }
+    return count;
+  }, [calendarByDay, cursor]);
 
   const clientContacts = crm.contacts.items.filter((contact) => contact.type === "client");
 
@@ -222,7 +281,10 @@ export function ClientsModule({
       crumb="Booked"
       view={view}
       onViewChange={(next) => setView(next as ViewMode)}
+      viewOptions={VIEW_OPTIONS}
       toolbar={
+        <>
+        {view === "calendar" ? <MonthNav cursor={cursor} onChange={setCursor} /> : null}
         <form
           className="flex flex-1 flex-wrap items-end gap-3"
           onSubmit={(event) => {
@@ -245,30 +307,35 @@ export function ClientsModule({
               {clientStatusOptions()}
             </NativeSelect>
           </Field>
-          <Field id="client-from-date" label="From">
-            <Input
-              id="client-from-date"
-              type="date"
-              value={fromDate}
-              max={toDate || undefined}
-              onChange={(event) => setFromDate(event.target.value)}
-              className="rounded-xl"
-            />
-          </Field>
-          <Field id="client-to-date" label="To">
-            <Input
-              id="client-to-date"
-              type="date"
-              value={toDate}
-              min={fromDate || undefined}
-              onChange={(event) => setToDate(event.target.value)}
-              className="rounded-xl"
-            />
-          </Field>
+          {view === "calendar" ? null : (
+            <>
+              <Field id="client-from-date" label="From">
+                <Input
+                  id="client-from-date"
+                  type="date"
+                  value={fromDate}
+                  max={toDate || undefined}
+                  onChange={(event) => setFromDate(event.target.value)}
+                  className="rounded-xl"
+                />
+              </Field>
+              <Field id="client-to-date" label="To">
+                <Input
+                  id="client-to-date"
+                  type="date"
+                  value={toDate}
+                  min={fromDate || undefined}
+                  onChange={(event) => setToDate(event.target.value)}
+                  className="rounded-xl"
+                />
+              </Field>
+            </>
+          )}
           <Button type="submit" variant="outline" className="rounded-xl">
             Search
           </Button>
         </form>
+        </>
       }
       actions={
         crm.hasPermission(CRM_PERMISSIONS.clientsCreate) ? (
@@ -283,10 +350,25 @@ export function ClientsModule({
         allowed={allowed}
         status={crm.clients.status}
         errorMessage={crm.clients.errorMessage}
-        empty={crm.clients.items.length === 0}
+        empty={view === "calendar" ? false : crm.clients.items.length === 0}
         emptyLabel="No bookings yet"
         onRetry={reload}
       >
+        {view === "calendar" ? (
+          <>
+            <MonthCalendar
+              cursor={cursor}
+              byDay={calendarByDay}
+              onOpen={(id) => {
+                const client = crm.clients.items.find((item) => item.id === id);
+                if (client) setViewing(client);
+              }}
+            />
+            {calendarMonthCount === 0 ? (
+              <p className="text-sm text-muted-foreground">No bookings this month</p>
+            ) : null}
+          </>
+        ) : null}
         {view === "card" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {crm.clients.items.map((client) => {
@@ -329,7 +411,8 @@ export function ClientsModule({
               );
             })}
           </div>
-        ) : (
+        ) : null}
+        {view === "table" ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -369,7 +452,7 @@ export function ClientsModule({
               })}
             </TableBody>
           </Table>
-        )}
+        ) : null}
       </ModuleStatus>
 
       <SideSheet

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   FolderKanban,
   Home,
+  LayoutDashboard,
   ListTodo,
   PhoneCall,
   Shield,
@@ -20,6 +21,25 @@ export type NavItem = {
   permission?: string;
 };
 
+/** Same groups and order as the web CRM sidebar (`apps/crm` layout nav). */
+export const SIDEBAR_GROUPS = ["Overview", "Pipeline", "Work", "Admin"] as const;
+
+export type SidebarItem = NavItem & { group: (typeof SIDEBAR_GROUPS)[number] };
+
+export const SIDEBAR: SidebarItem[] = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, group: "Overview" },
+  { to: "/calendar", label: "Calendar", icon: CalendarDays, group: "Overview" },
+  { to: "/contacts", label: "Contacts", icon: Users, group: "Pipeline" },
+  { to: "/enquiries", label: "Enquiries", icon: FolderKanban, group: "Pipeline" },
+  { to: "/follow-ups", label: "Follow-ups", icon: PhoneCall, group: "Pipeline" },
+  { to: "/booked", label: "Booked", icon: Building2, group: "Pipeline" },
+  { to: "/payments", label: "Payments", icon: Wallet, group: "Pipeline" },
+  { to: "/tasks", label: "Tasks", icon: ListTodo, group: "Work" },
+  { to: "/reminders", label: "Reminders", icon: Bell, group: "Work" },
+  { to: "/users", label: "Users", icon: Users, group: "Admin", permission: CRM_PERMISSIONS.usersRead },
+  { to: "/roles", label: "Roles", icon: Shield, group: "Admin", permission: CRM_PERMISSIONS.rolesRead },
+];
+
 /** The five bottom tabs. The bar always renders five slots so its layout never shifts. */
 export const TABS: NavItem[] = [
   { to: "/", label: "Home", icon: Home, permission: CRM_PERMISSIONS.dashboardRead },
@@ -32,21 +52,11 @@ export const TABS: NavItem[] = [
 /** Profile lives in the header, beside the plus button, so the tab bar can hold Booked and Payments. */
 export const PROFILE_ITEM: NavItem = { to: "/profile", label: "Profile", icon: User };
 
-/** Destinations that do not fit in the tab bar; reachable from the header menu drawer. */
-export const DRAWER_ITEMS: NavItem[] = [
-  { to: "/contacts", label: "Contacts", icon: Users, permission: CRM_PERMISSIONS.contactsRead },
-  { to: "/follow-ups", label: "Follow-ups", icon: PhoneCall, permission: CRM_PERMISSIONS.followUpsRead },
-  { to: "/tasks", label: "Tasks", icon: ListTodo, permission: CRM_PERMISSIONS.tasksRead },
-  { to: "/reminders", label: "Reminders", icon: Bell, permission: CRM_PERMISSIONS.tasksRead },
-  { to: "/users", label: "Users", icon: Users, permission: CRM_PERMISSIONS.usersRead },
-  { to: "/roles", label: "Roles", icon: Shield, permission: CRM_PERMISSIONS.rolesRead },
-];
-
 export function hasPermission(item: NavItem, permissions: readonly string[]): boolean {
   if (!item.permission) return true;
   return permissions.includes(item.permission);
 }
 
-export function visibleDrawerItems(permissions: readonly string[]): NavItem[] {
-  return DRAWER_ITEMS.filter((item) => hasPermission(item, permissions));
+export function visibleSidebarItems(permissions: readonly string[]): SidebarItem[] {
+  return SIDEBAR.filter((item) => hasPermission(item, permissions));
 }

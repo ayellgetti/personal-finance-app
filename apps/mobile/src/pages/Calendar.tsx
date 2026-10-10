@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AgendaItem } from "@/components/calendar/AgendaItem";
 import { DaySheet } from "@/components/calendar/DaySheet";
+import { MonthCategories } from "@/components/calendar/MonthCategories";
 import { MonthGrid } from "@/components/calendar/MonthGrid";
 import { WeekList } from "@/components/calendar/WeekList";
 import { CreateEnquirySheet } from "@/components/forms/CreateEnquirySheet";
@@ -18,6 +19,8 @@ import {
   KIND_MARK_CLASSES,
   dayKey,
   groupByDay,
+  itemsInMonth,
+  monthBounds,
   rangeFor,
   rangeLabel,
   shiftCursor,
@@ -25,9 +28,10 @@ import {
   visibleDays,
   type CalendarView,
   type CreateTarget,
+  type MonthCategory,
 } from "@/lib/mobile/calendar";
 import { matchesQuery, toDateInputValue } from "@/lib/mobile/format";
-import { listCalendar } from "@/lib/mobile/remote";
+import { listCalendar, listPayments } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
 import { useCreateIntent } from "@/lib/mobile/use-create-intent";
 import { useResource } from "@/lib/mobile/use-resource";
@@ -63,6 +67,7 @@ export default function Calendar() {
   const [view, setView] = useState<CalendarView>("month");
   const [cursor, setCursor] = useState(() => startOfDay(new Date()));
   const [pickedDay, setPickedDay] = useState<Date | null>(null);
+  const [category, setCategory] = useState<MonthCategory>("all");
   const [createFor, setCreateFor] = useState<{ target: CreateTarget; day: Date } | null>(null);
 
   const targets = useMemo(
@@ -73,14 +78,24 @@ export default function Calendar() {
     [permissions],
   );
 
-  // The header plus-circle lands here with ?new=1; start a reminder on the cursor day.
+  // Add reminder in the header plus menu lands here with ?new=1.
   const [intentOpen, setIntentOpen] = useCreateIntent(targets.includes("reminder"));
 
   const days = useMemo(() => visibleDays(view, cursor), [view, cursor]);
   const range = useMemo(() => rangeFor(days, cursor), [days, cursor]);
 
-  const load = useCallback(() => listCalendar(range), [range]);
-  const feed = useResource(load, canRead);
+  const canReadPayments = permissions.includes(CRM_PERMISSIONS.paymentsRead);
+  const bounds = useMemo(() => monthBounds(cursor), [cursor]);
+  const load = useCallback(async () => {
+    const [calendar, payments] = await Promise.all([
+      listCalendar(range),
+      canReadPayments
+        ? listPayments({ from: bounds.from, to: bounds.to, limit: 200 }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    return { items: calendar.items, payments: payments?.items ?? [] };
+  }, [range, bounds, canReadPayments]);
+  const feed = useResource(load, canRead, `${range.from}|${range.to}`);
 
   const visibleItems = useMemo(
     () =>
@@ -89,6 +104,7 @@ export default function Calendar() {
       ),
     [feed.data, query],
   );
+  const monthItems = useMemo(() => itemsInMonth(visibleItems, cursor), [visibleItems, cursor]);
   const byDay = useMemo(() => groupByDay(visibleItems), [visibleItems]);
 
   if (!canRead) return <ForbiddenState label="the calendar" />;
@@ -187,13 +203,25 @@ export default function Calendar() {
           {feed.status === "loading" ? <LoadingState label="Loading calendar…" /> : null}
 
           {view === "month" ? (
-            <MonthGrid
-              days={days}
-              cursor={cursor}
-              byDay={byDay}
-              selectedKey={pickedDay ? dayKey(pickedDay) : null}
-              onSelect={openDay}
-            />
+            <>
+              <MonthGrid
+                days={days}
+                cursor={cursor}
+                byDay={byDay}
+                selectedKey={pickedDay ? dayKey(pickedDay) : null}
+                onSelect={openDay}
+              />
+              {feed.status === "ready" ? (
+                <MonthCategories
+                  category={canReadPayments || category !== "payment" ? category : "all"}
+                  onCategory={setCategory}
+                  items={monthItems}
+                  payments={feed.data?.payments ?? []}
+                  query={query}
+                  showPayments={canReadPayments}
+                />
+              ) : null}
+            </>
           ) : null}
 
           {view === "week" ? (

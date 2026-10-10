@@ -14,12 +14,11 @@ import {
 import { renderCrm } from "@/test/render-crm";
 import type { CrmContact } from "@/types/crm";
 
-vi.mock("@/lib/auth/store", () => ({
-  useAuth: () => ({
-    user: { id: "user-1", name: "Ada Lovelace", email: "ada@example.com" },
-    logout: vi.fn(),
-  }),
-}));
+vi.mock("@/lib/auth/store", () => {
+  const user = { id: "user-1", name: "Ada Lovelace", email: "ada@example.com" };
+  const logout = vi.fn();
+  return { useAuth: () => ({ user, logout }) };
+});
 
 vi.mock("@/lib/crm/remote", async () => import("@/test/crm-remote-mock"));
 
@@ -90,7 +89,10 @@ describe("PaymentsModule", () => {
     );
   });
 
-  it("switches payments between table and cards", async () => {
+  it("switches payments between table, cards, and calendar", async () => {
+    const paidAt = new Date();
+    paidAt.setDate(Math.min(paidAt.getDate(), 28));
+    paidAt.setHours(10, 0, 0, 0);
     listClients.mockResolvedValue(
       emptyPage([
         {
@@ -117,7 +119,7 @@ describe("PaymentsModule", () => {
           type: "INCOME",
           mode: "UPI",
           status: "paid",
-          paidAt: "2026-09-20T10:00:00.000Z",
+          paidAt: paidAt.toISOString(),
           reference: "TXN-4421",
         },
       ]),
@@ -131,6 +133,20 @@ describe("PaymentsModule", () => {
     expect(await screen.findByText("Acme Events")).toBeInTheDocument();
     expect(screen.getByText("TXN-4421")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Payee" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Calendar view" }));
+    expect(await screen.findByText("Mon")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Acme Events/ })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Payee" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(listPayments).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 500, from: expect.any(String), to: expect.any(String) }),
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Acme Events/ }));
+    expect(await screen.findByRole("button", { name: "Save" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Table view" }));
     expect(await screen.findByRole("columnheader", { name: "Payee" })).toBeInTheDocument();

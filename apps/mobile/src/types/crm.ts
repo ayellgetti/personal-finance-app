@@ -30,6 +30,7 @@ export const CRM_PERMISSIONS = {
   followUpsCreate: "crm.followups.create",
   clientsRead: "crm.clients.read",
   paymentsRead: "crm.payments.read",
+  paymentsCreate: "crm.payments.create",
   tasksRead: "crm.tasks.read",
   tasksCreate: "crm.tasks.create",
   calendarRead: "crm.calendar.read",
@@ -255,6 +256,19 @@ export type CreateFollowUpInput = {
   dueAt: string;
   nextFollowupDate: string;
   notes?: string | null;
+};
+
+export type CreatePaymentInput = {
+  referenceType: CrmPaymentReferenceType;
+  referenceId: string;
+  enquiryId?: string | null;
+  amount: number;
+  currency?: string;
+  type?: CrmPaymentType;
+  mode: CrmPaymentMode;
+  status?: CrmPaymentStatus;
+  paidAt?: string | null;
+  reference?: string | null;
 };
 
 export type CreateTaskInput = {

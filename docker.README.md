@@ -24,7 +24,7 @@ Pair `.env.dev` with `docker-compose.dev.yml` and `.env.prod` with
 
 Dev Compose runs one CRM dataset: `${POSTGRES_DB}` (finance + myfinancefreedom CRM) on the `api` container (port 5001) and `apps/crm` (port 8082).
 
-Prod Compose adds two isolated CRM datasets on the same Postgres server: `${POSTGRES_TRAVEL_CRM_DB}` (travel) and `${POSTGRES_BANQUE_CRM_DB}` (banquet). Each extra CRM has its own API container (`api-travel`, `api-banque`) and reuses `apps/crm`. Hosts: `crm.myfinancefreedom.com`, `travel.myfinancefreedom.com`, `banquet.myfinancefreedom.com`. Extra API ports are not published; nginx reaches them on the Compose network. Do not start prod while the dev nginx holds port 80.
+Prod Compose adds two isolated CRM datasets on the same Postgres server: `${POSTGRES_TRAVEL_CRM_DB}` (travel) and `${POSTGRES_BANQUE_CRM_DB}` (banquet). Each extra CRM has its own API container (`api-travel`, `api-banque`) and reuses `apps/crm`. Hosts: `crm.myfinancefreedom.com`, `travel.myfinancefreedom.com`, `banquet.myfinancefreedom.com`. `mcrm.myfinancefreedom.com` is the CRM Mobile SPA and its `/api` traffic goes to `api-banque`. Extra API ports are not published; nginx reaches them on the Compose network. Do not start prod while the dev nginx holds port 80.
 
 ## Dev
 

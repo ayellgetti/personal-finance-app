@@ -15,7 +15,7 @@ export type Resource<T> = {
  * the first paint cheap on a phone. `enabled` is false while the caller lacks the
  * permission the endpoint requires.
  */
-export function useResource<T>(load: () => Promise<T>, enabled = true): Resource<T> {
+export function useResource<T>(load: () => Promise<T>, enabled = true, refreshKey = ""): Resource<T> {
   const [status, setStatus] = useState<ResourceStatus>(enabled ? "loading" : "forbidden");
   const [data, setData] = useState<T | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,9 +51,9 @@ export function useResource<T>(load: () => Promise<T>, enabled = true): Resource
     return () => {
       cancelled = true;
     };
-    // `load` is recreated per render by callers, so the token drives refetching.
+    // `load` is recreated per render by callers, so the token and refreshKey drive refetching.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, reloadToken]);
+  }, [enabled, reloadToken, refreshKey]);
 
   const reload = useCallback(() => setReloadToken((token) => token + 1), []);
 

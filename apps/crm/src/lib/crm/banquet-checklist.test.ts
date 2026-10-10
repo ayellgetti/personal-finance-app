@@ -46,7 +46,7 @@ describe("WhatsApp handover message", () => {
       instruction: "Jain thali for 12",
     });
 
-    expect(message).toContain("*Event handover*");
+    expect(message).toContain("*Event Details*");
     expect(message).toContain("Client: Ramesh");
     expect(message).toContain("Event: Sangeet");
     expect(message).toContain("Menu: Gold");

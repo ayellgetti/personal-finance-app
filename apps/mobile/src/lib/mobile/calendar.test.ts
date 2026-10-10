@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   dayKey,
+  filterMonthItems,
   groupByDay,
+  itemsInMonth,
+  monthBounds,
+  monthCategoryForKind,
   monthGrid,
   rangeFor,
   rangeLabel,
@@ -96,5 +100,44 @@ describe("grouping", () => {
 
     expect(grouped.get("2026-10-09")?.map((entry) => entry.id)).toEqual(["early", "late"]);
     expect(grouped.get("2026-10-10")?.map((entry) => entry.id)).toEqual(["other"]);
+  });
+});
+
+describe("month categories", () => {
+  const cursor = new Date(2026, 9, 1);
+  const items = [
+    item({ id: "remind", at: new Date(2026, 9, 9, 9, 0).toISOString(), kind: "event" }),
+    item({ id: "booked", at: new Date(2026, 9, 10, 18, 0).toISOString(), kind: "booking" }),
+    item({ id: "call", at: new Date(2026, 9, 11, 11, 0).toISOString(), kind: "followup" }),
+    item({ id: "todo", at: new Date(2026, 9, 12, 8, 0).toISOString(), kind: "task" }),
+    item({ id: "next-month", at: new Date(2026, 10, 1, 8, 0).toISOString(), kind: "event" }),
+  ];
+
+  it("keeps only the displayed month and sorts by time", () => {
+    expect(itemsInMonth(items, cursor).map((entry) => entry.id)).toEqual([
+      "remind",
+      "booked",
+      "call",
+      "todo",
+    ]);
+  });
+
+  it("keeps booked, reminders, follow-ups, and other items on separate tabs", () => {
+    const month = itemsInMonth(items, cursor);
+
+    expect(monthCategoryForKind("booking")).toBe("booking");
+    expect(monthCategoryForKind("event")).toBe("event");
+    expect(filterMonthItems(month, "booking").map((entry) => entry.id)).toEqual(["booked"]);
+    expect(filterMonthItems(month, "event").map((entry) => entry.id)).toEqual(["remind"]);
+    expect(filterMonthItems(month, "followup").map((entry) => entry.id)).toEqual(["call"]);
+    expect(filterMonthItems(month, "other").map((entry) => entry.id)).toEqual(["todo"]);
+    expect(filterMonthItems(month, "payment")).toEqual([]);
+  });
+
+  it("covers the whole calendar month for payments", () => {
+    const bounds = monthBounds(cursor);
+
+    expect(dayKey(new Date(bounds.from))).toBe("2026-10-01");
+    expect(dayKey(new Date(bounds.to))).toBe("2026-10-31");
   });
 });

@@ -4,14 +4,14 @@ import { AppDrawer } from "@/components/layout/AppDrawer";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { QuickAddSheet } from "@/components/layout/QuickAddSheet";
-import { DRAWER_ITEMS, PROFILE_ITEM, TABS } from "@/components/layout/nav";
+import { PROFILE_ITEM, SIDEBAR } from "@/components/layout/nav";
 import { useMobile } from "@/lib/mobile/store";
 
 function titleFor(pathname: string): string {
-  const match = [PROFILE_ITEM, ...TABS, ...DRAWER_ITEMS].find((item) =>
+  const match = [PROFILE_ITEM, ...SIDEBAR].find((item) =>
     item.to === "/" ? pathname === "/" : pathname.startsWith(item.to),
   );
-  return match?.label ?? "CRM Mobile";
+  return match?.label ?? "Sales CRM";
 }
 
 export function AppShell() {

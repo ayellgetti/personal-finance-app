@@ -4,6 +4,7 @@ import type {
   CreateContactInput,
   CreateEnquiryInput,
   CreateFollowUpInput,
+  CreatePaymentInput,
   CreateTaskInput,
   CrmCalendarEvent,
   CrmCalendarItem,
@@ -62,6 +63,8 @@ export type ListPaymentsQuery = {
   referenceType?: CrmPaymentReferenceType;
   referenceId?: string;
   status?: CrmPaymentStatus;
+  from?: string;
+  to?: string;
 };
 
 export type ListTasksQuery = {
@@ -347,6 +350,11 @@ export async function listClients(query: ListClientsQuery = {}): Promise<CrmPagi
 export async function listPayments(query: ListPaymentsQuery = {}): Promise<CrmPaginated<CrmPayment>> {
   const raw = await api<unknown>(`/api/crm/payments${toSearchParams(query)}`);
   return mapPaginated(raw, mapPayment);
+}
+
+export async function createPayment(input: CreatePaymentInput): Promise<CrmPayment> {
+  const data = await api<Record<string, unknown>>("/api/crm/payments", { method: "POST", body: input });
+  return mapPayment(asRecord(requireField(data, "payment")));
 }
 
 export async function listTasks(query: ListTasksQuery = {}): Promise<CrmPaginated<CrmTask>> {

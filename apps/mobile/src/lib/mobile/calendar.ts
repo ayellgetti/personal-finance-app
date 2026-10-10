@@ -130,6 +130,44 @@ export function isSameMonth(date: Date, cursor: Date): boolean {
   return date.getFullYear() === cursor.getFullYear() && date.getMonth() === cursor.getMonth();
 }
 
+/** Horizontal filters under the month grid. Booked and reminders stay on their own tabs. */
+export type MonthCategory = "all" | "booking" | "event" | "followup" | "payment" | "other";
+
+export const MONTH_CATEGORIES: readonly { id: MonthCategory; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "booking", label: "Booked" },
+  { id: "event", label: "Reminder" },
+  { id: "followup", label: "Follow-up" },
+  { id: "payment", label: "Payment" },
+  { id: "other", label: "Other" },
+];
+
+export function monthCategoryForKind(kind: CrmCalendarKind): Exclude<MonthCategory, "all" | "payment"> {
+  if (kind === "booking") return "booking";
+  if (kind === "event") return "event";
+  if (kind === "followup") return "followup";
+  return "other";
+}
+
+/** First instant of the month through the last, for the payment list window. */
+export function monthBounds(cursor: Date): { from: string; to: string } {
+  const from = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+  const to = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+export function itemsInMonth(items: readonly CrmCalendarItem[], cursor: Date): CrmCalendarItem[] {
+  return items
+    .filter((item) => isSameMonth(new Date(item.at), cursor))
+    .sort((left, right) => new Date(left.at).getTime() - new Date(right.at).getTime());
+}
+
+export function filterMonthItems(items: readonly CrmCalendarItem[], category: MonthCategory): CrmCalendarItem[] {
+  if (category === "all") return [...items];
+  if (category === "payment") return [];
+  return items.filter((item) => monthCategoryForKind(item.kind) === category);
+}
+
 export function isToday(date: Date, now = new Date()): boolean {
   return dayKey(date) === dayKey(now);
 }

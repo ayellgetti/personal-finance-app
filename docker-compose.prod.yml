@@ -319,7 +319,7 @@ services:
     ports:
       - "8085:80"
     depends_on:
-      api:
+      api-banque:
         condition: service_healthy
     healthcheck: *crm-prod-healthcheck
 

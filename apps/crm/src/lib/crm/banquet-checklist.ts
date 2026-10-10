@@ -214,7 +214,7 @@ export function buildWhatsAppHandoverMessage(draft: WhatsAppHandoverDraft): stri
   ].filter((line): line is string => Boolean(line));
 
   const blocks = [
-    ["*Event handover*", ...header].join("\n"),
+    ["*Event Details*", ...header].join("\n"),
     section("Menu", menuLines(draft.menu)),
     section("Decoration", draft.decoration),
     section("Payment", paymentLines(draft.payments)),

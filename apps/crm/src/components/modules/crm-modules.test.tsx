@@ -41,12 +41,11 @@ import { renderCrm } from "@/test/render-crm";
 import { formatDateTime } from "@/lib/crm/display";
 import type { CrmCalendarItem, CrmClient, CrmContact, CrmEnquiry, CrmPayment, CrmTask } from "@/types/crm";
 
-vi.mock("@/lib/auth/store", () => ({
-  useAuth: () => ({
-    user: { id: "user-1", name: "Ada Lovelace", email: "ada@example.com" },
-    logout: vi.fn(),
-  }),
-}));
+vi.mock("@/lib/auth/store", () => {
+  const user = { id: "user-1", name: "Ada Lovelace", email: "ada@example.com" };
+  const logout = vi.fn();
+  return { useAuth: () => ({ user, logout }) };
+});
 
 vi.mock("@/lib/crm/remote", async () => import("@/test/crm-remote-mock"));
 
@@ -619,8 +618,23 @@ describe("CRM modules", () => {
     expect(screen.getByRole("button", { name: /Call florist/ })).toBeInTheDocument();
   });
 
-  it("switches bookings between table and cards", async () => {
-    listClients.mockResolvedValue(emptyPage([{ ...client, gstin: "29ABCDE1234F1Z5" }]));
+  it("switches bookings between table, cards, and calendar", async () => {
+    const starts = new Date();
+    starts.setDate(1);
+    starts.setHours(10, 30, 0, 0);
+    const ends = new Date(starts);
+    ends.setDate(3);
+    ends.setHours(18, 0, 0, 0);
+    listClients.mockResolvedValue(
+      emptyPage([
+        {
+          ...client,
+          gstin: "29ABCDE1234F1Z5",
+          startsAt: starts.toISOString(),
+          endsAt: ends.toISOString(),
+        },
+      ]),
+    );
     listContacts.mockResolvedValue(emptyPage([{ ...contact, type: "client" as const }]));
     renderCrm(<ClientsModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
 
@@ -630,6 +644,24 @@ describe("CRM modules", () => {
     expect(await screen.findByText("29ABCDE1234F1Z5")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Acme Events" })).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Billing name" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Calendar view" }));
+    expect(await screen.findByText("Mon")).toBeInTheDocument();
+    const bookedChips = screen.getAllByRole("button", { name: /Acme Events/ });
+    expect(bookedChips.length).toBeGreaterThanOrEqual(3);
+    expect(screen.queryByRole("columnheader", { name: "Billing name" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("From")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(listClients).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 500, from: expect.any(String), to: expect.any(String) }),
+      );
+    });
+
+    const firstChip = bookedChips[0];
+    if (!firstChip) throw new Error("Expected a booking on the calendar");
+    fireEvent.click(firstChip);
+    expect(await screen.findByRole("tab", { name: /Payments/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Table view" }));
     expect(await screen.findByRole("columnheader", { name: "Billing name" })).toBeInTheDocument();

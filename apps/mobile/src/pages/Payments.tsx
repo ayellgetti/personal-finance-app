@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { CreatePaymentSheet } from "@/components/forms/CreatePaymentSheet";
 import { EmptyState, ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
 import { LoadMore } from "@/components/LoadMore";
 import { SearchBar } from "@/components/SearchBar";
@@ -7,6 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { formatDate, formatMoney, humanize, matchesQuery } from "@/lib/mobile/format";
 import { listPayments } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
+import { useCreateIntent } from "@/lib/mobile/use-create-intent";
 import { usePagedList } from "@/lib/mobile/use-paged-list";
 import { CRM_PERMISSIONS, type CrmPayment } from "@/types/crm";
 
@@ -74,8 +76,10 @@ function PaymentDetailSheet({ payment, onClose }: { payment: CrmPayment | null; 
 export default function Payments() {
   const { permissions } = useMobile();
   const canRead = permissions.includes(CRM_PERMISSIONS.paymentsRead);
+  const canCreate = permissions.includes(CRM_PERMISSIONS.paymentsCreate);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<CrmPayment | null>(null);
+  const [createOpen, setCreateOpen] = useCreateIntent(canCreate);
 
   const load = useCallback((page: number) => listPayments({ page, limit: 20 }), []);
   const list = usePagedList(load, "payments", canRead);
@@ -118,6 +122,7 @@ export default function Payments() {
       ) : null}
 
       <PaymentDetailSheet payment={selected} onClose={() => setSelected(null)} />
+      <CreatePaymentSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={list.reload} />
     </div>
   );
 }

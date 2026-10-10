@@ -1,4 +1,4 @@
-import { CalendarPlus, FolderPlus, ListTodo, PhoneCall, UserPlus } from "lucide-react";
+import { Bell, FolderPlus, PhoneCall, UserPlus, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CRM_PERMISSIONS } from "@/types/crm";
@@ -35,16 +35,16 @@ const ACTIONS: QuickAction[] = [
     permission: CRM_PERMISSIONS.followUpsCreate,
   },
   {
-    label: "New task",
-    hint: "Assign work to the team",
-    icon: ListTodo,
-    to: "/tasks?new=1",
-    permission: CRM_PERMISSIONS.tasksCreate,
+    label: "Add payment",
+    hint: "Record money in or out",
+    icon: Wallet,
+    to: "/payments?new=1",
+    permission: CRM_PERMISSIONS.paymentsCreate,
   },
   {
-    label: "New event",
+    label: "Add reminder",
     hint: "Block a slot on the calendar",
-    icon: CalendarPlus,
+    icon: Bell,
     to: "/calendar?new=1",
     permission: CRM_PERMISSIONS.calendarCreate,
   },
