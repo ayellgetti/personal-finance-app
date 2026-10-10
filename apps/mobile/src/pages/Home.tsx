@@ -9,6 +9,7 @@ import {
   formatDate,
   formatMoney,
   formatTime,
+  balanceClass,
   humanize,
   paymentTypeClass,
   startOfDayIso,
@@ -120,11 +121,13 @@ function PaymentTotal({
   amount,
   tone,
   to,
+  className,
 }: {
   label: string;
   amount: string;
   tone: string;
   to: string | null;
+  className?: string;
 }) {
   const body = (
     <>
@@ -132,10 +135,10 @@ function PaymentTotal({
       <p className={`font-display text-lg font-bold tabular-nums ${tone}`}>{amount}</p>
     </>
   );
-  const className = "rounded-xl border border-border bg-background px-3 py-3 text-left tap-highlight-none";
-  if (!to) return <div className={className}>{body}</div>;
+  const cardClass = `rounded-xl border border-border bg-background px-3 py-3 text-left tap-highlight-none ${className ?? ""}`;
+  if (!to) return <div className={cardClass}>{body}</div>;
   return (
-    <Link to={to} className={`${className} hover:bg-secondary`}>
+    <Link to={to} className={`${cardClass} hover:bg-secondary`}>
       {body}
     </Link>
   );
@@ -323,6 +326,13 @@ export default function Home() {
             amount={formatMoney(data.paymentsExpenseThisMonth, "INR")}
             tone={paymentTypeClass("EXPENSE")}
             to={canReadPayments ? "/payments?type=EXPENSE&month=current" : null}
+          />
+          <PaymentTotal
+            label="Balance"
+            amount={formatMoney(data.paymentsIncomeThisMonth - data.paymentsExpenseThisMonth, "INR")}
+            tone={balanceClass(data.paymentsIncomeThisMonth - data.paymentsExpenseThisMonth)}
+            to={canReadPayments ? "/payments?month=current" : null}
+            className="col-span-2"
           />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">

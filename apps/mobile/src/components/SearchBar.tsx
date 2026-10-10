@@ -34,7 +34,7 @@ export function SearchBar({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className="h-11 rounded-xl pl-9 text-base"
+          className={inline ? "h-11 rounded-full pl-9 text-base" : "h-11 rounded-xl pl-9 text-base"}
         />
       </div>
     </div>

@@ -6,7 +6,7 @@ import { QuickPaymentSheet } from "@/components/forms/QuickPaymentSheet";
 import { QuickReminderSheet, type ReminderTarget } from "@/components/forms/QuickReminderSheet";
 import { EmptyState, ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
 import type { ChipOption } from "@/components/FilterChips";
-import { AddButton, ViewSwitch } from "@/components/ViewSwitch";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { FilterSortBar, type FilterSection } from "@/components/FilterSortSheet";
 import { MonthNav } from "@/components/MonthNav";
 import { ListRow } from "@/components/ListRow";
@@ -15,7 +15,17 @@ import { PaymentDetailSheet } from "@/components/records/PaymentDetailSheet";
 import { RecordShortcuts } from "@/components/records/RecordShortcuts";
 import { Badge } from "@/components/ui/badge";
 import { dayKey, monthBounds } from "@/lib/mobile/calendar";
-import { endOfDayIso, formatDate, formatMoney, humanize, matchesQuery, paymentTypeAccent, paymentTypeClass, personLine } from "@/lib/mobile/format";
+import {
+  balanceClass,
+  endOfDayIso,
+  formatDate,
+  formatMoney,
+  humanize,
+  matchesQuery,
+  paymentTypeAccent,
+  paymentTypeClass,
+  personLine,
+} from "@/lib/mobile/format";
 import { compareNumber, compareText, compareTime, type SortOrder } from "@/lib/mobile/sort";
 import { fetchClient, fetchContactDetail, listClients, listContacts, listPayments } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
@@ -431,11 +441,8 @@ export default function Payments() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <ViewSwitch options={VIEW_OPTIONS} value={view} onChange={setView} label="Payment view" />
-        {canCreate ? <AddButton label="New" onClick={() => setCreateOpen(true)} /> : null}
-      </div>
       <FilterSortBar
+        views={<ViewSwitch options={VIEW_OPTIONS} value={view} onChange={setView} label="Payment view" />}
         query={query}
         onQuery={setQuery}
         searchPlaceholder="Search loaded payments"
@@ -458,27 +465,38 @@ export default function Payments() {
           setFrom("");
           setTo("");
         }}
+        onAdd={canCreate ? () => setCreateOpen(true) : undefined}
+        addLabel="New"
       />
       {view === "month" ? <MonthNav cursor={cursor} onChange={setCursor} /> : null}
 
       {list.status === "ready" && totals.length > 0 ? (
         <div aria-label="Loaded totals" className="grid grid-cols-2 gap-2">
-          {totals.map((total) => (
-            <div key={total.currency} className="col-span-2 grid grid-cols-2 gap-2">
-              <div className="rounded-2xl border border-border bg-card px-4 py-3">
-                <p className="text-xs text-muted-foreground">Income</p>
-                <p className={`text-base font-semibold tabular-nums ${paymentTypeClass("INCOME")}`}>
-                  {formatMoney(total.income, total.currency)}
-                </p>
+          {totals.map((total) => {
+            const balance = total.income - total.expense;
+            return (
+              <div key={total.currency} className="col-span-2 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl border border-border bg-card px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Income</p>
+                  <p className={`text-base font-semibold tabular-nums ${paymentTypeClass("INCOME")}`}>
+                    {formatMoney(total.income, total.currency)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-card px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Expense</p>
+                  <p className={`text-base font-semibold tabular-nums ${paymentTypeClass("EXPENSE")}`}>
+                    {formatMoney(total.expense, total.currency)}
+                  </p>
+                </div>
+                <div className="col-span-2 rounded-2xl border border-border bg-card px-4 py-3">
+                  <p className="text-xs text-muted-foreground">Balance</p>
+                  <p className={`text-base font-semibold tabular-nums ${balanceClass(balance)}`}>
+                    {formatMoney(balance, total.currency)}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-2xl border border-border bg-card px-4 py-3">
-                <p className="text-xs text-muted-foreground">Expense</p>
-                <p className={`text-base font-semibold tabular-nums ${paymentTypeClass("EXPENSE")}`}>
-                  {formatMoney(total.expense, total.currency)}
-                </p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : null}
 

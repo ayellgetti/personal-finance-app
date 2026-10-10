@@ -11,7 +11,7 @@ describe("mobile header", () => {
     expect(screen.getByRole("heading", { name: "Contacts" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute("href", "/profile");
-    expect(screen.getByRole("button", { name: "Create" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create" })).not.toBeInTheDocument();
   });
 
   it("opens the menu without triggering quick add", () => {
@@ -28,7 +28,7 @@ describe("mobile header", () => {
   it("opens quick add from the plus-circle button", () => {
     const onOpenMenu = vi.fn();
     const onOpenQuickAdd = vi.fn();
-    renderMobile(<MobileHeader title="Home" onOpenMenu={onOpenMenu} onOpenQuickAdd={onOpenQuickAdd} />);
+    renderMobile(<MobileHeader title="Home" onOpenMenu={onOpenMenu} onOpenQuickAdd={onOpenQuickAdd} showQuickAdd />);
 
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 

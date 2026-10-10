@@ -119,7 +119,7 @@ export function DashboardModule({
           <Card className="rounded-2xl shadow-[var(--shadow-card)]">
             <CardHeader>
               <CardTitle>Transaction this month</CardTitle>
-              <CardDescription>Paid income and expense in the current month</CardDescription>
+              <CardDescription>Paid income, expense, and balance in the current month</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
               <div>
@@ -129,6 +129,12 @@ export function DashboardModule({
               <div>
                 <p className="text-sm text-muted-foreground">Expense</p>
                 <p className="font-display text-2xl font-bold">{formatMoney(snapshot.paymentsExpenseThisMonth)}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-sm text-muted-foreground">Balance</p>
+                <p className="font-display text-2xl font-bold">
+                  {formatMoney(snapshot.paymentsIncomeThisMonth - snapshot.paymentsExpenseThisMonth)}
+                </p>
               </div>
             </CardContent>
           </Card>

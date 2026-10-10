@@ -7,10 +7,12 @@ export function MobileHeader({
   title,
   onOpenMenu,
   onOpenQuickAdd,
+  showQuickAdd = false,
 }: {
   title: string;
   onOpenMenu: () => void;
   onOpenQuickAdd: () => void;
+  showQuickAdd?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 pt-safe backdrop-blur-xl">
@@ -30,14 +32,16 @@ export function MobileHeader({
           {title}
         </h1>
 
-        <button
-          type="button"
-          aria-label="Create"
-          onClick={onOpenQuickAdd}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-glow)] transition-opacity tap-highlight-none hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-        </button>
+        {showQuickAdd ? (
+          <button
+            type="button"
+            aria-label="Create"
+            onClick={onOpenQuickAdd}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-glow)] transition-opacity tap-highlight-none hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+          </button>
+        ) : null}
 
         <NavLink
           to="/profile"

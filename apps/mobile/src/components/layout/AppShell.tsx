@@ -27,6 +27,7 @@ export function AppShell() {
           title={titleFor(pathname)}
           onOpenMenu={() => setMenuOpen(true)}
           onOpenQuickAdd={() => setQuickAddOpen(true)}
+          showQuickAdd={pathname === "/"}
         />
 
         <main className="mx-auto w-full px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-4 md:px-6">

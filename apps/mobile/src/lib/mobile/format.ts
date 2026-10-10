@@ -86,6 +86,13 @@ export function paymentTypeClass(type: "INCOME" | "EXPENSE"): string {
   return type === "EXPENSE" ? "text-rose-700 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300";
 }
 
+/** Net of income minus expense. A surplus is green, a deficit is red, and zero stays neutral. */
+export function balanceClass(amount: number): string {
+  if (amount > 0) return paymentTypeClass("INCOME");
+  if (amount < 0) return paymentTypeClass("EXPENSE");
+  return "text-foreground";
+}
+
 export function paymentTypeAccent(type: "INCOME" | "EXPENSE"): string {
   return type === "EXPENSE" ? "border-l-rose-500" : "border-l-emerald-500";
 }

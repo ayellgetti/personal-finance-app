@@ -21,6 +21,7 @@ import { ClientDetailSheet } from "@/components/records/ClientDetailSheet";
 import { EnquiryDetailSheet } from "@/components/records/EnquiryDetailSheet";
 import { PaymentDetailSheet } from "@/components/records/PaymentDetailSheet";
 import { FilterSortBar, type FilterSection } from "@/components/FilterSortSheet";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { Button } from "@/components/ui/button";
 import {
   CALENDAR_VIEWS,
@@ -47,7 +48,6 @@ import { fetchEnquiry, listCalendar, listClients, listContacts, listPayments } f
 import { useMobile } from "@/lib/mobile/store";
 import { useCreateIntent } from "@/lib/mobile/use-create-intent";
 import { useResource } from "@/lib/mobile/use-resource";
-import { cn } from "@/lib/utils";
 import {
   CRM_PERMISSIONS,
   type CrmCalendarItem,
@@ -369,6 +369,14 @@ export default function Calendar() {
   return (
     <div className="space-y-3">
       <FilterSortBar
+        views={
+          <ViewSwitch
+            options={CALENDAR_VIEWS.map((option) => ({ value: option, label: VIEW_LABELS[option] }))}
+            value={view}
+            onChange={changeView}
+            label="Calendar view"
+          />
+        }
         query={query}
         onQuery={setQuery}
         searchPlaceholder="Search this view"
@@ -392,26 +400,6 @@ export default function Calendar() {
           setCategory("all");
         }}
       />
-
-      <div role="tablist" aria-label="Calendar view" className="flex rounded-xl bg-secondary p-1">
-        {CALENDAR_VIEWS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            role="tab"
-            aria-selected={view === option}
-            onClick={() => changeView(option)}
-            className={cn(
-              "flex-1 rounded-lg py-1.5 text-xs font-semibold transition-colors tap-highlight-none",
-              view === option
-                ? "bg-card text-foreground shadow-[var(--shadow-card)]"
-                : "text-muted-foreground",
-            )}
-          >
-            {VIEW_LABELS[option]}
-          </button>
-        ))}
-      </div>
 
       <div className="flex items-center justify-between gap-2">
         <Button

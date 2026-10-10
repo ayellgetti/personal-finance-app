@@ -8,7 +8,6 @@ import { FormSheet } from "@/components/forms/FormSheet";
 import { LoadMore } from "@/components/LoadMore";
 import { ContactHubSheet } from "@/components/records/ContactHubSheet";
 import { Badge } from "@/components/ui/badge";
-import { AddButton } from "@/components/ViewSwitch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -257,8 +256,7 @@ export default function Contacts() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <FilterSortBar
+      <FilterSortBar
           query={search}
           onQuery={setSearch}
           searchPlaceholder="Search contacts"
@@ -285,9 +283,9 @@ export default function Contacts() {
           singular="contact"
           plural="contacts"
           onClear={() => setType("all")}
+          onAdd={canCreate ? () => setCreateOpen(true) : undefined}
+          addLabel="New"
         />
-        {canCreate ? <AddButton label="New" onClick={() => setCreateOpen(true)} /> : null}
-      </div>
 
       {list.status === "loading" ? <LoadingState label="Loading contacts…" /> : null}
       {list.status === "error" ? <ErrorState message={list.errorMessage} onRetry={list.reload} /> : null}

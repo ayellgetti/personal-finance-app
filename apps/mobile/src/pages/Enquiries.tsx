@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EmptyState, ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
 import type { ChipOption } from "@/components/FilterChips";
-import { AddButton, ViewSwitch } from "@/components/ViewSwitch";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { FilterSortBar, type FilterSection } from "@/components/FilterSortSheet";
 import { ConvertEnquirySheet } from "@/components/forms/ConvertEnquirySheet";
 import { CreateEnquirySheet } from "@/components/forms/CreateEnquirySheet";
@@ -290,11 +290,8 @@ export default function Enquiries() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <ViewSwitch options={VIEW_OPTIONS} value={view} onChange={setView} label="Enquiry view" />
-        {canCreate ? <AddButton label="New" onClick={() => setCreateOpen(true)} /> : null}
-      </div>
       <FilterSortBar
+        views={<ViewSwitch options={VIEW_OPTIONS} value={view} onChange={setView} label="Enquiry view" />}
         query={query}
         onQuery={setQuery}
         searchPlaceholder="Search loaded enquiries"
@@ -314,6 +311,8 @@ export default function Enquiries() {
           setStatus("all");
           setAssignedToId("");
         }}
+        onAdd={canCreate ? () => setCreateOpen(true) : undefined}
+        addLabel="New"
       />
       {dueToday ? (
         <p className="text-xs text-muted-foreground">Showing loaded enquiries whose due date is today.</p>

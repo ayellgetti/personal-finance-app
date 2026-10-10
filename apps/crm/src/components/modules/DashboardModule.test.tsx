@@ -45,8 +45,10 @@ describe("DashboardModule", () => {
       expect(screen.getByText("Transaction this month")).toBeInTheDocument();
       expect(screen.getByText("Income")).toBeInTheDocument();
       expect(screen.getByText("Expense")).toBeInTheDocument();
+      expect(screen.getByText("Balance")).toBeInTheDocument();
       expect(screen.getByText(formatMoney(100))).toBeInTheDocument();
       expect(screen.getByText(formatMoney(40))).toBeInTheDocument();
+      expect(screen.getByText(formatMoney(60))).toBeInTheDocument();
     });
   });
 });

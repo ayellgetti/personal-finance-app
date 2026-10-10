@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { EmptyState, ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
 import type { ChipOption } from "@/components/FilterChips";
-import { AddButton, ViewSwitch } from "@/components/ViewSwitch";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { FilterSortBar, type FilterSection } from "@/components/FilterSortSheet";
 import { MonthNav } from "@/components/MonthNav";
 import { CreateClientSheet } from "@/components/forms/CreateClientSheet";
@@ -261,11 +261,8 @@ export default function Booked() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <ViewSwitch options={VIEW_OPTIONS} value={view} onChange={setView} label="Booked view" />
-        {canCreate ? <AddButton label="New" onClick={() => setCreateOpen(true)} /> : null}
-      </div>
       <FilterSortBar
+        views={<ViewSwitch options={VIEW_OPTIONS} value={view} onChange={setView} label="Booked view" />}
         query={query}
         onQuery={setQuery}
         searchPlaceholder="Search bookings"
@@ -286,6 +283,8 @@ export default function Booked() {
           setFrom("");
           setTo("");
         }}
+        onAdd={canCreate ? () => setCreateOpen(true) : undefined}
+        addLabel="New"
       />
       {view === "month" ? <MonthNav cursor={cursor} onChange={setCursor} /> : null}
 
