@@ -217,6 +217,14 @@ export function formatMoney(amount: number, currency = "INR"): string {
   }
 }
 
+export function personLine(name: string | null | undefined, mobile: string | null | undefined): string {
+  return [name?.trim(), mobile?.trim()].filter(Boolean).join(" · ") || "—";
+}
+
+export function paymentTypeClass(type: CrmPaymentType): string {
+  return type === "INCOME" ? "text-emerald-700" : "text-red-700";
+}
+
 export function isoToLocalInput(iso: string | null | undefined): string {
   if (!iso) return "";
   const date = new Date(iso);

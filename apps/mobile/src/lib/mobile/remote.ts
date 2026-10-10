@@ -1,7 +1,12 @@
 import { api } from "@/lib/api";
 import type {
+  ConvertedEnquiry,
+  ConvertEnquiryInput,
   CreateCalendarEventInput,
+  CreateClientInput,
   CreateContactInput,
+  CreateCrmRoleInput,
+  CreateCrmUserInput,
   CreateEnquiryInput,
   CreateFollowUpInput,
   CreatePaymentInput,
@@ -10,7 +15,6 @@ import type {
   CrmCalendarItem,
   CrmClient,
   CrmClientStatus,
-  ConvertEnquiryInput,
   CrmContact,
   CrmContactDetail,
   CrmContactType,
@@ -19,14 +23,21 @@ import type {
   CrmEnquiryDueDateWindow,
   CrmEnquiryStatus,
   CrmFollowUp,
+  CrmFollowUpCalendar,
+  CrmFollowUpCalendarItem,
   CrmMe,
   CrmPaginated,
   CrmPagination,
   CrmPayment,
   CrmPaymentReferenceType,
   CrmPaymentStatus,
+  CrmPermission,
+  CrmRoleDetail,
+  CrmStaffUser,
   CrmTask,
   CrmTaskStatus,
+  UpdateCrmRoleInput,
+  UpdateCrmUserInput,
 } from "@/types/crm";
 
 export type ListContactsQuery = {
@@ -41,6 +52,7 @@ export type ListEnquiriesQuery = {
   limit?: number;
   status?: CrmEnquiryStatus | "open";
   contactId?: string;
+  assignedToId?: string;
 };
 
 export type ListFollowUpsQuery = {
@@ -48,6 +60,7 @@ export type ListFollowUpsQuery = {
   limit?: number;
   enquiryId?: string;
   contactId?: string;
+  stage?: CrmEnquiryStatus;
   from?: string;
   to?: string;
 };
@@ -57,6 +70,8 @@ export type ListClientsQuery = {
   limit?: number;
   status?: CrmClientStatus;
   search?: string;
+  from?: string;
+  to?: string;
 };
 
 export type ListPaymentsQuery = {
@@ -73,11 +88,26 @@ export type ListTasksQuery = {
   page?: number;
   limit?: number;
   status?: CrmTaskStatus;
+  assigneeId?: string;
 };
 
 export type ListCalendarQuery = {
   from: string;
   to: string;
+};
+
+export type ListCalendarEventsQuery = {
+  page?: number;
+  limit?: number;
+  from?: string;
+  to?: string;
+  assigneeId?: string;
+};
+
+export type ListCrmUsersQuery = {
+  page?: number;
+  limit?: number;
+  search?: string;
 };
 
 const DEFAULT_PAGINATION: CrmPagination = {
@@ -265,6 +295,19 @@ function mapCalendarEvent(row: Record<string, unknown>): CrmCalendarEvent {
   };
 }
 
+function mapFollowUpCalendarItem(row: Record<string, unknown>): CrmFollowUpCalendarItem {
+  return {
+    kind: row.kind as CrmFollowUpCalendarItem["kind"],
+    enquiryId: String(row.enquiryId),
+    title: String(row.title ?? ""),
+    contactId: String(row.contactId),
+    status: row.status as CrmEnquiryStatus,
+    at: asIso(row.at),
+    nextFollowupDate: asIsoOrNull(row.nextFollowupDate),
+    overdue: Boolean(row.overdue),
+  };
+}
+
 function mapCalendarItem(row: Record<string, unknown>): CrmCalendarItem {
   const kind = row.kind as CrmCalendarItem["kind"];
   const source = asRecord(row.event ?? row.task ?? row.enquiry ?? {});
@@ -337,6 +380,15 @@ export async function createContact(input: CreateContactInput): Promise<CrmConta
   return mapContact(asRecord(requireField(data, "contact")));
 }
 
+export async function updateContact(id: string, input: Partial<CreateContactInput>): Promise<CrmContact> {
+  const data = await api<Record<string, unknown>>(`/api/crm/contacts/${id}`, { method: "PATCH", body: input });
+  return mapContact(asRecord(requireField(data, "contact")));
+}
+
+export async function removeContact(id: string): Promise<void> {
+  await api("/api/crm/contacts/remove", { method: "POST", body: { id } });
+}
+
 export async function listEnquiries(query: ListEnquiriesQuery = {}): Promise<CrmPaginated<CrmEnquiry>> {
   const raw = await api<unknown>(`/api/crm/enquiries${toSearchParams(query)}`);
   return mapPaginated(raw, mapEnquiry);
@@ -344,6 +396,11 @@ export async function listEnquiries(query: ListEnquiriesQuery = {}): Promise<Crm
 
 export async function createEnquiry(input: CreateEnquiryInput): Promise<CrmEnquiry> {
   const data = await api<Record<string, unknown>>("/api/crm/enquiries", { method: "POST", body: input });
+  return mapEnquiry(asRecord(requireField(data, "enquiry")));
+}
+
+export async function fetchEnquiry(id: string): Promise<CrmEnquiry> {
+  const data = await api<Record<string, unknown>>(`/api/crm/enquiries/${id}`);
   return mapEnquiry(asRecord(requireField(data, "enquiry")));
 }
 
@@ -356,8 +413,17 @@ export async function removeEnquiry(id: string): Promise<void> {
   await api("/api/crm/enquiries/remove", { method: "POST", body: { id } });
 }
 
-export async function convertEnquiry(id: string, body: ConvertEnquiryInput): Promise<void> {
-  await api(`/api/crm/enquiries/${id}/convert`, { method: "POST", body });
+export async function convertEnquiry(id: string, body: ConvertEnquiryInput): Promise<ConvertedEnquiry> {
+  const data = await api<Record<string, unknown>>(`/api/crm/enquiries/${id}/convert`, {
+    method: "POST",
+    body,
+  });
+  return {
+    enquiry: mapEnquiry(asRecord(requireField(data, "enquiry"))),
+    contact: mapContact(asRecord(requireField(data, "contact"))),
+    client: mapClient(asRecord(requireField(data, "client"))),
+    event: mapCalendarEvent(asRecord(requireField(data, "event"))),
+  };
 }
 
 export async function fetchContactDetail(id: string): Promise<CrmContactDetail> {
@@ -370,17 +436,50 @@ export async function listFollowUps(query: ListFollowUpsQuery = {}): Promise<Crm
   return mapPaginated(raw, mapFollowUp);
 }
 
+export async function listFollowUpCalendar(query: ListCalendarQuery): Promise<CrmFollowUpCalendar> {
+  const raw = await api<Record<string, unknown>>(
+    `/api/crm/followups/calendar${toSearchParams({ from: query.from, to: query.to })}`,
+  );
+  const items = Array.isArray(raw.items)
+    ? raw.items.map((item) => mapFollowUpCalendarItem(asRecord(item)))
+    : [];
+  const overdue = Array.isArray(raw.overdue)
+    ? raw.overdue.map((item) => mapFollowUpCalendarItem(asRecord(item)))
+    : [];
+  return { items, overdue };
+}
+
 export async function createFollowUp(input: CreateFollowUpInput): Promise<CrmFollowUp> {
   const data = await api<Record<string, unknown>>("/api/crm/followups", { method: "POST", body: input });
   return mapFollowUp(asRecord(requireField(data, "followUp")));
 }
 
-export async function updateClient(
-  id: string,
-  input: { billingName?: string; status?: CrmClientStatus; gstin?: string | null },
-): Promise<CrmClient> {
+export async function updateFollowUp(id: string, input: Partial<CreateFollowUpInput>): Promise<CrmFollowUp> {
+  const data = await api<Record<string, unknown>>(`/api/crm/followups/${id}`, { method: "PATCH", body: input });
+  return mapFollowUp(asRecord(requireField(data, "followUp")));
+}
+
+export async function removeFollowUp(id: string): Promise<void> {
+  await api("/api/crm/followups/remove", { method: "POST", body: { id } });
+}
+
+export async function fetchClient(id: string): Promise<CrmClient> {
+  const data = await api<Record<string, unknown>>(`/api/crm/clients/${id}`);
+  return mapClient(asRecord(requireField(data, "client")));
+}
+
+export async function createClient(input: CreateClientInput): Promise<CrmClient> {
+  const data = await api<Record<string, unknown>>("/api/crm/clients", { method: "POST", body: input });
+  return mapClient(asRecord(requireField(data, "client")));
+}
+
+export async function updateClient(id: string, input: Partial<CreateClientInput>): Promise<CrmClient> {
   const data = await api<Record<string, unknown>>(`/api/crm/clients/${id}`, { method: "PATCH", body: input });
   return mapClient(asRecord(requireField(data, "client")));
+}
+
+export async function removeClient(id: string): Promise<void> {
+  await api("/api/crm/clients/remove", { method: "POST", body: { id } });
 }
 
 export async function listClients(query: ListClientsQuery = {}): Promise<CrmPaginated<CrmClient>> {
@@ -417,6 +516,30 @@ export async function createTask(input: CreateTaskInput): Promise<CrmTask> {
   return mapTask(asRecord(requireField(data, "task")));
 }
 
+export async function updateTask(id: string, input: Partial<CreateTaskInput>): Promise<CrmTask> {
+  const data = await api<Record<string, unknown>>(`/api/crm/tasks/${id}`, { method: "PATCH", body: input });
+  return mapTask(asRecord(requireField(data, "task")));
+}
+
+export async function updateTaskStatus(id: string, status: CrmTaskStatus): Promise<CrmTask> {
+  const data = await api<Record<string, unknown>>(`/api/crm/tasks/${id}/status`, {
+    method: "PATCH",
+    body: { status },
+  });
+  return mapTask(asRecord(requireField(data, "task")));
+}
+
+export async function removeTask(id: string): Promise<void> {
+  await api("/api/crm/tasks/remove", { method: "POST", body: { id } });
+}
+
+export async function listCalendarEvents(
+  query: ListCalendarEventsQuery = {},
+): Promise<CrmPaginated<CrmCalendarEvent>> {
+  const raw = await api<unknown>(`/api/crm/calendar/events${toSearchParams(query)}`);
+  return mapPaginated(raw, mapCalendarEvent);
+}
+
 export async function listCalendar(query: ListCalendarQuery): Promise<{ items: CrmCalendarItem[] }> {
   const raw = await api<Record<string, unknown>>(
     `/api/crm/calendar${toSearchParams({ from: query.from, to: query.to })}`,
@@ -439,4 +562,83 @@ export async function updateCalendarEvent(
 export async function createCalendarEvent(input: CreateCalendarEventInput): Promise<CrmCalendarEvent> {
   const data = await api<Record<string, unknown>>("/api/crm/calendar/events", { method: "POST", body: input });
   return mapCalendarEvent(asRecord(requireField(data, "event")));
+}
+
+export async function removeCalendarEvent(id: string): Promise<void> {
+  await api("/api/crm/calendar/events/remove", { method: "POST", body: { id } });
+}
+
+function mapStaffUser(row: Record<string, unknown>): CrmStaffUser {
+  const roleIds = Array.isArray(row.roleIds) ? row.roleIds.map((id) => String(id)) : [];
+  return {
+    id: String(row.id),
+    firstName: String(row.firstName ?? ""),
+    lastName: String(row.lastName ?? ""),
+    email: String(row.email ?? ""),
+    mobileNo: String(row.mobileNo ?? ""),
+    dob: asIso(row.dob ?? ""),
+    gender: String(row.gender ?? ""),
+    countryCode: String(row.countryCode ?? ""),
+    roleIds,
+  };
+}
+
+function mapRoleDetail(row: Record<string, unknown>): CrmRoleDetail {
+  const permissionIds = Array.isArray(row.permissionIds) ? row.permissionIds.map((id) => String(id)) : [];
+  return {
+    id: String(row.id),
+    name: String(row.name ?? ""),
+    slug: String(row.slug ?? ""),
+    permissionIds,
+  };
+}
+
+function mapPermission(row: Record<string, unknown>): CrmPermission {
+  const name = String(row.name ?? "");
+  return {
+    id: String(row.id),
+    code: String(row.code ?? ""),
+    name,
+    description: String(row.description ?? name),
+  };
+}
+
+export async function listCrmUsers(query: ListCrmUsersQuery = {}): Promise<CrmPaginated<CrmStaffUser>> {
+  const raw = await api<unknown>(`/api/crm/users${toSearchParams(query)}`);
+  return mapPaginated(raw, mapStaffUser);
+}
+
+export async function createCrmUser(input: CreateCrmUserInput): Promise<CrmStaffUser> {
+  const data = await api<Record<string, unknown>>("/api/crm/users", { method: "POST", body: input });
+  return mapStaffUser(asRecord(requireField(data, "user")));
+}
+
+export async function updateCrmUser(id: string, input: UpdateCrmUserInput): Promise<CrmStaffUser> {
+  const data = await api<Record<string, unknown>>(`/api/crm/users/${id}`, { method: "PATCH", body: input });
+  return mapStaffUser(asRecord(requireField(data, "user")));
+}
+
+export async function listRoles(): Promise<CrmRoleDetail[]> {
+  const data = await api<Record<string, unknown>>("/api/crm/roles");
+  const roles = Array.isArray(data.roles) ? data.roles : [];
+  return roles.map((role) => mapRoleDetail(asRecord(role)));
+}
+
+export async function listPermissions(): Promise<CrmPermission[]> {
+  const data = await api<Record<string, unknown>>("/api/crm/permissions");
+  const permissions = Array.isArray(data.permissions) ? data.permissions : [];
+  return permissions.map((permission) => mapPermission(asRecord(permission)));
+}
+
+export async function createRole(input: CreateCrmRoleInput): Promise<CrmRoleDetail> {
+  const data = await api<Record<string, unknown>>("/api/crm/roles", { method: "POST", body: input });
+  return mapRoleDetail(asRecord(requireField(data, "role")));
+}
+
+export async function updateRole(id: string, input: UpdateCrmRoleInput): Promise<CrmRoleDetail> {
+  const data = await api<Record<string, unknown>>(`/api/crm/roles/${id}`, {
+    method: "PATCH",
+    body: input,
+  });
+  return mapRoleDetail(asRecord(requireField(data, "role")));
 }

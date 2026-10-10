@@ -44,6 +44,12 @@ export function isSameDay(value: string | null, reference: Date): boolean {
   );
 }
 
+/** Name with the mobile beside it, when a number is known. */
+export function personLine(name: string, mobile?: string | null): string {
+  const number = mobile?.trim();
+  return number ? `${name} · ${number}` : name;
+}
+
 /** Turns `quotation_sent` into `Quotation sent` for status chips. */
 export function humanize(value: string): string {
   const spaced = value.replace(/_/g, " ");
@@ -73,6 +79,15 @@ export function matchesQuery(query: string, ...parts: Array<string | number | nu
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
   return parts.some((part) => String(part ?? "").toLowerCase().includes(needle));
+}
+
+/** Income is green; expense is red. Shared by payment lists, the calendar, and payment detail. */
+export function paymentTypeClass(type: "INCOME" | "EXPENSE"): string {
+  return type === "EXPENSE" ? "text-rose-700 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300";
+}
+
+export function paymentTypeAccent(type: "INCOME" | "EXPENSE"): string {
+  return type === "EXPENSE" ? "border-l-rose-500" : "border-l-emerald-500";
 }
 
 export function formatMoney(amount: number, currency: string): string {

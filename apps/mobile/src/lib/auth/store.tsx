@@ -14,6 +14,7 @@ import {
   persistSession,
   readStoredUser,
   subscribeAuth,
+  writeStoredUser,
   type AuthSession,
   type StoredUser,
 } from "@/lib/auth/session";
@@ -181,8 +182,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateAccount = useCallback(
     async (patch: { firstName?: string; lastName?: string; currentPassword?: string; newPassword?: string }): Promise<AuthResult> => {
       try {
-        const updated = await api<ApiUser>("/api/user/account", { method: "PATCH", body: patch });
-        setUser(toPublic(updated));
+        if (patch.currentPassword && patch.newPassword) {
+          await api<{ user: ApiUser }>("/api/users/me/password", {
+            method: "POST",
+            body: { currentPassword: patch.currentPassword, newPassword: patch.newPassword },
+          });
+          // A password change revokes every refresh session.
+          clearSession();
+          setUser(null);
+          return { ok: true };
+        }
+        const data = await api<{ user: ApiUser }>("/api/users/me", {
+          method: "PATCH",
+          body: { firstName: patch.firstName, lastName: patch.lastName },
+        });
+        writeStoredUser(data.user);
+        setUser(toPublic(data.user));
         return { ok: true };
       } catch (error) {
         return { ok: false, error: errorMessage(error, "Unable to update account") };

@@ -10,11 +10,17 @@ export function WeekList({
   byDay,
   canAdd,
   onAdd,
+  onOpen,
+  onRemind,
+  onFollow,
 }: {
   days: Date[];
   byDay: Map<string, CrmCalendarItem[]>;
   canAdd: boolean;
   onAdd: (day: Date) => void;
+  onOpen?: (item: CrmCalendarItem) => void;
+  onRemind?: (item: CrmCalendarItem) => void;
+  onFollow?: (item: CrmCalendarItem) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -55,7 +61,12 @@ export function WeekList({
               <ul className="space-y-2">
                 {items.map((item) => (
                   <li key={`${item.kind}-${item.id}`}>
-                    <AgendaItem item={item} />
+                    <AgendaItem
+                      item={item}
+                      onOpen={onOpen ? () => onOpen(item) : undefined}
+                      onRemind={onRemind ? () => onRemind(item) : undefined}
+                      onFollow={onFollow ? () => onFollow(item) : undefined}
+                    />
                   </li>
                 ))}
               </ul>

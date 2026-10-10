@@ -17,6 +17,8 @@ import {
   adminMe,
   convertEnquiry,
   createCalendarEvent,
+  createFollowUp,
+  createPayment,
   createRole,
   emptyPage,
   fetchContactDetail,
@@ -1170,6 +1172,79 @@ describe("CRM modules", () => {
     expect(screen.getAllByText("End date").length).toBeGreaterThan(0);
     expect(screen.getAllByText(formatDateTime(client.startsAt)).length).toBeGreaterThan(0);
     expect(screen.getAllByText(formatDateTime(client.endsAt)).length).toBeGreaterThan(0);
+  });
+
+  it("adds a same-client payment and linked follow-up from Booked", async () => {
+    const clientContact: CrmContact = { ...contact, type: "client" };
+    listContacts.mockResolvedValue(emptyPage([clientContact]));
+    listClients.mockResolvedValue(emptyPage([client]));
+    createPayment.mockResolvedValue({
+      id: "payment-new",
+      referenceType: "client",
+      referenceId: client.id,
+      enquiryId: enquiry.id,
+      amount: 1000,
+      currency: "INR",
+      type: "INCOME",
+      mode: "UPI",
+      status: "paid",
+      paidAt: new Date().toISOString(),
+      reference: null,
+    });
+    createFollowUp.mockResolvedValue({
+      id: "followup-new",
+      enquiryId: enquiry.id,
+      stage: "closed",
+      dueAt: new Date().toISOString(),
+      nextFollowupDate: new Date().toISOString(),
+      notes: null,
+      createdAt: new Date().toISOString(),
+    });
+    renderCrm(<ClientsModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
+
+    expect(await screen.findByText("Priya Shah · +919888888888")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add payment" }));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "1000" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Add payment" }).at(-1) as HTMLElement);
+    await waitFor(() => expect(createPayment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        referenceType: "client",
+        referenceId: client.id,
+        enquiryId: enquiry.id,
+        status: "paid",
+      }),
+    ));
+
+    fireEvent.click(screen.getByRole("button", { name: "Add follow-up" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Add follow-up" }).at(-1) as HTMLElement);
+    await waitFor(() => expect(createFollowUp).toHaveBeenCalledWith(
+      expect.objectContaining({ enquiryId: enquiry.id, stage: "closed" }),
+    ));
+  });
+
+  it("adds a contact-bound reminder from enquiry detail", async () => {
+    listContacts.mockResolvedValue(emptyPage([contact]));
+    listEnquiries.mockResolvedValue(emptyPage([enquiry]));
+    createCalendarEvent.mockResolvedValue({
+      id: "reminder-new",
+      title: "Call Priya",
+      startsAt: new Date().toISOString(),
+      endsAt: new Date().toISOString(),
+      slot: null,
+      notes: null,
+      contactId: contact.id,
+      enquiryId: enquiry.id,
+    });
+    renderCrm(<EnquiriesModule />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "View" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add reminder" }));
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Call Priya" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Add reminder" }).at(-1) as HTMLElement);
+
+    await waitFor(() => expect(createCalendarEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ contactId: contact.id, enquiryId: enquiry.id }),
+    ));
   });
 
   it("fills booked start and end dates from the contact booking when the list omits them", async () => {

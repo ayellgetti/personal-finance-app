@@ -62,6 +62,7 @@ describe("enquiry detail", () => {
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
     expect(await screen.findByText("Akash")).toBeInTheDocument();
+    expect(screen.getByText("9000000000")).toBeInTheDocument();
     expect(screen.getByText("Lead created")).toBeInTheDocument();
   });
 });

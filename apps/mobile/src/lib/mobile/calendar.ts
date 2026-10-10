@@ -41,11 +41,11 @@ export const KIND_ACCENT_CLASSES: Record<CrmCalendarKind, string> = {
 /** The things a tapped date can start, mirroring the CRM day picker. */
 export type CreateTarget = "reminder" | "enquiry" | "followUp" | "task";
 
-export const CREATE_TARGETS: { target: CreateTarget; label: string; permission: string }[] = [
-  { target: "reminder", label: "Reminder", permission: CRM_PERMISSIONS.calendarCreate },
-  { target: "enquiry", label: "Enquiry", permission: CRM_PERMISSIONS.enquiriesCreate },
-  { target: "followUp", label: "Follow-up", permission: CRM_PERMISSIONS.followUpsCreate },
-  { target: "task", label: "Task", permission: CRM_PERMISSIONS.tasksCreate },
+export const CREATE_TARGETS: { target: CreateTarget; label: string; hint: string; permission: string }[] = [
+  { target: "reminder", label: "Add reminder", hint: "Block a slot on the calendar", permission: CRM_PERMISSIONS.calendarCreate },
+  { target: "enquiry", label: "New enquiry", hint: "Start a sales case", permission: CRM_PERMISSIONS.enquiriesCreate },
+  { target: "followUp", label: "New follow-up", hint: "Log the next action", permission: CRM_PERMISSIONS.followUpsCreate },
+  { target: "task", label: "New task", hint: "Track something that has to get done", permission: CRM_PERMISSIONS.tasksCreate },
 ];
 
 export const EVENT_SLOT_LABELS: Record<CrmEventSlot, string> = {

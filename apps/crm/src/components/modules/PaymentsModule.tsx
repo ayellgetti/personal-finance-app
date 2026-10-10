@@ -3,8 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  ContextActions,
+  QuickFollowUpSheet,
+  QuickPaymentSheet,
+  QuickReminderSheet,
+  type FollowUpActionTarget,
+  type PaymentActionTarget,
+  type ReminderActionTarget,
+} from "@/components/modules/ContextActionSheets";
 import { MonthCalendar, MonthNav } from "@/components/modules/MonthCalendar";
 import { dayKey, monthRangeIso, type MonthChip } from "@/components/modules/month-calendar";
+import { PaymentDetailSheet } from "@/components/modules/PaymentDetailSheet";
 import {
   ConfirmRemoveDialog,
   EditAction,
@@ -17,6 +27,7 @@ import {
   RowActions,
   SideSheet,
   StatusBadge,
+  ViewAction,
 } from "@/components/modules/shared";
 import {
   PAYMENT_MODE_LABELS,
@@ -27,10 +38,13 @@ import {
   formatTime,
   isoToLocalInput,
   localInputToIso,
+  paymentTypeClass,
   paymentModeOptions,
   paymentStatusOptions,
   paymentTypeOptions,
+  personLine,
 } from "@/lib/crm/display";
+import { cn } from "@/lib/utils";
 import { useCrm } from "@/lib/crm/store";
 import {
   CRM_PERMISSIONS,
@@ -117,9 +131,14 @@ export function PaymentsModule({
   const [view, setView] = useState<ViewMode>("table");
   const [cursor, setCursor] = useState(() => new Date());
   const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmPayment | null>(null);
+  const [viewing, setViewing] = useState<CrmPayment | null>(null);
+  const [quickPayment, setQuickPayment] = useState<PaymentActionTarget | null>(null);
+  const [quickReminder, setQuickReminder] = useState<ReminderActionTarget | null>(null);
+  const [quickFollowUp, setQuickFollowUp] = useState<FollowUpActionTarget | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -136,9 +155,7 @@ export function PaymentsModule({
       limit: calendarRange ? CALENDAR_PAGE_LIMIT : undefined,
     });
     if (crm.hasPermission(CRM_PERMISSIONS.clientsRead)) void crm.loadClients({ limit: 100 });
-    if (crm.hasPermission(CRM_PERMISSIONS.contactsRead)) {
-      void crm.loadContacts({ type: "vendor", limit: 100 });
-    }
+    if (crm.hasPermission(CRM_PERMISSIONS.contactsRead)) void crm.loadContacts({ limit: 100 });
   };
 
   useEffect(() => {
@@ -146,18 +163,58 @@ export function PaymentsModule({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionReady, allowed, statusFilter, clientId, view, cursor]);
 
-  const clientName = (id: string) =>
-    crm.clients.items.find((client) => client.id === id)?.billingName ?? id;
-  const vendorName = (id: string) =>
-    crm.contacts.items.find((contact) => contact.id === id)?.name ?? id;
-  const payeeName = (payment: CrmPayment) =>
-    payment.referenceType === "vendor" ? vendorName(payment.referenceId) : clientName(payment.referenceId);
+  const clientFor = (id: string) => crm.clients.items.find((client) => client.id === id) ?? null;
+  const contactFor = (id: string) => crm.contacts.items.find((contact) => contact.id === id) ?? null;
+  const payeeContact = (payment: CrmPayment) => {
+    if (payment.referenceType === "vendor") return contactFor(payment.referenceId);
+    const client = clientFor(payment.referenceId);
+    return client ? contactFor(client.contactId) : null;
+  };
+  const payeeName = (payment: CrmPayment) => {
+    const contact = payeeContact(payment);
+    const fallback =
+      payment.referenceType === "client"
+        ? clientFor(payment.referenceId)?.billingName
+        : payment.referenceId;
+    return personLine(contact?.name ?? fallback, contact?.mobile);
+  };
+  const enquiryIdFor = (payment: CrmPayment) =>
+    payment.enquiryId ??
+    (payment.referenceType === "client"
+      ? clientFor(payment.referenceId)?.convertedFromEnquiryId ?? null
+      : null);
+  const paymentTarget = (payment: CrmPayment): PaymentActionTarget => ({
+    referenceType: payment.referenceType,
+    referenceId: payment.referenceId,
+    enquiryId: enquiryIdFor(payment),
+    label: payeeName(payment),
+  });
+  const reminderTarget = (payment: CrmPayment): ReminderActionTarget => ({
+    contactId: payeeContact(payment)?.id ?? null,
+    enquiryId: enquiryIdFor(payment),
+    label: payeeName(payment),
+  });
+  const followUpTarget = (payment: CrmPayment): FollowUpActionTarget | null => {
+    const enquiryId = enquiryIdFor(payment);
+    return enquiryId ? { enquiryId, label: payeeName(payment) } : null;
+  };
+  const filteredPayments = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return crm.payments.items;
+    return crm.payments.items.filter((payment) =>
+      [
+        payeeName(payment),
+        payment.reference,
+        payment.amount,
+        payment.status,
+        payment.mode,
+        payment.type,
+      ].some((value) => String(value ?? "").toLowerCase().includes(query)),
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [crm.clients.items, crm.contacts.items, crm.payments.items, search]);
 
   const calendarByDay = useMemo(() => {
-    const nameFor = (payment: CrmPayment) =>
-      payment.referenceType === "vendor"
-        ? (crm.contacts.items.find((contact) => contact.id === payment.referenceId)?.name ?? payment.referenceId)
-        : (crm.clients.items.find((client) => client.id === payment.referenceId)?.billingName ?? payment.referenceId);
     const grouped = new Map<string, MonthChip[]>();
     const dated = crm.payments.items
       .filter((payment): payment is CrmPayment & { paidAt: string } => Boolean(payment.paidAt))
@@ -167,13 +224,14 @@ export function PaymentsModule({
       const chips = grouped.get(key) ?? [];
       chips.push({
         id: payment.id,
-        label: `${formatTime(payment.paidAt)} ${formatMoney(payment.amount, payment.currency)} ${nameFor(payment)}`,
+        label: `${formatTime(payment.paidAt)} ${formatMoney(payment.amount, payment.currency)} ${payeeName(payment)}`,
         className:
           payment.type === "EXPENSE" ? "bg-amber-100 text-amber-900" : "bg-emerald-100 text-emerald-900",
       });
       grouped.set(key, chips);
     }
     return grouped;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crm.clients.items, crm.contacts.items, crm.payments.items]);
 
   const calendarMonthCount = useMemo(() => {
@@ -225,6 +283,7 @@ export function PaymentsModule({
 
   const paymentActions = (payment: CrmPayment) => (
     <RowActions>
+      <ViewAction onClick={() => setViewing(payment)} />
       {crm.hasPermission(CRM_PERMISSIONS.paymentsUpdate) ? (
         <EditAction onClick={() => openEdit(payment)} />
       ) : null}
@@ -277,6 +336,17 @@ export function PaymentsModule({
               {paymentStatusOptions()}
             </NativeSelect>
           </Field>
+          {view !== "calendar" ? (
+            <Field id="payment-search" label="Search">
+              <Input
+                id="payment-search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Name, mobile, reference"
+                className="rounded-xl"
+              />
+            </Field>
+          ) : null}
           {clientId ? (
             <Button type="button" variant="outline" className="rounded-xl" onClick={onClearClientFilter}>
               Clear booked filter
@@ -307,14 +377,10 @@ export function PaymentsModule({
             <MonthCalendar
               cursor={cursor}
               byDay={calendarByDay}
-              onOpen={
-                crm.hasPermission(CRM_PERMISSIONS.paymentsUpdate)
-                  ? (id) => {
-                      const payment = crm.payments.items.find((item) => item.id === id);
-                      if (payment) openEdit(payment);
-                    }
-                  : undefined
-              }
+              onOpen={(id) => {
+                const payment = crm.payments.items.find((item) => item.id === id);
+                if (payment) setViewing(payment);
+              }}
             />
             {calendarMonthCount === 0 ? (
               <p className="text-sm text-muted-foreground">No payments this month</p>
@@ -323,12 +389,14 @@ export function PaymentsModule({
         ) : null}
         {view === "card" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {crm.payments.items.map((payment) => (
+            {filteredPayments.map((payment) => (
               <Card key={payment.id} className="rounded-2xl shadow-[var(--shadow-card)]">
                 <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
                   <div className="min-w-0">
-                    <CardTitle className="text-base leading-snug">
-                      {formatMoney(payment.amount, payment.currency)}
+                    <CardTitle className={cn("text-base leading-snug", paymentTypeClass(payment.type))}>
+                      <button type="button" onClick={() => setViewing(payment)}>
+                        {formatMoney(payment.amount, payment.currency)}
+                      </button>
                     </CardTitle>
                     <CardDescription className="truncate">{payeeName(payment)}</CardDescription>
                   </div>
@@ -355,6 +423,15 @@ export function PaymentsModule({
                       <dd className="truncate text-right">{payment.reference ?? "—"}</dd>
                     </div>
                   </dl>
+                  <ContextActions
+                    onPay={crm.hasPermission(CRM_PERMISSIONS.paymentsCreate) ? () => setQuickPayment(paymentTarget(payment)) : undefined}
+                    onRemind={crm.hasPermission(CRM_PERMISSIONS.calendarCreate) ? () => setQuickReminder(reminderTarget(payment)) : undefined}
+                    onFollow={
+                      crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && followUpTarget(payment)
+                        ? () => setQuickFollowUp(followUpTarget(payment))
+                        : undefined
+                    }
+                  />
                   {paymentActions(payment)}
                 </CardContent>
               </Card>
@@ -376,10 +453,16 @@ export function PaymentsModule({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {crm.payments.items.map((payment) => (
+              {filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell className="font-medium">{payeeName(payment)}</TableCell>
-                  <TableCell>{formatMoney(payment.amount, payment.currency)}</TableCell>
+                  <TableCell className="font-medium">
+                    <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => setViewing(payment)}>
+                      {payeeName(payment)}
+                    </button>
+                  </TableCell>
+                  <TableCell className={paymentTypeClass(payment.type)}>
+                    {formatMoney(payment.amount, payment.currency)}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={payment.type} label={PAYMENT_TYPE_LABELS[payment.type]} />
                   </TableCell>
@@ -389,7 +472,20 @@ export function PaymentsModule({
                   </TableCell>
                   <TableCell>{formatDateTime(payment.paidAt)}</TableCell>
                   <TableCell>{payment.reference ?? "—"}</TableCell>
-                  <TableCell>{paymentActions(payment)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <ContextActions
+                        onPay={crm.hasPermission(CRM_PERMISSIONS.paymentsCreate) ? () => setQuickPayment(paymentTarget(payment)) : undefined}
+                        onRemind={crm.hasPermission(CRM_PERMISSIONS.calendarCreate) ? () => setQuickReminder(reminderTarget(payment)) : undefined}
+                        onFollow={
+                          crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && followUpTarget(payment)
+                            ? () => setQuickFollowUp(followUpTarget(payment))
+                            : undefined
+                        }
+                      />
+                      {paymentActions(payment)}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -432,7 +528,7 @@ export function PaymentsModule({
                 .filter((contact) => contact.type === "vendor")
                 .map((contact) => (
                   <option key={contact.id} value={contact.id}>
-                    {contact.name}
+                    {personLine(contact.name, contact.mobile)}
                   </option>
                 ))}
             </NativeSelect>
@@ -447,7 +543,10 @@ export function PaymentsModule({
               <option value="">Select booked record</option>
               {crm.clients.items.map((client) => (
                 <option key={client.id} value={client.id}>
-                  {client.billingName}
+                  {personLine(
+                    contactFor(client.contactId)?.name ?? client.billingName,
+                    contactFor(client.contactId)?.mobile,
+                  )}
                 </option>
               ))}
             </NativeSelect>
@@ -509,6 +608,38 @@ export function PaymentsModule({
           />
         </Field>
       </SideSheet>
+
+      <PaymentDetailSheet
+        payment={viewing}
+        payee={viewing ? payeeName(viewing) : ""}
+        onClose={() => setViewing(null)}
+        onEdit={(payment) => {
+          setViewing(null);
+          openEdit(payment);
+        }}
+        onRemove={(payment) => {
+          setViewing(null);
+          setRemoveId(payment.id);
+        }}
+        onPay={(payment) => {
+          setViewing(null);
+          setQuickPayment(paymentTarget(payment));
+        }}
+        onRemind={(payment) => {
+          setViewing(null);
+          setQuickReminder(reminderTarget(payment));
+        }}
+        onFollow={(payment) => {
+          const target = followUpTarget(payment);
+          if (target) {
+            setViewing(null);
+            setQuickFollowUp(target);
+          }
+        }}
+      />
+      <QuickPaymentSheet target={quickPayment} onClose={() => setQuickPayment(null)} />
+      <QuickReminderSheet target={quickReminder} onClose={() => setQuickReminder(null)} />
+      <QuickFollowUpSheet target={quickFollowUp} onClose={() => setQuickFollowUp(null)} />
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

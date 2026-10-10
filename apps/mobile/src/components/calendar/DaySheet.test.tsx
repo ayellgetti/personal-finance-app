@@ -41,10 +41,10 @@ describe("day sheet", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Reminder" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Task" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Enquiry" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Follow-up" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add reminder/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /New task/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /New enquiry/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /New follow-up/ })).not.toBeInTheDocument();
   });
 
   it("reports the picked target", () => {
@@ -53,7 +53,7 @@ describe("day sheet", () => {
       <DaySheet day={DAY} items={[]} targets={["followUp"]} onOpenChange={vi.fn()} onPick={onPick} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Follow-up" }));
+    fireEvent.click(screen.getByRole("button", { name: /New follow-up/ }));
 
     expect(onPick).toHaveBeenCalledWith("followUp");
   });

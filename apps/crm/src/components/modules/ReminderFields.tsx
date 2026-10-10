@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, NativeSelect } from "@/components/modules/shared";
+import { personLine } from "@/lib/crm/display";
 import type { ReminderFormState } from "@/lib/crm/reminder";
 
 export function ReminderFields({
@@ -12,7 +13,7 @@ export function ReminderFields({
 }: {
   form: ReminderFormState;
   errors: Record<string, string>;
-  contacts: { id: string; name: string }[];
+  contacts: { id: string; name: string; mobile?: string | null }[];
   showContact: boolean;
   onChange: (next: ReminderFormState) => void;
 }) {
@@ -55,7 +56,7 @@ export function ReminderFields({
             <option value="">No contact</option>
             {contacts.map((contact) => (
               <option key={contact.id} value={contact.id}>
-                {contact.name}
+                {personLine(contact.name, contact.mobile)}
               </option>
             ))}
           </NativeSelect>

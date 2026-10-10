@@ -1,6 +1,7 @@
 import { Wallet } from "lucide-react";
 import { AgendaItem } from "@/components/calendar/AgendaItem";
 import { ListRow } from "@/components/ListRow";
+import { RecordShortcuts } from "@/components/records/RecordShortcuts";
 import { Badge } from "@/components/ui/badge";
 import {
   MONTH_CATEGORIES,
@@ -8,7 +9,7 @@ import {
   filterMonthItems,
   type MonthCategory,
 } from "@/lib/mobile/calendar";
-import { formatMoney, humanize, matchesQuery } from "@/lib/mobile/format";
+import { formatMoney, humanize, matchesQuery, paymentTypeAccent, paymentTypeClass } from "@/lib/mobile/format";
 import { cn } from "@/lib/utils";
 import type { CrmCalendarItem, CrmPayment, CrmPaymentType } from "@/types/crm";
 
@@ -66,21 +67,51 @@ function dayHeading(at: string): string {
   });
 }
 
-function PaymentRow({ payment }: { payment: CrmPayment }) {
-  const detail = payment.reference
-    ? [TYPE_LABELS[payment.type], humanize(payment.mode)].join(" · ")
-    : humanize(payment.mode);
+function PaymentRow({
+  payment,
+  person,
+  onOpen,
+  onRemind,
+  onFollow,
+  enquiryId,
+}: {
+  payment: CrmPayment;
+  person: { name: string; mobile: string | null } | null;
+  onOpen?: () => void;
+  onRemind?: () => void;
+  onFollow?: () => void;
+  enquiryId?: string | null;
+}) {
+  const linkedEnquiry = enquiryId ?? payment.enquiryId;
+  const remind = onRemind && (person || linkedEnquiry) ? onRemind : undefined;
+  const follow = onFollow && linkedEnquiry ? onFollow : undefined;
+  const lead = [person?.mobile, person ? payment.reference : null].filter(Boolean).join(" · ");
+  const mode = humanize(payment.mode);
 
   return (
     <ListRow
-      title={payment.reference || TYPE_LABELS[payment.type]}
-      detail={detail}
+      title={person?.name || payment.reference || TYPE_LABELS[payment.type]}
+      detail={
+        <>
+          {lead ? `${lead} · ` : null}
+          <span className={paymentTypeClass(payment.type)}>{TYPE_LABELS[payment.type]}</span>
+          {mode ? ` · ${mode}` : null}
+        </>
+      }
       value={formatMoney(payment.amount, payment.currency)}
-      accentClassName="border-l-violet-500"
+      valueClassName={paymentTypeClass(payment.type)}
+      accentClassName={paymentTypeAccent(payment.type)}
+      onClick={onOpen}
+      footer={remind || follow ? <RecordShortcuts onRemind={remind} onFollow={follow} /> : undefined}
       badge={
         <Badge
           variant="secondary"
-          className="gap-1 rounded-lg border-0 bg-violet-500/15 text-[10px] text-violet-700 dark:text-violet-300"
+          className={cn(
+            "gap-1 rounded-lg border-0 text-[10px]",
+            payment.type === "EXPENSE"
+              ? "bg-rose-500/15 text-rose-700 dark:text-rose-300"
+              : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+          )}
         >
           <Wallet className="h-3 w-3" aria-hidden />
           {humanize(payment.status)}
@@ -97,6 +128,14 @@ export function MonthCategories({
   payments,
   query,
   showPayments,
+  payeeFor,
+  onOpenItem,
+  onOpenPayment,
+  onRemindItem,
+  onFollowItem,
+  onRemindPayment,
+  onFollowPayment,
+  enquiryIdFor,
 }: {
   category: MonthCategory;
   onCategory: (next: MonthCategory) => void;
@@ -104,6 +143,14 @@ export function MonthCategories({
   payments: readonly CrmPayment[];
   query: string;
   showPayments: boolean;
+  payeeFor?: (payment: CrmPayment) => { name: string; mobile: string | null } | null;
+  onOpenItem?: (item: CrmCalendarItem) => void;
+  onOpenPayment?: (payment: CrmPayment) => void;
+  onRemindItem?: (item: CrmCalendarItem) => void;
+  onFollowItem?: (item: CrmCalendarItem) => void;
+  onRemindPayment?: (payment: CrmPayment) => void;
+  onFollowPayment?: (payment: CrmPayment) => void;
+  enquiryIdFor?: (payment: CrmPayment) => string | null;
 }) {
   const tabs = MONTH_CATEGORIES.filter((tab) => showPayments || tab.id !== "payment");
   const rows = rowsFor(category, items, payments, query);
@@ -151,7 +198,23 @@ export function MonthCategories({
                     {dayHeading(row.at)}
                   </h3>
                 ) : null}
-                {row.kind === "item" ? <AgendaItem item={row.item} /> : <PaymentRow payment={row.payment} />}
+                {row.kind === "item" ? (
+                  <AgendaItem
+                    item={row.item}
+                    onOpen={onOpenItem ? () => onOpenItem(row.item) : undefined}
+                    onRemind={onRemindItem ? () => onRemindItem(row.item) : undefined}
+                    onFollow={onFollowItem ? () => onFollowItem(row.item) : undefined}
+                  />
+                ) : (
+                  <PaymentRow
+                    payment={row.payment}
+                    person={payeeFor?.(row.payment) ?? null}
+                    onOpen={onOpenPayment ? () => onOpenPayment(row.payment) : undefined}
+                    onRemind={onRemindPayment ? () => onRemindPayment(row.payment) : undefined}
+                    onFollow={onFollowPayment ? () => onFollowPayment(row.payment) : undefined}
+                    enquiryId={enquiryIdFor?.(row.payment)}
+                  />
+                )}
               </div>
             );
           })}

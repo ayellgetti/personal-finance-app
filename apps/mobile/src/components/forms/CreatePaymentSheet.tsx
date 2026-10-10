@@ -4,9 +4,12 @@ import { FormSheet } from "@/components/forms/FormSheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { humanize, toDateInputValue } from "@/lib/mobile/format";
+import { isoToLocalInput } from "@/lib/mobile/booking";
+import { humanize, personLine } from "@/lib/mobile/format";
 import { createPayment, listClients, listContacts, updatePayment } from "@/lib/mobile/remote";
+import { useDebounced } from "@/lib/mobile/use-debounced";
 import { useResource } from "@/lib/mobile/use-resource";
+import { toPaymentBody, validatePayment } from "@/lib/mobile/validate";
 import {
   CRM_PAYMENT_MODES,
   CRM_PAYMENT_STATUSES,
@@ -37,7 +40,10 @@ export function CreatePaymentSheet({
   const [status, setStatus] = useState<CrmPaymentStatus>("pending");
   const [paidAt, setPaidAt] = useState("");
   const [reference, setReference] = useState("");
+  const [payeeQuery, setPayeeQuery] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const payeeSearch = useDebounced(payeeQuery, 300);
 
   useEffect(() => {
     if (!open || !payment) return;
@@ -47,47 +53,60 @@ export function CreatePaymentSheet({
     setType(payment.type);
     setMode(payment.mode);
     setStatus(payment.status);
-    setPaidAt(payment.paidAt ? toDateInputValue(new Date(payment.paidAt)) : "");
+    setPaidAt(payment.paidAt ? isoToLocalInput(payment.paidAt) : "");
     setReference(payment.reference ?? "");
   }, [open, payment]);
 
-  const loadClients = useCallback(() => listClients({ page: 1, limit: 50 }), []);
-  const loadVendors = useCallback(() => listContacts({ page: 1, limit: 50, type: "vendor" }), []);
-  const clients = useResource(loadClients, open && referenceType === "client");
-  const vendors = useResource(loadVendors, open && referenceType === "vendor");
+  const loadClients = useCallback(
+    () => listClients({ page: 1, limit: 20, search: payeeSearch || undefined }),
+    [payeeSearch],
+  );
+  const loadVendors = useCallback(
+    () => listContacts({ page: 1, limit: 20, type: "vendor", search: payeeSearch || undefined }),
+    [payeeSearch],
+  );
+  const clients = useResource(loadClients, open && referenceType === "client", payeeSearch);
+  const vendors = useResource(loadVendors, open && referenceType === "vendor", payeeSearch);
 
   const payees =
     referenceType === "vendor"
-      ? (vendors.data?.items ?? []).map((contact) => ({ id: contact.id, label: contact.name }))
-      : (clients.data?.items ?? []).map((client) => ({ id: client.id, label: client.billingName }));
+      ? (vendors.data?.items ?? []).map((contact) => ({
+          id: contact.id,
+          label: personLine(contact.name, contact.mobile),
+        }))
+      : (clients.data?.items ?? []).map((client) => ({
+          id: client.id,
+          label: client.billingName,
+        }));
   const payeesLoading = referenceType === "vendor" ? vendors.status === "loading" : clients.status === "loading";
+  const payeeOptions =
+    referenceId && !payees.some((payee) => payee.id === referenceId)
+      ? [{ id: referenceId, label: "Current record" }, ...payees]
+      : payees;
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const parsedAmount = Number(amount);
-    if (!referenceId) {
-      toast.error(referenceType === "vendor" ? "Pick a vendor" : "Pick a booked record");
-      return;
-    }
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      toast.error("Amount must be greater than 0");
+    const nextErrors = validatePayment({ referenceId, amount, reference, paidAt });
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast.error(nextErrors.referenceId ?? nextErrors.amount ?? nextErrors.paidAt ?? "Check the payment");
       return;
     }
 
     const selectedClient = clients.data?.items.find((client) => client.id === referenceId);
     setBusy(true);
     try {
-      const body = {
+      const body = toPaymentBody({
         referenceType,
         referenceId,
         enquiryId: referenceType === "client" ? (payment?.enquiryId ?? selectedClient?.convertedFromEnquiryId ?? null) : null,
-        amount: parsedAmount,
+        amount,
         type,
         mode,
         status,
-        paidAt: paidAt ? new Date(paidAt).toISOString() : null,
-        reference: reference.trim() || null,
-      };
+        paidAt,
+        reference,
+      });
       if (payment) {
         await updatePayment(payment.id, body);
         toast.success("Payment updated");
@@ -138,19 +157,31 @@ export function CreatePaymentSheet({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="payment-payee-search">Find {referenceType === "vendor" ? "vendor" : "booking"}</Label>
+        <Input
+          id="payment-payee-search"
+          value={payeeQuery}
+          onChange={(event) => setPayeeQuery(event.target.value)}
+          className="h-11 rounded-xl text-base"
+          placeholder="Search by name"
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="payment-payee">{referenceType === "vendor" ? "Vendor" : "Booked"}</Label>
         <Select value={referenceId} onValueChange={setReferenceId}>
           <SelectTrigger id="payment-payee" className="h-11 rounded-xl">
             <SelectValue placeholder={payeesLoading ? "Loading…" : "Pick one"} />
           </SelectTrigger>
           <SelectContent className="max-h-72">
-            {payees.map((payee) => (
+            {payeeOptions.map((payee) => (
               <SelectItem key={payee.id} value={payee.id}>
                 {payee.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {errors.referenceId ? <p className="text-xs text-destructive">{errors.referenceId}</p> : null}
       </div>
 
       <div className="space-y-2">
@@ -182,6 +213,7 @@ export function CreatePaymentSheet({
           className="h-11 rounded-xl text-base"
           required
         />
+        {errors.amount ? <p className="text-xs text-destructive">{errors.amount}</p> : null}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

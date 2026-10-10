@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import App from "@/App";
 
 vi.mock("virtual:pwa-register", () => ({ registerSW: () => () => undefined }));
@@ -72,7 +72,7 @@ describe("app boot", () => {
     });
     expect(screen.getByRole("button", { name: "Create" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Profile" })).toHaveAttribute("href", "/profile");
-    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(within(screen.getByRole("navigation", { name: "Primary" })).getAllByRole("listitem")).toHaveLength(5);
 
     // Permissions drive the tab bar: Enquiries is allowed here, Calendar is not.
     expect(screen.getByRole("link", { name: "Enquiries" })).toBeInTheDocument();

@@ -23,6 +23,7 @@ export const CRM_PERMISSIONS = {
   contactsRead: "crm.contacts.read",
   contactsCreate: "crm.contacts.create",
   contactsUpdate: "crm.contacts.update",
+  contactsDelete: "crm.contacts.delete",
   enquiriesRead: "crm.enquiries.read",
   enquiriesCreate: "crm.enquiries.create",
   enquiriesUpdate: "crm.enquiries.update",
@@ -30,22 +31,34 @@ export const CRM_PERMISSIONS = {
   enquiriesConvert: "crm.enquiries.convert",
   followUpsRead: "crm.followups.read",
   followUpsCreate: "crm.followups.create",
+  followUpsUpdate: "crm.followups.update",
+  followUpsDelete: "crm.followups.delete",
   clientsRead: "crm.clients.read",
+  clientsCreate: "crm.clients.create",
   clientsUpdate: "crm.clients.update",
+  clientsDelete: "crm.clients.delete",
   paymentsRead: "crm.payments.read",
   paymentsCreate: "crm.payments.create",
   paymentsUpdate: "crm.payments.update",
   paymentsDelete: "crm.payments.delete",
   tasksRead: "crm.tasks.read",
   tasksCreate: "crm.tasks.create",
+  tasksUpdate: "crm.tasks.update",
+  tasksDelete: "crm.tasks.delete",
   calendarRead: "crm.calendar.read",
   calendarCreate: "crm.calendar.create",
   calendarUpdate: "crm.calendar.update",
+  calendarDelete: "crm.calendar.delete",
   usersRead: "crm.users.read",
+  usersCreate: "crm.users.create",
+  usersUpdate: "crm.users.update",
   rolesRead: "crm.roles.read",
+  rolesUpdate: "crm.roles.update",
 } as const;
 
 export type CrmPermissionCode = (typeof CRM_PERMISSIONS)[keyof typeof CRM_PERMISSIONS];
+
+export const ALL_CRM_PERMISSIONS = Object.values(CRM_PERMISSIONS);
 
 export const CRM_CONTACT_TYPES = ["lead", "client", "vendor", "employee"] as const;
 export type CrmContactType = (typeof CRM_CONTACT_TYPES)[number];
@@ -131,6 +144,24 @@ export type CrmFollowUp = {
   notes: string | null;
 };
 
+export type CrmFollowUpCalendarKind = "new_enquiry" | "followup";
+
+export type CrmFollowUpCalendarItem = {
+  kind: CrmFollowUpCalendarKind;
+  enquiryId: string;
+  title: string;
+  contactId: string;
+  status: CrmEnquiryStatus;
+  at: string;
+  nextFollowupDate: string | null;
+  overdue: boolean;
+};
+
+export type CrmFollowUpCalendar = {
+  items: CrmFollowUpCalendarItem[];
+  overdue: CrmFollowUpCalendarItem[];
+};
+
 export type CrmEnquiryWithFollowUps = CrmEnquiry & {
   followUps: CrmFollowUp[];
 };
@@ -142,9 +173,16 @@ export type CrmContactDetail = {
   bookings: CrmCalendarEvent[];
 };
 
+export type ConvertedEnquiry = {
+  enquiry: CrmEnquiry;
+  contact: CrmContact;
+  client: CrmClient;
+  event: CrmCalendarEvent;
+};
+
 export type ConvertEnquiryInput = {
   billingName?: string;
-  startsAt?: string;
+  startsAt: string;
   endsAt?: string | null;
   slot?: CrmEventSlot | null;
 };
@@ -235,6 +273,32 @@ export type CrmDashboard = {
   tasksByStatus: Record<CrmTaskStatus, number>;
 };
 
+export type CrmStaffUser = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobileNo: string;
+  dob: string;
+  gender: string;
+  countryCode: string;
+  roleIds: string[];
+};
+
+export type CrmRoleDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  permissionIds: string[];
+};
+
+export type CrmPermission = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+};
+
 export type CrmPagination = {
   total: number;
   page: number;
@@ -278,6 +342,14 @@ export type CreateFollowUpInput = {
   notes?: string | null;
 };
 
+export type CreateClientInput = {
+  contactId: string;
+  billingName: string;
+  status?: CrmClientStatus;
+  gstin?: string | null;
+  convertedFromEnquiryId?: string | null;
+};
+
 export type CreatePaymentInput = {
   referenceType: CrmPaymentReferenceType;
   referenceId: string;
@@ -310,4 +382,37 @@ export type CreateCalendarEventInput = {
   enquiryId?: string | null;
   assigneeId?: string | null;
   notes?: string | null;
+};
+
+export type CreateCrmUserInput = {
+  firstName: string;
+  lastName: string;
+  dob: string;
+  gender: string;
+  countryCode: string;
+  mobileNo: string;
+  email: string;
+  password: string;
+  roleIds: string[];
+};
+
+export type UpdateCrmUserInput = {
+  firstName?: string;
+  lastName?: string;
+  dob?: string;
+  gender?: string;
+  countryCode?: string;
+  mobileNo?: string;
+  email?: string;
+  roleIds?: string[];
+};
+
+export type CreateCrmRoleInput = {
+  name: string;
+  permissionIds: string[];
+};
+
+export type UpdateCrmRoleInput = {
+  name?: string;
+  permissionIds?: string[];
 };

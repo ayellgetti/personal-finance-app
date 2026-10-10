@@ -12,9 +12,10 @@ import {
   EnquiriesTab,
   PaymentsTab,
 } from "@/components/modules/ContactViewSheet";
+import { ContextActions } from "@/components/modules/ContextActionSheets";
 import { SheetTabButton, SheetTabList, StatusBadge } from "@/components/modules/shared";
 import { bookingDatesForClient } from "@/lib/crm/booking";
-import { CLIENT_STATUS_LABELS, formatDateTime } from "@/lib/crm/display";
+import { CLIENT_STATUS_LABELS, formatDateTime, personLine } from "@/lib/crm/display";
 import { fetchContactDetail } from "@/lib/crm/remote";
 import { useCrm } from "@/lib/crm/store";
 import {
@@ -33,6 +34,9 @@ export function ClientViewSheet({
   onOpenContact,
   onOpenPayments,
   onEdit,
+  onPay,
+  onRemind,
+  onFollow,
 }: {
   client: CrmClient | null;
   contact?: CrmContact | null;
@@ -40,6 +44,9 @@ export function ClientViewSheet({
   onOpenContact: (contactId: string) => void;
   onOpenPayments: (clientId: string) => void;
   onEdit?: (client: CrmClient) => void;
+  onPay?: (client: CrmClient) => void;
+  onRemind?: (client: CrmClient) => void;
+  onFollow?: (client: CrmClient) => void;
 }) {
   const crm = useCrm();
   const [tab, setTab] = useState<ClientViewTab>("booking");
@@ -96,7 +103,9 @@ export function ClientViewSheet({
               <div className="flex items-start justify-between gap-3 pr-6">
                 <div className="min-w-0 space-y-1">
                   <SheetTitle className="truncate text-lg leading-snug">{client.billingName}</SheetTitle>
-                  <SheetDescription className="text-sm">{contact?.name ?? "Booked"}</SheetDescription>
+                  <SheetDescription className="text-sm">
+                    {personLine(contact?.name ?? "Booked", contact?.mobile)}
+                  </SheetDescription>
                 </div>
                 <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
               </div>
@@ -158,6 +167,25 @@ export function ClientViewSheet({
               )}
 
               <div className="flex flex-wrap gap-2">
+                <ContextActions
+                  onPay={
+                    onPay && crm.hasPermission(CRM_PERMISSIONS.paymentsCreate)
+                      ? () => onPay(client)
+                      : undefined
+                  }
+                  onRemind={
+                    onRemind && crm.hasPermission(CRM_PERMISSIONS.calendarCreate)
+                      ? () => onRemind(client)
+                      : undefined
+                  }
+                  onFollow={
+                    onFollow &&
+                    client.convertedFromEnquiryId &&
+                    crm.hasPermission(CRM_PERMISSIONS.followUpsCreate)
+                      ? () => onFollow(client)
+                      : undefined
+                  }
+                />
                 <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onOpenContact(client.contactId)}>
                   Contact
                 </Button>

@@ -15,6 +15,16 @@ import { fakeCrud } from "./crm-test-utils";
 
 const DUE_DATE = new Date("2026-10-01T12:00:00.000Z");
 
+/** Date-only strings parse as UTC midnight, so use tomorrow's local day. */
+function futureDueDateKey(): string {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + 1);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 type FakeContact = {
   id: string;
   name: string;
@@ -434,7 +444,7 @@ test("enquiry create requires an exact due date", () => {
       contactId: "00000000-0000-4000-8000-000000000001",
       title: "Banquet",
       source: "web",
-      dueDate: "2026-10-01",
+      dueDate: futureDueDateKey(),
     }).success,
     true,
   );

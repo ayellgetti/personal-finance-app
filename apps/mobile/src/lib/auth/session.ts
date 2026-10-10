@@ -45,6 +45,11 @@ export function readStoredUser(): StoredUser | null {
   }
 }
 
+export function writeStoredUser(user: StoredUser) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  notifyAuthListeners();
+}
+
 export function persistSession(session: AuthSession) {
   localStorage.setItem(ACCESS_KEY, session.accessToken);
   localStorage.setItem(REFRESH_KEY, session.refreshToken);

@@ -26,12 +26,15 @@ export function buildLeadTimeline(
 ): LeadTimelineEvent[] {
   const events: LeadTimelineEvent[] = [];
   if (enquiry.createdAt) {
+    const notes = [enquiry.source ? `Source: ${enquiry.source}` : null, enquiry.notes?.trim() || null]
+      .filter((part): part is string => Boolean(part))
+      .join("\n");
     events.push({
       id: `created-${enquiry.id}`,
       kind: "created",
       at: enquiry.createdAt,
       title: "Lead created",
-      notes: enquiry.source ? `Source: ${enquiry.source}` : null,
+      notes: notes || null,
       status: "new",
       overdue: false,
     });

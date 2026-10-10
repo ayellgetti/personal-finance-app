@@ -107,4 +107,50 @@ describe("month categories", () => {
     expect(screen.getByRole("tab", { name: "Reminder" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Other" })).toBeInTheDocument();
   });
+
+  it("opens the payment or calendar row that was tapped", () => {
+    const onOpenItem = vi.fn();
+    const onOpenPayment = vi.fn();
+    renderMobile(
+      <MonthCategories
+        category="all"
+        onCategory={vi.fn()}
+        items={ITEMS}
+        payments={PAYMENTS}
+        query=""
+        showPayments
+        onOpenItem={onOpenItem}
+        onOpenPayment={onOpenPayment}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /UPI-10/ }));
+    expect(onOpenPayment).toHaveBeenCalledWith(PAYMENTS[0]);
+
+    fireEvent.click(screen.getByRole("button", { name: /Call Priya/ }));
+    expect(onOpenItem).toHaveBeenCalledWith(ITEMS[1]);
+  });
+
+  it("colors income green and expense red", () => {
+    const expense: CrmPayment = {
+      ...PAYMENTS[0],
+      id: "p2",
+      amount: 8000,
+      type: "EXPENSE",
+      reference: "Decor",
+    };
+    renderMobile(
+      <MonthCategories
+        category="payment"
+        onCategory={vi.fn()}
+        items={[]}
+        payments={[PAYMENTS[0], expense]}
+        query=""
+        showPayments
+      />,
+    );
+
+    expect(screen.getByText("Income")).toHaveClass("text-emerald-700");
+    expect(screen.getByText("Expense")).toHaveClass("text-rose-700");
+  });
 });

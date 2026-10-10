@@ -138,6 +138,45 @@ test("CRM public enquiry route does not require authentication", async () => {
   }
 });
 
+test("authenticated CRM routes reject missing credentials with an error envelope", async () => {
+  const server = createServer(app.express);
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  try {
+    const address = server.address();
+    assert(address && typeof address !== "string");
+    const paths = [
+      "/api/crm/followups",
+      "/api/crm/tasks",
+      "/api/crm/payments",
+      "/api/crm/users",
+      "/api/crm/roles",
+      "/api/crm/calendar/events",
+      "/api/users/me",
+    ];
+    for (const path of paths) {
+      const response: Response = await fetch(`http://127.0.0.1:${address.port}${path}`);
+      const body = (await response.json()) as { message?: string; success?: boolean };
+      assert.equal(response.status, 401, path);
+      assert.equal(typeof body.message, "string");
+      assert.equal(body.success, false);
+    }
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+});
+
 test("CRM contacts route requires authentication", async () => {
   const server = createServer(app.express);
 

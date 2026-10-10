@@ -4,20 +4,40 @@ import { Link } from "react-router-dom";
 import { ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
 import { SectionCard } from "@/components/SectionCard";
 import { useAuth } from "@/lib/auth/store";
-import { endOfDayIso, formatDate, formatTime, humanize, startOfDayIso } from "@/lib/mobile/format";
+import {
+  endOfDayIso,
+  formatDate,
+  formatMoney,
+  formatTime,
+  humanize,
+  paymentTypeClass,
+  startOfDayIso,
+} from "@/lib/mobile/format";
 import { fetchDashboard, listCalendar, listClients } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
 import { useResource } from "@/lib/mobile/use-resource";
-import { CRM_PERMISSIONS, type CrmCalendarItem, type CrmDashboard } from "@/types/crm";
+import {
+  CRM_CONTACT_TYPES,
+  CRM_PERMISSIONS,
+  CRM_TASK_STATUSES,
+  type CrmCalendarItem,
+  type CrmDashboard,
+} from "@/types/crm";
 
-function StatTile({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="stat-tile">
+function StatTile({ value, label, to }: { value: number; label: string; to?: string }) {
+  const body = (
+    <>
       <p className="font-display text-2xl font-bold tabular-nums">{value}</p>
       <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </p>
-    </div>
+    </>
+  );
+  if (!to) return <div className="stat-tile">{body}</div>;
+  return (
+    <Link to={to} className="stat-tile block tap-highlight-none">
+      {body}
+    </Link>
   );
 }
 
@@ -95,7 +115,33 @@ function PipelineCount({
   );
 }
 
-function DueList({ dashboard }: { dashboard: CrmDashboard }) {
+function PaymentTotal({
+  label,
+  amount,
+  tone,
+  to,
+}: {
+  label: string;
+  amount: string;
+  tone: string;
+  to: string | null;
+}) {
+  const body = (
+    <>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`font-display text-lg font-bold tabular-nums ${tone}`}>{amount}</p>
+    </>
+  );
+  const className = "rounded-xl border border-border bg-background px-3 py-3 text-left tap-highlight-none";
+  if (!to) return <div className={className}>{body}</div>;
+  return (
+    <Link to={to} className={`${className} hover:bg-secondary`}>
+      {body}
+    </Link>
+  );
+}
+
+function DueList({ dashboard, canOpen }: { dashboard: CrmDashboard; canOpen: boolean }) {
   const items = dashboard.customerDueItems;
   if (items.length === 0) {
     return <p className="py-2 text-sm text-muted-foreground">Nothing is due today.</p>;
@@ -109,6 +155,42 @@ function DueList({ dashboard }: { dashboard: CrmDashboard }) {
           <span className="shrink-0 text-xs text-muted-foreground">{formatDate(item.dueDate)}</span>
         </li>
       ))}
+      {canOpen ? (
+        <li className="pt-2.5">
+          <Link to="/enquiries?due=today" className="text-xs font-semibold text-primary hover:underline">
+            All due today
+          </Link>
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
+function CountRows({ rows }: { rows: { key: string; label: string; value: number; to?: string }[] }) {
+  return (
+    <ul className="divide-y divide-border">
+      {rows.map((row) => {
+        const body = (
+          <>
+            <span className="text-sm">{row.label}</span>
+            <span className="font-display text-sm font-bold tabular-nums">{row.value}</span>
+          </>
+        );
+        return (
+          <li key={row.key}>
+            {row.to ? (
+              <Link
+                to={row.to}
+                className="flex items-center justify-between gap-3 py-2.5 tap-highlight-none hover:text-primary"
+              >
+                {body}
+              </Link>
+            ) : (
+              <div className="flex items-center justify-between gap-3 py-2.5">{body}</div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -121,6 +203,10 @@ export default function Home() {
   const canReadCalendar = permissions.includes(CRM_PERMISSIONS.calendarRead);
   const canReadEnquiries = permissions.includes(CRM_PERMISSIONS.enquiriesRead);
   const canReadClients = permissions.includes(CRM_PERMISSIONS.clientsRead);
+  const canReadFollowUps = permissions.includes(CRM_PERMISSIONS.followUpsRead);
+  const canReadContacts = permissions.includes(CRM_PERMISSIONS.contactsRead);
+  const canReadPayments = permissions.includes(CRM_PERMISSIONS.paymentsRead);
+  const canReadTasks = permissions.includes(CRM_PERMISSIONS.tasksRead);
 
   const dashboard = useResource(fetchDashboard, canReadDashboard);
   const loadBooked = useCallback(() => listClients({ page: 1, limit: 1 }), []);
@@ -161,10 +247,26 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        <StatTile value={data.leadsGeneratedToday} label="New" />
-        <StatTile value={data.customerDueToday} label="Due" />
-        <StatTile value={data.followUpsToday} label="Calls" />
-        <StatTile value={data.overdueFollowUps} label="Late" />
+        <StatTile
+          value={data.leadsGeneratedToday}
+          label="New"
+          to={canReadEnquiries ? "/enquiries?status=new" : undefined}
+        />
+        <StatTile
+          value={data.customerDueToday}
+          label="Due"
+          to={canReadEnquiries ? "/enquiries?due=today" : undefined}
+        />
+        <StatTile
+          value={data.followUpsToday}
+          label="Calls"
+          to={canReadFollowUps ? "/follow-ups?when=today" : undefined}
+        />
+        <StatTile
+          value={data.overdueFollowUps}
+          label="Late"
+          to={canReadFollowUps ? "/follow-ups?when=overdue" : undefined}
+        />
       </div>
 
       {canReadCalendar ? (
@@ -188,7 +290,7 @@ export default function Home() {
       ) : null}
 
       <SectionCard eyebrow="Pipeline" title="Due today" tone="primary">
-        <DueList dashboard={data} />
+        <DueList dashboard={data} canOpen={canReadEnquiries} />
       </SectionCard>
 
       <SectionCard eyebrow="Pipeline" title="Open and booked" tone="neutral">
@@ -198,6 +300,63 @@ export default function Home() {
           bookedLoading={booked.status === "loading"}
           canOpenEnquiries={canReadEnquiries}
           canOpenBooked={canReadClients}
+        />
+        {canReadEnquiries ? (
+          <Link to="/enquiries?status=closed" className="mt-3 block text-xs font-semibold text-primary hover:underline">
+            {data.enquiries.closed} closed enquiries
+          </Link>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">{data.enquiries.closed} closed enquiries</p>
+        )}
+      </SectionCard>
+
+      <SectionCard eyebrow="This month" title="Payments" tone="neutral">
+        <div className="grid grid-cols-2 gap-3">
+          <PaymentTotal
+            label="Income"
+            amount={formatMoney(data.paymentsIncomeThisMonth, "INR")}
+            tone={paymentTypeClass("INCOME")}
+            to={canReadPayments ? "/payments?type=INCOME&month=current" : null}
+          />
+          <PaymentTotal
+            label="Expense"
+            amount={formatMoney(data.paymentsExpenseThisMonth, "INR")}
+            tone={paymentTypeClass("EXPENSE")}
+            to={canReadPayments ? "/payments?type=EXPENSE&month=current" : null}
+          />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {data.paymentsPaidThisMonth} paid payment{data.paymentsPaidThisMonth === 1 ? "" : "s"}
+          {canReadPayments ? (
+            <>
+              {" · "}
+              <Link to="/payments" className="font-semibold text-primary hover:underline">
+                View payments
+              </Link>
+            </>
+          ) : null}
+        </p>
+      </SectionCard>
+
+      <SectionCard eyebrow="People" title="Contacts by type" tone="neutral">
+        <CountRows
+          rows={CRM_CONTACT_TYPES.map((type) => ({
+            key: type,
+            label: humanize(type),
+            value: data.contactsByType[type] ?? 0,
+            to: canReadContacts ? `/contacts?type=${type}` : undefined,
+          }))}
+        />
+      </SectionCard>
+
+      <SectionCard eyebrow="Work" title="Tasks by status" tone="neutral">
+        <CountRows
+          rows={CRM_TASK_STATUSES.map((status) => ({
+            key: status,
+            label: humanize(status),
+            value: data.tasksByStatus[status] ?? 0,
+            to: canReadTasks ? `/tasks?status=${status}` : undefined,
+          }))}
         />
       </SectionCard>
     </div>

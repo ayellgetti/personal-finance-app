@@ -11,20 +11,25 @@ export function ListRow({
   value,
   badge,
   accentClassName,
+  valueClassName,
   onClick,
+  footer,
 }: {
   title: string;
-  detail?: string | null;
+  detail?: ReactNode;
   value?: string | null;
   badge?: ReactNode;
   accentClassName?: string;
+  valueClassName?: string;
   onClick?: () => void;
+  footer?: ReactNode;
 }) {
-  const className = cn(
-    "w-full rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-[var(--shadow-card)]",
+  const shell = cn(
+    "w-full rounded-2xl border border-border bg-card text-left shadow-[var(--shadow-card)]",
     accentClassName && "border-l-4",
     accentClassName,
-    onClick && "transition-colors hover:bg-secondary tap-highlight-none",
+    onClick && !footer && "transition-colors hover:bg-secondary tap-highlight-none",
+    !footer && "px-4 py-3",
   );
   const body = (
     <div className="flex items-start justify-between gap-3">
@@ -34,17 +39,34 @@ export function ListRow({
       </div>
       {value || badge ? (
         <div className="flex max-w-[45%] shrink-0 flex-col items-end gap-1">
-          {value ? <span className="text-right text-base font-semibold tabular-nums">{value}</span> : null}
+          {value ? (
+            <span className={cn("text-right text-base font-semibold tabular-nums", valueClassName)}>{value}</span>
+          ) : null}
           {badge}
         </div>
       ) : null}
     </div>
   );
 
-  if (!onClick) return <div className={className}>{body}</div>;
+  if (footer) {
+    return (
+      <div className={shell}>
+        {onClick ? (
+          <button type="button" onClick={onClick} className="w-full px-4 py-3 text-left transition-colors hover:bg-secondary tap-highlight-none">
+            {body}
+          </button>
+        ) : (
+          <div className="px-4 py-3">{body}</div>
+        )}
+        <div className="border-t border-border px-4 py-2">{footer}</div>
+      </div>
+    );
+  }
+
+  if (!onClick) return <div className={shell}>{body}</div>;
 
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <button type="button" onClick={onClick} className={shell}>
       {body}
     </button>
   );

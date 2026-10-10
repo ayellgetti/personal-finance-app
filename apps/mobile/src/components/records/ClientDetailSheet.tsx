@@ -1,13 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { ConfirmInline } from "@/components/ConfirmInline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime, formatMoney, humanize } from "@/lib/mobile/format";
+import { formatDateTime, formatMoney, humanize, paymentTypeClass, personLine } from "@/lib/mobile/format";
 import { buildLeadTimeline } from "@/lib/mobile/lead-timeline";
-import { fetchContactDetail, updateCalendarEvent } from "@/lib/mobile/remote";
+import { fetchContactDetail, removeClient, updateCalendarEvent } from "@/lib/mobile/remote";
 import { cn } from "@/lib/utils";
 import {
   CRM_PERMISSIONS,
@@ -126,11 +127,17 @@ export function ClientDetailSheet({
   permissions,
   onClose,
   onEdit,
+  onRemind,
+  onFollow,
+  onRemoved,
 }: {
   client: CrmClient | null;
   permissions: readonly string[];
   onClose: () => void;
   onEdit: (client: CrmClient) => void;
+  onRemind?: (client: CrmClient) => void;
+  onFollow?: (client: CrmClient) => void;
+  onRemoved?: () => void;
 }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState<ClientTab>("booking");
@@ -138,7 +145,10 @@ export function ClientDetailSheet({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
+  const canRemove = Boolean(onRemoved) && permissions.includes(CRM_PERMISSIONS.clientsDelete);
   const canEdit = permissions.includes(CRM_PERMISSIONS.clientsUpdate);
   const canEditNotes = permissions.includes(CRM_PERMISSIONS.calendarUpdate);
   const canReadContacts = permissions.includes(CRM_PERMISSIONS.contactsRead);
@@ -146,6 +156,7 @@ export function ClientDetailSheet({
   useEffect(() => {
     setTab("booking");
     setContactOpen(false);
+    setConfirmRemove(false);
     setDetail(null);
     setError(null);
     if (!client || !canReadContacts) return;
@@ -165,6 +176,22 @@ export function ClientDetailSheet({
       cancelled = true;
     };
   }, [client, canReadContacts]);
+
+  const remove = async () => {
+    if (!client) return;
+    setRemoving(true);
+    try {
+      await removeClient(client.id);
+      toast.success("Booked record removed");
+      setConfirmRemove(false);
+      onClose();
+      onRemoved?.();
+    } catch (caught) {
+      toast.error(caught instanceof Error ? caught.message : "Unable to remove booked record");
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const contact: CrmContact | null = detail?.contact ?? null;
   const bookings = detail?.bookings ?? [];
@@ -193,7 +220,9 @@ export function ClientDetailSheet({
             <div className="flex items-start justify-between gap-3 pr-8">
               <div className="min-w-0 space-y-1">
                 <h2 className="truncate text-lg font-semibold leading-snug">{client.billingName}</h2>
-                <p className="text-sm text-muted-foreground">{contact?.name ?? "Booked"}</p>
+                <p className="text-sm text-muted-foreground">
+                  {contact ? personLine(contact.name, contact.mobile) : "Booked"}
+                </p>
               </div>
               <Badge variant="secondary" className="shrink-0 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                 {humanize(client.status)}
@@ -311,9 +340,15 @@ export function ClientDetailSheet({
                 <ul className="space-y-2" role="tabpanel">
                   {payments.map((payment) => (
                     <li key={payment.id} className="rounded-2xl border border-border px-4 py-3">
-                      <p className="text-sm font-semibold">{formatMoney(payment.amount, payment.currency)}</p>
+                      <p className={`text-sm font-semibold ${paymentTypeClass(payment.type)}`}>
+                        {formatMoney(payment.amount, payment.currency)}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {humanize(payment.type)} · {humanize(payment.status)} · {formatDateTime(payment.paidAt)}
+                        <span className={paymentTypeClass(payment.type)}>
+                          {payment.type === "EXPENSE" ? "Expense" : "Income"}
+                        </span>
+                        {" · "}
+                        {humanize(payment.status)} · {formatDateTime(payment.paidAt)}
                       </p>
                     </li>
                   ))}
@@ -322,6 +357,16 @@ export function ClientDetailSheet({
             ) : null}
 
             <div className="flex flex-wrap gap-2">
+              {onRemind ? (
+                <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onRemind(client)}>
+                  Add reminder
+                </Button>
+              ) : null}
+              {onFollow && client.convertedFromEnquiryId ? (
+                <Button type="button" size="sm" variant="outline" className="rounded-xl" onClick={() => onFollow(client)}>
+                  Add follow-up
+                </Button>
+              ) : null}
               <Button type="button" size="sm" variant="outline" className="rounded-xl" disabled={!contact} onClick={() => setContactOpen(true)}>
                 Contact
               </Button>
@@ -342,7 +387,26 @@ export function ClientDetailSheet({
                   Edit
                 </Button>
               ) : null}
+              {canRemove ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl text-destructive"
+                  onClick={() => setConfirmRemove(true)}
+                >
+                  Remove
+                </Button>
+              ) : null}
             </div>
+            {confirmRemove ? (
+              <ConfirmInline
+                message="Remove this booked record? It is hidden from Booked. A calendar booking with a paid payment stays locked and cannot be removed."
+                busy={removing}
+                onCancel={() => setConfirmRemove(false)}
+                onConfirm={() => void remove()}
+              />
+            ) : null}
           </>
         ) : null}
       </RecordSheet>

@@ -35,6 +35,10 @@ import {
   SideSheet,
 } from "@/components/modules/shared";
 import { DatePicker } from "@/components/modules/DatePicker";
+import {
+  QuickReminderSheet,
+  type ReminderActionTarget,
+} from "@/components/modules/ContextActionSheets";
 import { LeadTimeline } from "@/components/modules/LeadTimeline";
 import { BookingFields, ConvertToBookedSheet } from "@/components/modules/ConvertToBookedSheet";
 import { EMPTY_BOOKING, toBookingInput, validateBooking, type BookingFormState } from "@/lib/crm/booking";
@@ -49,6 +53,7 @@ import {
   isLocalDateKeyOnOrAfterToday,
   localDateInputToIso,
   localInputToIso,
+  personLine,
 } from "@/lib/crm/display";
 import { createContact, listFollowUps } from "@/lib/crm/remote";
 import { cn } from "@/lib/utils";
@@ -293,6 +298,7 @@ function EnquiryDetailSheet({
   onMove,
   onRemove,
   onFollow,
+  onRemind,
   onConvert,
 }: {
   enquiry: CrmEnquiry | null;
@@ -302,6 +308,7 @@ function EnquiryDetailSheet({
   onMove: (enquiry: CrmEnquiry, stage: CrmEnquiryStatus) => void;
   onRemove: (id: string) => void;
   onFollow: (enquiry: CrmEnquiry) => void;
+  onRemind: (enquiry: CrmEnquiry) => void;
   onConvert: (enquiry: CrmEnquiry) => void;
 }) {
   const crm = useCrm();
@@ -388,6 +395,17 @@ function EnquiryDetailSheet({
 
               {/* Actions */}
               <div className="flex flex-wrap gap-2">
+                {crm.hasPermission(CRM_PERMISSIONS.calendarCreate) ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => { onRemind(enquiry); onClose(); }}
+                  >
+                    Add reminder
+                  </Button>
+                ) : null}
                 {crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && enquiry.status !== "closed" ? (
                   <Button
                     type="button"
@@ -861,6 +879,7 @@ export function EnquiriesModule({
     newStage: CrmEnquiryStatus;
   } | null>(null);
   const [followingEnquiry, setFollowingEnquiry] = useState<CrmEnquiry | null>(null);
+  const [reminderTarget, setReminderTarget] = useState<ReminderActionTarget | null>(null);
   const [convertingEnquiry, setConvertingEnquiry] = useState<CrmEnquiry | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -880,8 +899,17 @@ export function EnquiriesModule({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionReady, allowed, statusFilter, view]);
 
-  const contactName = (contactId: string) =>
-    crm.contacts.items.find((c) => c.id === contactId)?.name ?? contactId;
+  const contactName = (contactId: string) => {
+    const contact = crm.contacts.items.find((item) => item.id === contactId);
+    return contact ? personLine(contact.name, contact.mobile) : contactId;
+  };
+  const remindEnquiry = (enquiry: CrmEnquiry) => {
+    setReminderTarget({
+      contactId: enquiry.contactId,
+      enquiryId: enquiry.id,
+      label: contactName(enquiry.contactId),
+    });
+  };
 
   const openCreate = (dueDate = "") => {
     setEditing(null);
@@ -1068,6 +1096,7 @@ export function EnquiriesModule({
         onMove={requestMove}
         onRemove={setRemoveId}
         onFollow={setFollowingEnquiry}
+        onRemind={remindEnquiry}
         onConvert={setConvertingEnquiry}
       />
 
@@ -1090,6 +1119,8 @@ export function EnquiriesModule({
           onConfirm={confirmFollowUp}
         />
       ) : null}
+
+      <QuickReminderSheet target={reminderTarget} onClose={() => setReminderTarget(null)} />
 
       <ConvertToBookedSheet
         enquiry={convertingEnquiry}
@@ -1142,7 +1173,7 @@ export function EnquiriesModule({
                 >
                   <option value="">Select contact</option>
                   {crm.contacts.items.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.id}>{personLine(c.name, c.mobile)}</option>
                   ))}
                 </NativeSelect>
               </Field>
@@ -1188,7 +1219,7 @@ export function EnquiriesModule({
             >
               <option value="">Select contact</option>
               {crm.contacts.items.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>{personLine(c.name, c.mobile)}</option>
               ))}
             </NativeSelect>
           </Field>

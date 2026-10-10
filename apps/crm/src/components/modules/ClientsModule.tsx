@@ -4,6 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ClientViewSheet } from "@/components/modules/ClientViewSheet";
+import {
+  ContextActions,
+  QuickFollowUpSheet,
+  QuickPaymentSheet,
+  QuickReminderSheet,
+  type FollowUpActionTarget,
+  type PaymentActionTarget,
+  type ReminderActionTarget,
+} from "@/components/modules/ContextActionSheets";
 import { MonthCalendar, MonthNav } from "@/components/modules/MonthCalendar";
 import {
   coversLocalDay,
@@ -33,6 +42,7 @@ import {
   formatDateTime,
   formatTime,
   parseLocalDateKey,
+  personLine,
 } from "@/lib/crm/display";
 import { fetchContactDetail } from "@/lib/crm/remote";
 import { useCrm } from "@/lib/crm/store";
@@ -115,6 +125,9 @@ export function ClientsModule({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmClient | null>(null);
   const [viewing, setViewing] = useState<CrmClient | null>(null);
+  const [quickPayment, setQuickPayment] = useState<PaymentActionTarget | null>(null);
+  const [quickReminder, setQuickReminder] = useState<ReminderActionTarget | null>(null);
+  const [quickFollowUp, setQuickFollowUp] = useState<FollowUpActionTarget | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -163,6 +176,25 @@ export function ClientsModule({
 
   const contactFor = (id: string) => crm.contacts.items.find((contact) => contact.id === id) ?? null;
   const contactName = (id: string) => contactFor(id)?.name ?? id;
+  const clientLabel = (client: CrmClient) => {
+    const contact = contactFor(client.contactId);
+    return personLine(contact?.name ?? client.billingName, contact?.mobile);
+  };
+  const paymentTarget = (client: CrmClient): PaymentActionTarget => ({
+    referenceType: "client",
+    referenceId: client.id,
+    enquiryId: client.convertedFromEnquiryId,
+    label: clientLabel(client),
+  });
+  const reminderTarget = (client: CrmClient): ReminderActionTarget => ({
+    contactId: client.contactId,
+    enquiryId: client.convertedFromEnquiryId,
+    label: clientLabel(client),
+  });
+  const followUpTarget = (client: CrmClient): FollowUpActionTarget | null =>
+    client.convertedFromEnquiryId
+      ? { enquiryId: client.convertedFromEnquiryId, label: clientLabel(client) }
+      : null;
   const viewingContact = viewing ? contactFor(viewing.contactId) : null;
 
   const calendarByDay = useMemo(() => {
@@ -232,31 +264,42 @@ export function ClientsModule({
   };
 
   const clientActions = (client: CrmClient) => (
-    <RowActions>
-      <ViewAction onClick={() => setViewing(client)} />
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="rounded-xl"
-        onClick={() => onOpenContact(client.contactId)}
-      >
-        Contact
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="rounded-xl"
-        onClick={() => onOpenPayments(client.id)}
-      >
-        Payments
-      </Button>
-      {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? <EditAction onClick={() => openEdit(client)} /> : null}
-      {crm.hasPermission(CRM_PERMISSIONS.clientsDelete) ? (
-        <RemoveAction onClick={() => setRemoveId(client.id)} />
-      ) : null}
-    </RowActions>
+    <div className="flex flex-wrap justify-end gap-1">
+      <ContextActions
+        onPay={crm.hasPermission(CRM_PERMISSIONS.paymentsCreate) ? () => setQuickPayment(paymentTarget(client)) : undefined}
+        onRemind={crm.hasPermission(CRM_PERMISSIONS.calendarCreate) ? () => setQuickReminder(reminderTarget(client)) : undefined}
+        onFollow={
+          crm.hasPermission(CRM_PERMISSIONS.followUpsCreate) && followUpTarget(client)
+            ? () => setQuickFollowUp(followUpTarget(client))
+            : undefined
+        }
+      />
+      <RowActions>
+        <ViewAction onClick={() => setViewing(client)} />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="rounded-xl"
+          onClick={() => onOpenContact(client.contactId)}
+        >
+          Contact
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="rounded-xl"
+          onClick={() => onOpenPayments(client.id)}
+        >
+          Payments
+        </Button>
+        {crm.hasPermission(CRM_PERMISSIONS.clientsUpdate) ? <EditAction onClick={() => openEdit(client)} /> : null}
+        {crm.hasPermission(CRM_PERMISSIONS.clientsDelete) ? (
+          <RemoveAction onClick={() => setRemoveId(client.id)} />
+        ) : null}
+      </RowActions>
+    </div>
   );
 
   const onSubmit = async (event: FormEvent) => {
@@ -386,7 +429,9 @@ export function ClientsModule({
                           {client.billingName}
                         </button>
                       </CardTitle>
-                      <CardDescription className="truncate">{contactName(client.contactId)}</CardDescription>
+                      <CardDescription className="truncate">
+                        {personLine(contactName(client.contactId), contactFor(client.contactId)?.mobile)}
+                      </CardDescription>
                     </div>
                     <StatusBadge status={client.status} label={CLIENT_STATUS_LABELS[client.status]} />
                   </CardHeader>
@@ -439,7 +484,7 @@ export function ClientsModule({
                         {client.billingName}
                       </button>
                     </TableCell>
-                    <TableCell>{contactName(client.contactId)}</TableCell>
+                    <TableCell>{clientLabel(client)}</TableCell>
                     <TableCell>{formatDateTime(dates.startsAt)}</TableCell>
                     <TableCell>{formatDateTime(dates.endsAt)}</TableCell>
                     <TableCell>
@@ -476,7 +521,7 @@ export function ClientsModule({
               <option value="">Select booked contact</option>
               {clientContacts.map((contact) => (
                 <option key={contact.id} value={contact.id}>
-                  {contact.name}
+                  {personLine(contact.name, contact.mobile)}
                 </option>
               ))}
             </NativeSelect>
@@ -525,7 +570,26 @@ export function ClientsModule({
           setViewing(null);
           openEdit(client);
         }}
+        onPay={(client) => {
+          setViewing(null);
+          setQuickPayment(paymentTarget(client));
+        }}
+        onRemind={(client) => {
+          setViewing(null);
+          setQuickReminder(reminderTarget(client));
+        }}
+        onFollow={(client) => {
+          const target = followUpTarget(client);
+          if (target) {
+            setViewing(null);
+            setQuickFollowUp(target);
+          }
+        }}
       />
+
+      <QuickPaymentSheet target={quickPayment} onClose={() => setQuickPayment(null)} />
+      <QuickReminderSheet target={quickReminder} onClose={() => setQuickReminder(null)} />
+      <QuickFollowUpSheet target={quickFollowUp} onClose={() => setQuickFollowUp(null)} />
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

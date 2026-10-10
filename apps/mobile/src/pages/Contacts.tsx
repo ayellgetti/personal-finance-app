@@ -1,26 +1,41 @@
-import { FormEvent, useCallback, useMemo, useState } from "react";
-import { Loader2, Mail, Phone } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EmptyState, ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
-import { FilterChips, type ChipOption } from "@/components/FilterChips";
+import { FilterSortBar } from "@/components/FilterSortSheet";
+import { FieldError, NativeSelect } from "@/components/forms/NativeSelect";
+import { FormSheet } from "@/components/forms/FormSheet";
 import { LoadMore } from "@/components/LoadMore";
-import { SearchBar } from "@/components/SearchBar";
+import { ContactHubSheet } from "@/components/records/ContactHubSheet";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AddButton } from "@/components/ViewSwitch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { humanize } from "@/lib/mobile/format";
-import { createContact, listContacts } from "@/lib/mobile/remote";
+import { compareText, type SortOrder } from "@/lib/mobile/sort";
+import { createContact, listContacts, updateContact } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
 import { useCreateIntent } from "@/lib/mobile/use-create-intent";
 import { usePagedList } from "@/lib/mobile/use-paged-list";
 import { useDebounced } from "@/lib/mobile/use-debounced";
+import { toContactInput, validateContact } from "@/lib/mobile/validate";
 import { CRM_PERMISSIONS, CRM_CONTACT_TYPES, type CrmContact, type CrmContactType } from "@/types/crm";
 
-const TYPE_FILTERS: ChipOption<CrmContactType | "all">[] = [
+function readContactType(value: string | null): CrmContactType | "all" {
+  if (value && (CRM_CONTACT_TYPES as readonly string[]).includes(value)) return value as CrmContactType;
+  return "all";
+}
+
+type ContactSort = "name" | "company" | "type";
+
+const CONTACT_SORTS: { value: ContactSort; label: string }[] = [
+  { value: "name", label: "Name" },
+  { value: "company", label: "Company" },
+  { value: "type", label: "Type" },
+];
+
+const TYPE_FILTERS: { value: CrmContactType | "all"; label: string }[] = [
   { value: "all", label: "All" },
   ...CRM_CONTACT_TYPES.map((type) => ({ value: type, label: humanize(type) })),
 ];
@@ -48,197 +63,140 @@ function ContactRow({ contact, onOpen }: { contact: CrmContact; onOpen: () => vo
   );
 }
 
-function ContactDetailSheet({
-  contact,
-  onClose,
-}: {
-  contact: CrmContact | null;
-  onClose: () => void;
-}) {
-  return (
-    <Sheet open={Boolean(contact)} onOpenChange={(next) => (next ? undefined : onClose())}>
-      <SheetContent side="bottom" className="rounded-t-3xl pb-safe">
-        {contact ? (
-          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
-            <SheetHeader className="text-left">
-              <SheetTitle className="font-display text-lg">{contact.name}</SheetTitle>
-              <SheetDescription>{humanize(contact.type)}</SheetDescription>
-            </SheetHeader>
+type ContactForm = {
+  name: string;
+  mobile: string;
+  type: CrmContactType;
+  email: string;
+  companyName: string;
+  notes: string;
+};
 
-            <div className="grid grid-cols-2 gap-2">
-              <Button asChild variant="outline" className="h-11 rounded-xl">
-                <a href={`tel:${contact.mobile}`}>
-                  <Phone className="h-4 w-4" aria-hidden />
-                  Call
-                </a>
-              </Button>
-              <Button asChild variant="outline" className="h-11 rounded-xl" disabled={!contact.email}>
-                <a href={`mailto:${contact.email ?? ""}`}>
-                  <Mail className="h-4 w-4" aria-hidden />
-                  Email
-                </a>
-              </Button>
-            </div>
+const EMPTY_FORM: ContactForm = { name: "", mobile: "", type: "lead", email: "", companyName: "", notes: "" };
 
-            <dl className="divide-y divide-border rounded-2xl border border-border bg-card px-4">
-              <div className="flex justify-between gap-3 py-2.5">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Mobile</dt>
-                <dd className="truncate text-sm font-medium">{contact.mobile}</dd>
-              </div>
-              <div className="flex justify-between gap-3 py-2.5">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Email</dt>
-                <dd className="truncate text-sm font-medium">{contact.email || "—"}</dd>
-              </div>
-              <div className="flex justify-between gap-3 py-2.5">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Company</dt>
-                <dd className="truncate text-sm font-medium">{contact.companyName || "—"}</dd>
-              </div>
-            </dl>
-
-            {contact.notes ? (
-              <p className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                {contact.notes}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function CreateContactSheet({
+function ContactFormSheet({
   open,
   onOpenChange,
-  onCreated,
+  contact,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (next: boolean) => void;
-  onCreated: () => void;
+  contact: CrmContact | null;
+  onSaved: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [type, setType] = useState<CrmContactType>("lead");
-  const [email, setEmail] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [notes, setNotes] = useState("");
+  const [form, setForm] = useState<ContactForm>(EMPTY_FORM);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
-  const reset = () => {
-    setName("");
-    setMobile("");
-    setType("lead");
-    setEmail("");
-    setCompanyName("");
-    setNotes("");
-  };
+  useEffect(() => {
+    if (!open) return;
+    setErrors({});
+    setForm(
+      contact
+        ? {
+            name: contact.name,
+            mobile: contact.mobile,
+            type: contact.type,
+            email: contact.email ?? "",
+            companyName: contact.companyName ?? "",
+            notes: contact.notes ?? "",
+          }
+        : EMPTY_FORM,
+    );
+  }, [open, contact]);
+
+  const set = <K extends keyof ContactForm>(key: K, value: ContactForm[K]) =>
+    setForm((current) => ({ ...current, [key]: value }));
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy) return;
+    const nextErrors = validateContact(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast.error(nextErrors.name ?? nextErrors.mobile ?? nextErrors.email ?? "Check the contact");
+      return;
+    }
     setBusy(true);
     try {
-      await createContact({
-        name,
-        mobile,
-        type,
-        email: email || null,
-        companyName: companyName || null,
-        notes: notes || null,
-      });
-      toast.success("Contact created");
-      reset();
+      const input = toContactInput(form);
+      if (contact) await updateContact(contact.id, input);
+      else await createContact(input);
+      toast.success(contact ? "Contact updated" : "Contact created");
       onOpenChange(false);
-      onCreated();
+      onSaved();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to create contact");
+      toast.error(error instanceof Error ? error.message : "Unable to save contact");
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-3xl pb-safe">
-        <form onSubmit={onSubmit} className="mx-auto w-full max-w-tablet space-y-4 pb-4">
-          <SheetHeader className="text-left">
-            <SheetTitle className="font-display text-lg">New contact</SheetTitle>
-            <SheetDescription>Add a lead, client, or vendor.</SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-2">
-            <Label htmlFor="contact-name">Name</Label>
-            <Input
-              id="contact-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-11 rounded-xl text-base"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact-mobile">Mobile</Label>
-            <Input
-              id="contact-mobile"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              className="h-11 rounded-xl text-base"
-              inputMode="tel"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact-type">Type</Label>
-            <Select value={type} onValueChange={(next) => setType(next as CrmContactType)}>
-              <SelectTrigger id="contact-type" className="h-11 rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CRM_CONTACT_TYPES.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {humanize(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact-email">Email</Label>
-            <Input
-              id="contact-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-11 rounded-xl text-base"
-              inputMode="email"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact-company">Company</Label>
-            <Input
-              id="contact-company"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              className="h-11 rounded-xl text-base"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contact-notes">Notes</Label>
-            <Textarea
-              id="contact-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="rounded-xl text-base"
-              rows={3}
-            />
-          </div>
-
-          <Button type="submit" className="h-12 w-full rounded-xl text-base" disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            Create contact
-          </Button>
-        </form>
-      </SheetContent>
-    </Sheet>
+    <FormSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={contact ? "Edit contact" : "New contact"}
+      description={contact ? "Update this person's details." : "Add a lead, client, or vendor."}
+      submitLabel={contact ? "Save contact" : "Create contact"}
+      busy={busy}
+      onSubmit={onSubmit}
+    >
+      <div className="space-y-2">
+        <Label htmlFor="contact-name">Name</Label>
+        <Input id="contact-name" value={form.name} onChange={(e) => set("name", e.target.value)} className="h-11 rounded-xl text-base" />
+        <FieldError message={errors.name} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="contact-mobile">Mobile</Label>
+        <Input
+          id="contact-mobile"
+          value={form.mobile}
+          onChange={(e) => set("mobile", e.target.value)}
+          className="h-11 rounded-xl text-base"
+          inputMode="tel"
+        />
+        <FieldError message={errors.mobile} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="contact-type">Type</Label>
+        <NativeSelect id="contact-type" value={form.type} onChange={(next) => set("type", next as CrmContactType)}>
+          {CRM_CONTACT_TYPES.map((option) => (
+            <option key={option} value={option}>
+              {humanize(option)}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="contact-email">Email</Label>
+        <Input
+          id="contact-email"
+          type="email"
+          value={form.email}
+          onChange={(e) => set("email", e.target.value)}
+          className="h-11 rounded-xl text-base"
+          inputMode="email"
+        />
+        <FieldError message={errors.email} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="contact-company">Company</Label>
+        <Input
+          id="contact-company"
+          value={form.companyName}
+          onChange={(e) => set("companyName", e.target.value)}
+          className="h-11 rounded-xl text-base"
+        />
+        <FieldError message={errors.companyName} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="contact-notes">Notes</Label>
+        <Textarea id="contact-notes" value={form.notes} onChange={(e) => set("notes", e.target.value)} className="rounded-xl text-base" rows={3} />
+        <FieldError message={errors.notes} />
+      </div>
+    </FormSheet>
   );
 }
 
@@ -246,10 +204,28 @@ export default function Contacts() {
   const { permissions } = useMobile();
   const canRead = permissions.includes(CRM_PERMISSIONS.contactsRead);
   const canCreate = permissions.includes(CRM_PERMISSIONS.contactsCreate);
+  const canUpdate = permissions.includes(CRM_PERMISSIONS.contactsUpdate);
+  const canDelete = permissions.includes(CRM_PERMISSIONS.contactsDelete);
+  const canEditBooking = permissions.includes(CRM_PERMISSIONS.calendarUpdate);
 
+  const [params, setParams] = useSearchParams();
+  const type = readContactType(params.get("type"));
+  const setType = (next: CrmContactType | "all") => {
+    setParams(
+      (current) => {
+        const nextParams = new URLSearchParams(current);
+        if (next === "all") nextParams.delete("type");
+        else nextParams.set("type", next);
+        return nextParams;
+      },
+      { replace: true },
+    );
+  };
   const [search, setSearch] = useState("");
-  const [type, setType] = useState<CrmContactType | "all">("all");
+  const [sort, setSort] = useState<ContactSort>("name");
+  const [order, setOrder] = useState<SortOrder>("asc");
   const [selected, setSelected] = useState<CrmContact | null>(null);
+  const [editing, setEditing] = useState<CrmContact | null>(null);
   const [createOpen, setCreateOpen] = useCreateIntent(canCreate);
 
   const debouncedSearch = useDebounced(search, 300);
@@ -267,36 +243,88 @@ export default function Contacts() {
 
   const signature = useMemo(() => `${debouncedSearch}|${type}`, [debouncedSearch, type]);
   const list = usePagedList(load, signature, canRead);
+  const shown = useMemo(
+    () =>
+      [...list.items].sort((left, right) => {
+        if (sort === "company") return compareText(left.companyName, right.companyName, order);
+        if (sort === "type") return compareText(left.type, right.type, order);
+        return compareText(left.name, right.name, order);
+      }),
+    [list.items, order, sort],
+  );
 
   if (!canRead) return <ForbiddenState label="contacts" />;
 
   return (
     <div className="space-y-3">
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        placeholder="Search contacts"
-        label="Search contacts"
-      />
-      <FilterChips options={TYPE_FILTERS} value={type} onChange={setType} label="Filter by type" />
+      <div className="flex items-center gap-2">
+        <FilterSortBar
+          query={search}
+          onQuery={setSearch}
+          searchPlaceholder="Search contacts"
+          searchLabel="Search contacts"
+          sort={sort}
+          onSort={(next) => setSort(next as ContactSort)}
+          sortOptions={CONTACT_SORTS}
+          defaultSort="name"
+          order={order}
+          onOrder={setOrder}
+          defaultOrder="asc"
+          sections={[
+            {
+              id: "type",
+              kind: "single",
+              label: "Type",
+              value: type,
+              neutral: "all",
+              options: TYPE_FILTERS,
+              onChange: (next) => setType(next as CrmContactType | "all"),
+            },
+          ]}
+          resultCount={shown.length}
+          singular="contact"
+          plural="contacts"
+          onClear={() => setType("all")}
+        />
+        {canCreate ? <AddButton label="New" onClick={() => setCreateOpen(true)} /> : null}
+      </div>
 
       {list.status === "loading" ? <LoadingState label="Loading contacts…" /> : null}
-      {list.status === "error" ? (
-        <ErrorState message={list.errorMessage} onRetry={list.reload} />
-      ) : null}
+      {list.status === "error" ? <ErrorState message={list.errorMessage} onRetry={list.reload} /> : null}
+      {list.status === "forbidden" ? <ForbiddenState label="contacts" /> : null}
       {list.status === "ready" && list.items.length === 0 ? <EmptyState label="No contacts found." /> : null}
 
       {list.status === "ready" && list.items.length > 0 ? (
         <div className="space-y-2">
-          {list.items.map((contact) => (
+          {shown.map((contact) => (
             <ContactRow key={contact.id} contact={contact} onOpen={() => setSelected(contact)} />
           ))}
           <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />
         </div>
       ) : null}
 
-      <ContactDetailSheet contact={selected} onClose={() => setSelected(null)} />
-      <CreateContactSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={list.reload} />
+      <ContactHubSheet
+        contact={selected}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        canEditBooking={canEditBooking}
+        onClose={() => setSelected(null)}
+        onEdit={(contact) => {
+          setSelected(null);
+          setEditing(contact);
+        }}
+        onRemoved={list.reload}
+      />
+      <ContactFormSheet
+        open={createOpen || Boolean(editing)}
+        onOpenChange={(next) => {
+          if (next) return;
+          setCreateOpen(false);
+          setEditing(null);
+        }}
+        contact={editing}
+        onSaved={list.reload}
+      />
     </div>
   );
 }

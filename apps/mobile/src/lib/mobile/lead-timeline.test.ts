@@ -51,4 +51,9 @@ describe("lead timeline", () => {
     ]);
     expect(events[0]?.notes).toBe("Source: Walk-in");
   });
+
+  it("keeps the lead notes on the opening event", () => {
+    const events = buildLeadTimeline({ ...enquiry, notes: "Hall for 50 guests" }, []);
+    expect(events[0]?.notes).toBe("Source: Walk-in\nHall for 50 guests");
+  });
 });

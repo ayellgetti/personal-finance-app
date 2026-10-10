@@ -2,16 +2,16 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DueDatePicker } from "@/components/forms/DueDatePicker";
 import { FormSheet } from "@/components/forms/FormSheet";
+import { FieldError, NativeSelect } from "@/components/forms/NativeSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { dayKey } from "@/lib/mobile/calendar";
-import { humanize, toDateInputValue } from "@/lib/mobile/format";
+import { humanize, personLine, toDateInputValue } from "@/lib/mobile/format";
 import { createContact, createEnquiry, listContacts, updateEnquiry } from "@/lib/mobile/remote";
+import { useDebounced } from "@/lib/mobile/use-debounced";
 import { useResource } from "@/lib/mobile/use-resource";
-import { cn } from "@/lib/utils";
+import { toContactInput, validateContact, validateEnquiry } from "@/lib/mobile/validate";
 import {
   CRM_CONTACT_TYPES,
   CRM_ENQUIRY_STATUSES,
@@ -30,6 +30,8 @@ const ENQUIRY_SOURCES = [
   "Wedding Wire",
   "Other",
 ] as const;
+
+const DIAL_PATTERN = /^\+?[0-9]{7,15}$/;
 
 function dialNumber(value: string): string {
   const trimmed = value.trim();
@@ -52,27 +54,39 @@ export function CreateEnquirySheet({
 }) {
   const [contactMode, setContactMode] = useState<"existing" | "new">("new");
   const [contactId, setContactId] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [newMobile, setNewMobile] = useState("");
   const [newType, setNewType] = useState<CrmContactType>("lead");
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
   const [status, setStatus] = useState<CrmEnquiryStatus>("new");
+  const [closedReason, setClosedReason] = useState("");
   const [dueDate, setDueDate] = useState(defaultDate ?? "");
   const [notes, setNotes] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [createdContact, setCreatedContact] = useState<{ id: string; name: string; mobile: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const loadContacts = useCallback(() => listContacts({ page: 1, limit: 100 }), []);
-  const contacts = useResource(loadContacts, open && (Boolean(enquiry) || contactMode === "existing"));
+  const debouncedSearch = useDebounced(contactSearch, 300);
+  const loadContacts = useCallback(
+    () => listContacts({ page: 1, limit: 20, search: debouncedSearch.trim() || undefined }),
+    [debouncedSearch],
+  );
+  const contacts = useResource(loadContacts, open && (Boolean(enquiry) || contactMode === "existing"), debouncedSearch);
 
   useEffect(() => {
     if (!open) return;
+    setErrors({});
+    setCreatedContact(null);
+    setContactSearch("");
     if (enquiry) {
       setContactMode("existing");
       setContactId(enquiry.contactId);
       setTitle(enquiry.title);
       setSource(enquiry.source);
       setStatus(enquiry.status);
+      setClosedReason(enquiry.closedReason ?? "");
       setDueDate(enquiry.dueDate ? toDateInputValue(new Date(enquiry.dueDate)) : "");
       setNotes(enquiry.notes ?? "");
       return;
@@ -85,6 +99,7 @@ export function CreateEnquirySheet({
     setTitle("");
     setSource("");
     setStatus("new");
+    setClosedReason("");
     setDueDate(defaultDate ?? "");
     setNotes("");
   }, [open, defaultDate, enquiry]);
@@ -93,51 +108,60 @@ export function CreateEnquirySheet({
     ? [source, ...ENQUIRY_SOURCES]
     : [...ENQUIRY_SOURCES];
 
+  const contactOptions = contacts.data?.items ?? [];
+  const keepsCurrentContact = Boolean(contactId) && !contactOptions.some((contact) => contact.id === contactId);
+
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!enquiry && contactMode === "new") {
-      if (!newName.trim()) {
-        toast.error("Name is required");
-        return;
-      }
-      if (!dialNumber(newMobile)) {
-        toast.error("Mobile is required");
-        return;
-      }
-    } else if (!contactId) {
-      toast.error("Select an existing contact");
-      return;
-    }
-    if (!title.trim()) {
-      toast.error("Title is required");
-      return;
-    }
-    if (!source) {
-      toast.error("Source is required");
-      return;
-    }
-    if (!dueDate) {
-      toast.error("Due date is required");
-      return;
-    }
+    if (busy) return;
+    const creatingContact = !enquiry && contactMode === "new";
     const originalDue = enquiry?.dueDate ? toDateInputValue(new Date(enquiry.dueDate)) : "";
-    if (dueDate < dayKey(new Date()) && dueDate !== originalDue) {
-      toast.error("Due date must be today or in the future");
-      return;
+    const nextErrors: Record<string, string> = validateEnquiry({
+      contactId: creatingContact ? "pending" : contactId,
+      title,
+      source,
+      dueDate,
+      notes,
+      status,
+      closedReason,
+    });
+    if (enquiry && dueDate && dueDate === originalDue) delete nextErrors.dueDate;
+    if (creatingContact) {
+      delete nextErrors.contactId;
+      const dial = dialNumber(newMobile);
+      const contactErrors = validateContact({
+        name: newName,
+        mobile: dial,
+        email: "",
+        companyName: "",
+        notes: "",
+      });
+      if (contactErrors.name) nextErrors.newName = contactErrors.name;
+      if (!DIAL_PATTERN.test(dial)) {
+        nextErrors.newMobile = contactErrors.mobile ?? "Enter a mobile number of 7 to 15 digits";
+      }
     }
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     setBusy(true);
     try {
       let resolvedContactId = contactId;
-      if (!enquiry && contactMode === "new") {
-        const created = await createContact({
-          name: newName.trim(),
-          mobile: dialNumber(newMobile),
-          type: newType,
-        });
-        resolvedContactId = created.id;
+      if (creatingContact) {
+        const dial = dialNumber(newMobile);
+        const name = newName.trim();
+        if (createdContact && createdContact.name === name && createdContact.mobile === dial) {
+          resolvedContactId = createdContact.id;
+        } else {
+          const created = await createContact(
+            toContactInput({ name: newName, mobile: dial, type: newType, email: "", companyName: "", notes: "" }),
+          );
+          resolvedContactId = created.id;
+          setCreatedContact({ id: created.id, name, mobile: dial });
+        }
       }
 
+      const reason = status === "closed" ? closedReason.trim() : undefined;
       if (enquiry) {
         await updateEnquiry(enquiry.id, {
           contactId: resolvedContactId,
@@ -145,18 +169,21 @@ export function CreateEnquirySheet({
           source,
           status,
           notes: notes.trim() || null,
+          ...(reason ? { closedReason: reason } : {}),
           ...(dueDate !== originalDue ? { dueDate: new Date(`${dueDate}T12:00:00`).toISOString() } : {}),
         });
         toast.success("Enquiry updated");
       } else {
-        await createEnquiry({
+        const created = await createEnquiry({
           contactId: resolvedContactId,
           title: title.trim(),
           source,
           status,
           dueDate: new Date(`${dueDate}T12:00:00`).toISOString(),
           notes: notes.trim() || null,
+          ...(status === "closed" ? { closedReason: closedReason.trim() } : {}),
         });
+        if (reason) await updateEnquiry(created.id, { status: "closed", closedReason: reason });
         toast.success("Enquiry created");
       }
       onOpenChange(false);
@@ -167,6 +194,28 @@ export function CreateEnquirySheet({
       setBusy(false);
     }
   };
+
+  const contactPicker = (
+    <div className="space-y-2">
+      <Input
+        value={contactSearch}
+        onChange={(event) => setContactSearch(event.target.value)}
+        placeholder="Search name or mobile"
+        aria-label="Search contacts"
+        className="h-11 rounded-xl text-base"
+      />
+      <NativeSelect id="enquiry-contact" value={contactId} onChange={setContactId}>
+        <option value="">{contacts.status === "loading" ? "Loading…" : "Select contact"}</option>
+        {keepsCurrentContact ? <option value={contactId}>Current contact</option> : null}
+        {contactOptions.map((contact) => (
+          <option key={contact.id} value={contact.id}>
+            {personLine(contact.name, contact.mobile)}
+          </option>
+        ))}
+      </NativeSelect>
+      <FieldError message={errors.contactId} />
+    </div>
+  );
 
   return (
     <FormSheet
@@ -181,18 +230,7 @@ export function CreateEnquirySheet({
       {enquiry ? (
         <div className="space-y-2">
           <Label htmlFor="enquiry-contact">Contact</Label>
-          <Select value={contactId} onValueChange={setContactId}>
-            <SelectTrigger id="enquiry-contact" className="h-11 rounded-xl">
-              <SelectValue placeholder={contacts.status === "loading" ? "Loading…" : "Select contact"} />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              {(contacts.data?.items ?? []).map((contact) => (
-                <SelectItem key={contact.id} value={contact.id}>
-                  {contact.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {contactPicker}
         </div>
       ) : (
         <div className="space-y-2">
@@ -203,6 +241,7 @@ export function CreateEnquirySheet({
               size="sm"
               variant={contactMode === "existing" ? "default" : "outline"}
               className="rounded-xl"
+              aria-pressed={contactMode === "existing"}
               onClick={() => setContactMode("existing")}
             >
               Existing contact
@@ -211,25 +250,20 @@ export function CreateEnquirySheet({
               type="button"
               size="sm"
               variant={contactMode === "new" ? "default" : "outline"}
-              className={cn("rounded-xl", contactMode === "new" && "bg-primary")}
+              className="rounded-xl"
+              aria-pressed={contactMode === "new"}
               onClick={() => setContactMode("new")}
             >
               + New contact
             </Button>
           </div>
           {contactMode === "existing" ? (
-            <Select value={contactId} onValueChange={setContactId}>
-              <SelectTrigger id="enquiry-contact" className="h-11 rounded-xl" aria-label="Contact">
-                <SelectValue placeholder={contacts.status === "loading" ? "Loading…" : "Select contact"} />
-              </SelectTrigger>
-              <SelectContent className="max-h-72">
-                {(contacts.data?.items ?? []).map((contact) => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    {contact.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <>
+              <Label htmlFor="enquiry-contact" className="sr-only">
+                Contact
+              </Label>
+              {contactPicker}
+            </>
           ) : (
             <div className="space-y-3 rounded-xl border border-border p-3">
               <div className="space-y-2">
@@ -241,6 +275,7 @@ export function CreateEnquirySheet({
                   placeholder="e.g. Priya Sharma"
                   className="h-11 rounded-xl text-base"
                 />
+                <FieldError message={errors.newName} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-contact-mobile">Mobile</Label>
@@ -252,21 +287,17 @@ export function CreateEnquirySheet({
                   inputMode="tel"
                   className="h-11 rounded-xl text-base"
                 />
+                <FieldError message={errors.newMobile} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-contact-type">Contact type</Label>
-                <Select value={newType} onValueChange={(next) => setNewType(next as CrmContactType)}>
-                  <SelectTrigger id="new-contact-type" className="h-11 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CRM_CONTACT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {humanize(type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NativeSelect id="new-contact-type" value={newType} onChange={(next) => setNewType(next as CrmContactType)}>
+                  {CRM_CONTACT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {humanize(type)}
+                    </option>
+                  ))}
+                </NativeSelect>
               </div>
             </div>
           )}
@@ -281,45 +312,47 @@ export function CreateEnquirySheet({
           onChange={(event) => setTitle(event.target.value)}
           className="h-11 rounded-xl text-base"
         />
+        <FieldError message={errors.title} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="enquiry-source">How did they find us?</Label>
-        <Select value={source} onValueChange={setSource}>
-          <SelectTrigger id="enquiry-source" className="h-11 rounded-xl">
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            {sources.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <NativeSelect id="enquiry-source" value={source} onChange={setSource}>
+          <option value="">Select source</option>
+          {sources.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </NativeSelect>
+        <FieldError message={errors.source} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="enquiry-status">Stage</Label>
-        <Select value={status} onValueChange={(next) => setStatus(next as CrmEnquiryStatus)}>
-          <SelectTrigger id="enquiry-status" className="h-11 rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CRM_ENQUIRY_STATUSES.map((option) => (
-              <SelectItem key={option} value={option}>
-                {humanize(option)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <NativeSelect id="enquiry-status" value={status} onChange={(next) => setStatus(next as CrmEnquiryStatus)}>
+          {CRM_ENQUIRY_STATUSES.map((option) => (
+            <option key={option} value={option}>
+              {humanize(option)}
+            </option>
+          ))}
+        </NativeSelect>
       </div>
+      {status === "closed" ? (
+        <div className="space-y-2">
+          <Label htmlFor="enquiry-close-reason">Close reason</Label>
+          <Input
+            id="enquiry-close-reason"
+            value={closedReason}
+            onChange={(event) => setClosedReason(event.target.value)}
+            maxLength={200}
+            className="h-11 rounded-xl text-base"
+          />
+          <FieldError message={errors.closedReason} />
+        </div>
+      ) : null}
       <div className="space-y-2">
         <Label id="enquiry-due-label">Due date</Label>
-        <DueDatePicker
-          id="enquiry-due"
-          labelledBy="enquiry-due-label"
-          value={dueDate}
-          onChange={setDueDate}
-        />
+        <DueDatePicker id="enquiry-due" labelledBy="enquiry-due-label" value={dueDate} onChange={setDueDate} />
+        <FieldError message={errors.dueDate} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="enquiry-notes">Notes</Label>
@@ -330,6 +363,7 @@ export function CreateEnquirySheet({
           className="rounded-xl text-base"
           rows={3}
         />
+        <FieldError message={errors.notes} />
       </div>
     </FormSheet>
   );

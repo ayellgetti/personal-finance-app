@@ -1,11 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormSheet } from "@/components/forms/FormSheet";
+import { FieldError, NativeSelect } from "@/components/forms/NativeSelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { humanize } from "@/lib/mobile/format";
 import { updateClient } from "@/lib/mobile/remote";
+import { validateClient } from "@/lib/mobile/validate";
 import { CRM_CLIENT_STATUSES, type CrmClient, type CrmClientStatus } from "@/types/crm";
 
 export function EditClientSheet({
@@ -20,6 +21,7 @@ export function EditClientSheet({
   const [billingName, setBillingName] = useState("");
   const [gstin, setGstin] = useState("");
   const [status, setStatus] = useState<CrmClientStatus>("active");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -27,11 +29,19 @@ export function EditClientSheet({
     setBillingName(client.billingName);
     setGstin(client.gstin ?? "");
     setStatus(client.status);
+    setErrors({});
   }, [client]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!client) return;
+    if (!client || busy) return;
+    const nextErrors = validateClient({ contactId: client.contactId, billingName, gstin });
+    setErrors(nextErrors);
+    const firstError = Object.values(nextErrors)[0];
+    if (firstError) {
+      toast.error(firstError);
+      return;
+    }
     setBusy(true);
     try {
       await updateClient(client.id, {
@@ -66,8 +76,8 @@ export function EditClientSheet({
           value={billingName}
           onChange={(event) => setBillingName(event.target.value)}
           className="h-11 rounded-xl text-base"
-          required
         />
+        <FieldError message={errors.billingName} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="client-gstin">GSTIN</Label>
@@ -77,21 +87,17 @@ export function EditClientSheet({
           onChange={(event) => setGstin(event.target.value)}
           className="h-11 rounded-xl text-base"
         />
+        <FieldError message={errors.gstin} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="client-status">Status</Label>
-        <Select value={status} onValueChange={(next) => setStatus(next as CrmClientStatus)}>
-          <SelectTrigger id="client-status" className="h-11 rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {CRM_CLIENT_STATUSES.map((value) => (
-              <SelectItem key={value} value={value}>
-                {humanize(value)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <NativeSelect id="client-status" value={status} onChange={(next) => setStatus(next as CrmClientStatus)}>
+          {CRM_CLIENT_STATUSES.map((value) => (
+            <option key={value} value={value}>
+              {humanize(value)}
+            </option>
+          ))}
+        </NativeSelect>
       </div>
     </FormSheet>
   );

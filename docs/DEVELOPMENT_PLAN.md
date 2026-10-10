@@ -474,13 +474,30 @@ Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`) 
 
 Vite app on port **8085** (`mcrm.local.uat`): a phone-first companion over the same `/api/crm` endpoints and the same `requirePermission` codes. No API, Prisma, OpenAPI, or envelope changes — this phase is frontend only.
 
-Layout: sticky header with a menu button (left drawer for Follow-ups, Booked, Payments, Tasks, Reminders, Users, Roles, plus theme and sign out), centred title, and a plus-circle button opening a bottom quick-add sheet whose actions are filtered by the matching `crm.*.create` permissions. Fixed five-tab bottom nav — Home, Contacts, Enquiries, Calendar, Profile — where a tab the role cannot open renders disabled so the bar keeps five slots. One `max-w-md` column between the two bars, with `env(safe-area-inset-*)` padding on both.
+Layout: sticky header with a menu button (left drawer for Contacts, Follow-ups, Tasks, Reminders, Users, Roles, plus theme and sign out), centred title, and a plus-circle button opening a bottom quick-add sheet whose actions are filtered by the matching `crm.*.create` permissions. The current five-tab bottom nav is Home, Enquiries, Calendar, Booked, and Payments; Profile sits in the header. A tab the role cannot open renders disabled so the bar keeps five slots. The column grows up to tablet width (48rem), with `env(safe-area-inset-*)` padding on both edges.
 
 Screens: Home (dashboard stat tiles, next-up agenda card, due-today list), Contacts (debounced search, type chips, detail sheet with call/email, create sheet), Enquiries (stage chips, detail sheet with stage change, create sheet), Calendar (day agenda with prev/next and event create), Profile (account, roles, permission count, sign out). Lists page with "Load more" against the existing `{ items, pagination }` responses rather than fetching everything.
 
-The app keeps its own `lib/api.ts` and `lib/auth/*` (apps never import another app's source) and namespaces localStorage under `mobile-`. Quick-add navigates to `<tab>?new=1`; the tab reads that intent and opens its own create form. Drawer destinations without a mobile screen yet render a placeholder pointing at the web CRM.
+The app keeps its own `lib/api.ts` and `lib/auth/*` (apps never import another app's source) and namespaces localStorage under `mobile-`. Quick-add navigates to `<tab>?new=1`; the tab reads that intent and opens its own create form. Follow-ups is a mobile screen: today, overdue, and upcoming lead activity, plus follow-up history that can be edited or removed. Opening a row shows that lead's conversation (created, notes, follow-ups, next contact, closure). Tasks, Reminders, Users, and Roles were placeholders in this phase; Phase D10 replaced them.
 
 Adding this workspace also required a `COPY apps/mobile/package.json apps/mobile/` line in every existing Dockerfile, because `pnpm install --frozen-lockfile` validates the lockfile against all workspace members.
 
 **Validate:** `pnpm --filter mobile test` (19 passing), `pnpm --filter mobile typecheck`, `pnpm --filter mobile lint`, `pnpm --filter mobile build`; `pnpm --filter crm test` (102 passing) and `pnpm --filter crm build` unchanged.
+
+### Phase D10 — `apps/mobile` CRM parity
+
+**Status: COMPLETED** (frontend only; no API, Prisma, OpenAPI, or envelope changes)
+
+Brings `apps/mobile` to the authenticated feature set of `apps/crm` with phone layouts, over the same `/api/crm` endpoints and `crm.*` permission codes. Public banquet/travel pages, walkthroughs, the banquet checklist, and customer chat stay out of scope.
+
+- Contracts: the full permission catalog, admin types, and remote calls for contact update/remove, client create/update/remove, task update/status/remove, calendar event list/remove, users, roles, permissions, and conversion results.
+- Validation: `lib/mobile/validate.ts` mirrors the API Zod rules for contacts, enquiries (close reason when closed), follow-ups, payments, reminders, tasks, booked records, profile name, password change, staff, roles, and date ranges. Forms show inline errors and keep their values when the server refuses.
+- Records: contact hub with every booking, editable booking notes, edit/remove; enquiry list/cards/board with confirmed Booked or Lost closes (convert when permitted) and assignee filter; follow-ups list/cards/month/timeline; booked status/date filters, list/cards/month, manual create and remove; payments status/type/payee/date filters, list/cards/month, totals, and payee lookup by id; calendar edit/remove for reminders and bookings.
+- New screens: Tasks (horizontal four-column board), Reminders (event pages filtered to standalone reminders), Users, Roles (at least one permission). Quick Add includes follow-up, task, payment, and reminder.
+- Home: contacts by type (`/contacts?type=`), monthly income/expense (`/payments?type=&month=current`), due today (`/enquiries?due=today`), closed enquiries, and tasks by status. Profile: name edit, password change, and the permission list.
+- Known limits: enquiry text search, `due=today`, and payment type filter the loaded page because those list endpoints have no text, due-date, or type query. The API has no user delete, so mobile has none either. Authenticated HTTP 403 coverage stays in the service and permission-middleware tests; `app.test.ts` checks the unauthenticated envelope.
+
+List screens other than Home use one Filter & Sort sheet (`components/FilterSortSheet.tsx`): search stays on the page, and the sheet adds applied chips, sort, ascending or descending order, and the screen's existing filters. Profile stays a settings form. Sort runs on the loaded rows (`lib/mobile/sort.ts`); it does not add an API sort query.
+
+**Validate (2026-10-10):** `pnpm --filter mobile test` — 31 files, 112 tests, exit 0. `pnpm --filter mobile typecheck` — exit 0. `pnpm --filter mobile lint` — 0 errors, 5 existing `react-refresh/only-export-components` warnings. API and CRM source were not changed for the filter sheet.
 
