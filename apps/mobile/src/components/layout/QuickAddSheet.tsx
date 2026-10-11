@@ -72,7 +72,7 @@ export function QuickAddSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-safe pt-5">
-        <SheetHeader className="px-1 text-left">
+        <SheetHeader className="sticky top-0 z-20 -mx-4 bg-background px-5 pb-2 pr-16 text-left">
           <SheetTitle className="font-display text-lg">Create</SheetTitle>
           <SheetDescription>Pick what you want to add.</SheetDescription>
         </SheetHeader>

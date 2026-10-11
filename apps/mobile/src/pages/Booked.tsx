@@ -363,6 +363,7 @@ export default function Booked() {
             ? {
                 id: paying.id,
                 enquiryId: paying.convertedFromEnquiryId,
+                bookingId: paying.bookingId ?? null,
                 label: personLine(
                   contacts.data?.items.find((item) => item.id === paying.contactId)?.name || paying.billingName,
                   contacts.data?.items.find((item) => item.id === paying.contactId)?.mobile,

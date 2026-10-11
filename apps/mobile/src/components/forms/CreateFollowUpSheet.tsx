@@ -1,5 +1,6 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ChoiceSelect } from "@/components/forms/ChoiceSelect";
 import { FormSheet } from "@/components/forms/FormSheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,22 +154,22 @@ export function CreateFollowUpSheet({
       ) : (
         <div className="space-y-2">
           <Label htmlFor="followup-enquiry">Enquiry</Label>
-          <Select value={enquiryId} onValueChange={setEnquiryId}>
-            <SelectTrigger id="followup-enquiry" className="h-11 rounded-xl">
-              <SelectValue placeholder={enquiries.status === "loading" ? "Loading…" : "Pick an enquiry"} />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              {(enquiries.data?.items ?? []).map((item) => {
-                const contact = contacts.data?.items.find((party) => party.id === item.contactId);
-                const who = contact ? personLine(contact.name, contact.mobile) : null;
-                return (
-                  <SelectItem key={item.id} value={item.id}>
-                    {who ? `${item.title} · ${who}` : item.title}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-            </Select>
+          <ChoiceSelect
+            id="followup-enquiry"
+            value={enquiryId}
+            onChange={setEnquiryId}
+            emptyLabel={enquiries.status === "loading" ? "Loading…" : "Pick an enquiry"}
+            options={(enquiries.data?.items ?? []).map((item) => {
+              const contact = contacts.data?.items.find((party) => party.id === item.contactId);
+              const who = contact ? personLine(contact.name, contact.mobile) : null;
+              return {
+                value: item.id,
+                label: contact?.name ?? item.title,
+                detail: contact?.mobile,
+                text: who ? `${item.title} · ${who}` : item.title,
+              };
+            })}
+          />
           {errors.enquiryId ? <p className="text-xs text-destructive">{errors.enquiryId}</p> : null}
         </div>
       )}

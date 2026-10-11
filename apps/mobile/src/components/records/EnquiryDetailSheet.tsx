@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { bottomSheetCapClass } from "@/components/ui/sheet-frame";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatDate, formatDateTime, humanize, personLine } from "@/lib/mobile/format";
 import { buildLeadTimeline } from "@/lib/mobile/lead-timeline";
@@ -153,10 +154,10 @@ export function EnquiryDetailSheet({
 
   return (
     <Sheet open={Boolean(enquiry)} onOpenChange={(next) => (next ? undefined : onClose())}>
-      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-3xl p-0 pb-safe">
+      <SheetContent side="bottom" className={bottomSheetCapClass}>
         {enquiry ? (
-          <div className="mx-auto w-full max-w-tablet">
-            <SheetHeader className="border-b border-border px-5 py-4 text-left">
+          <div className="mx-auto flex min-h-0 w-full max-w-tablet flex-1 flex-col">
+            <SheetHeader className="shrink-0 border-b border-border bg-background px-5 py-4 pr-16 text-left">
               <div className="flex items-start justify-between gap-3 pr-8">
                 <div className="min-w-0 space-y-1">
                   <SheetTitle className="text-lg leading-snug">{enquiry.title}</SheetTitle>
@@ -170,7 +171,7 @@ export function EnquiryDetailSheet({
               </div>
             </SheetHeader>
 
-            <div className="space-y-5 px-5 py-4">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 py-4">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <Fact label="Name" value={contactName || "—"} />
                 <Fact label="Mobile" value={contactMobile || "—"} />

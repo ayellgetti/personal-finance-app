@@ -92,15 +92,15 @@ export function pickCurrentBooking(
   convertedFromEnquiryId?: string | null,
   now = Date.now(),
 ): CrmCalendarEvent | null {
-  if (bookings.length === 0) return null;
+  const upcoming = bookings.filter((booking) => new Date(booking.endsAt).getTime() >= now);
+  if (upcoming.length === 0) return null;
   const linked = convertedFromEnquiryId
-    ? bookings.filter((booking) => booking.enquiryId === convertedFromEnquiryId)
-    : bookings;
-  const pool = linked.length > 0 ? linked : bookings;
-  const upcoming = pool
-    .filter((booking) => new Date(booking.endsAt).getTime() >= now)
-    .sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime());
-  return upcoming[0] ?? [...pool].sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()).at(-1) ?? null;
+    ? upcoming.filter((booking) => booking.enquiryId === convertedFromEnquiryId)
+    : [];
+  const pool = linked.length > 0 ? linked : upcoming;
+  return [...pool].sort(
+    (left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime(),
+  )[0] ?? null;
 }
 
 export function applyBookingStart(form: BookingFormState, startsAt: string): BookingFormState {

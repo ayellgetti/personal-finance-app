@@ -43,6 +43,7 @@ function setup() {
     clients.model as unknown as CrmClientModel,
     enquiries.model as unknown as CrmEnquiryModel,
     contacts.model as unknown as CrmContactModel,
+    events.model as unknown as CrmCalendarEventModel,
   );
   return { clientService, paymentService, clients, payments, contacts, events };
 }
@@ -118,6 +119,27 @@ test("client list includes current booking start and end dates", async () => {
   assert.equal(listed.items[0]?.endsAt?.toISOString(), "2026-12-12T17:30:00.000Z");
 });
 
+test("a booking whose end has passed is not current and the client is no longer active", async () => {
+  const { clientService, events } = setup();
+  const created = await clientService.create("user-1", {
+    contactId: "c-1",
+    billingName: "Ada LLC",
+  });
+  await events.model.create({
+    id: "event-past",
+    title: "Last year",
+    startsAt: new Date("2020-01-01T10:00:00.000Z"),
+    endsAt: new Date("2020-01-01T18:00:00.000Z"),
+    contactId: created.contactId,
+    enquiryId: null,
+    isActive: 1,
+  });
+  const listed = await clientService.list({});
+  assert.equal(listed.items[0]?.bookingId, null);
+  assert.equal(listed.items[0]?.startsAt, null);
+  assert.equal(listed.items[0]?.status, "inactive");
+});
+
 test("client cannot be created from a lead contact", async () => {
   const { clientService } = setup();
   await assert.rejects(
@@ -184,6 +206,63 @@ test("payment create, amount must be positive, and soft-delete hides the row", a
       mode: "WALLET",
     }).success,
     false,
+  );
+});
+
+test("a client payment can be tied to that client's booking", async () => {
+  const { clientService, paymentService, events } = setup();
+  const client = await clientService.create("user-1", {
+    contactId: "c-1",
+    billingName: "Ada LLC",
+  });
+  const other = await clientService.create("user-1", {
+    contactId: "c-2",
+    billingName: "Bea LLC",
+  });
+  await events.model.create({
+    id: "event-ada",
+    title: "Wedding",
+    startsAt: new Date("2026-12-12T10:30:00.000Z"),
+    endsAt: new Date("2026-12-12T17:30:00.000Z"),
+    contactId: client.contactId,
+    enquiryId: null,
+    isActive: 1,
+  });
+  const first = await paymentService.create("user-1", {
+    referenceType: "client",
+    referenceId: client.id,
+    bookingId: "event-ada",
+    amount: 1000,
+    mode: "UPI",
+    status: "paid",
+    paidAt: new Date("2026-09-01T00:00:00.000Z"),
+  });
+  await paymentService.create("user-1", {
+    referenceType: "client",
+    referenceId: client.id,
+    bookingId: "event-ada",
+    amount: 500,
+    mode: "CASH",
+    status: "paid",
+    paidAt: new Date("2026-09-02T00:00:00.000Z"),
+  });
+  const listed = await paymentService.list({ bookingId: "event-ada" });
+  assert.equal(listed.items.length, 2);
+  assert.equal(
+    listed.items.reduce((sum, item) => sum + item.amount, 0),
+    1500,
+  );
+  assert.equal(first.bookingId, "event-ada");
+  await assert.rejects(
+    () =>
+      paymentService.create("user-1", {
+        referenceType: "client",
+        referenceId: other.id,
+        bookingId: "event-ada",
+        amount: 10,
+        mode: "UPI",
+      }),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
   );
 });
 

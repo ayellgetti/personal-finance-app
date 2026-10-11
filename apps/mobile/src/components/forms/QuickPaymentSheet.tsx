@@ -21,6 +21,7 @@ export function QuickPaymentSheet({
   client: {
     id: string;
     enquiryId: string | null;
+    bookingId?: string | null;
     label: string;
     referenceType?: CrmPaymentReferenceType;
   } | null;
@@ -58,6 +59,7 @@ export function QuickPaymentSheet({
         referenceType: client.referenceType ?? "client",
         referenceId: client.id,
         enquiryId: client.enquiryId,
+        bookingId: client.bookingId ?? null,
         amount: parsedAmount,
         type: "INCOME",
         mode,

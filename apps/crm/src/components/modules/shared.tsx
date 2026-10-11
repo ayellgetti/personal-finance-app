@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { Input } from "@/components/ui/input";
 import {
   CalendarDays,
   ChevronDown,
@@ -103,6 +104,114 @@ export function NativeSelect({
     >
       {children}
     </select>
+  );
+}
+
+export type ChoiceOption = {
+  value: string;
+  label: string;
+  detail?: string | null;
+  text?: string;
+};
+
+/** Android's native picker drops a second value stuffed into the option text. */
+export function isAndroidDevice(): boolean {
+  return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+}
+
+/** On Android, a search field plus a two-line list. Elsewhere, the native select. */
+export function ChoiceSelect({
+  id,
+  value,
+  onChange,
+  options,
+  emptyLabel,
+  searchLabel = "Search by name or mobile",
+  showSearch = true,
+  "aria-label": ariaLabel,
+}: {
+  id?: string;
+  value: string;
+  onChange: (next: string) => void;
+  options: readonly ChoiceOption[];
+  emptyLabel?: string;
+  searchLabel?: string;
+  showSearch?: boolean;
+  "aria-label"?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const android = isAndroidDevice();
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!android || !showSearch || !needle) return options;
+    return options.filter((option) =>
+      `${option.label} ${option.detail ?? ""} ${option.text ?? ""}`.toLowerCase().includes(needle),
+    );
+  }, [android, options, query, showSearch]);
+
+  if (!android) {
+    return (
+      <NativeSelect id={id} aria-label={ariaLabel} value={value} onChange={onChange}>
+        {emptyLabel !== undefined ? <option value="">{emptyLabel}</option> : null}
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.text ?? option.label}
+          </option>
+        ))}
+      </NativeSelect>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {showSearch ? (
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={searchLabel}
+          aria-label={searchLabel}
+          className="rounded-xl"
+        />
+      ) : null}
+      <div
+        id={id}
+        role="listbox"
+        aria-label={ariaLabel ?? emptyLabel ?? searchLabel}
+        className="max-h-48 space-y-1 overflow-y-auto rounded-xl border p-1"
+      >
+        {emptyLabel !== undefined ? (
+          <button
+            type="button"
+            role="option"
+            aria-selected={value === ""}
+            onClick={() => onChange("")}
+            className={cn(
+              "flex w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground",
+              value === "" && "bg-accent text-accent-foreground",
+            )}
+          >
+            {emptyLabel}
+          </button>
+        ) : null}
+        {filtered.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="option"
+            aria-selected={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "flex w-full flex-col items-start rounded-lg px-3 py-2 text-left text-sm",
+              value === option.value && "bg-accent text-accent-foreground",
+            )}
+          >
+            <span className="font-medium">{option.label}</span>
+            {option.detail ? <span className="text-xs text-muted-foreground">{option.detail}</span> : null}
+          </button>
+        ))}
+        {filtered.length === 0 ? <p className="px-3 py-2 text-sm text-muted-foreground">No matches</p> : null}
+      </div>
+    </div>
   );
 }
 
@@ -448,7 +557,7 @@ export function SideSheet({
 }) {
   const body = (
     <>
-      <SheetHeader className="space-y-1 border-b px-6 py-5 pr-12 text-left">
+      <SheetHeader className="shrink-0 space-y-1 border-b bg-background px-6 py-5 pr-16 text-left">
         <SheetTitle>{title}</SheetTitle>
         {description ? (
           <SheetDescription>{description}</SheetDescription>
@@ -467,10 +576,13 @@ export function SideSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className={cn("flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg", className)}
+        className={cn(
+          "flex w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:w-full sm:max-w-lg",
+          className,
+        )}
       >
         {onSubmit ? (
-          <form onSubmit={onSubmit} className="flex h-full min-h-0 flex-col">
+          <form onSubmit={onSubmit} className="flex h-full min-h-0 flex-1 flex-col">
             {body}
           </form>
         ) : (

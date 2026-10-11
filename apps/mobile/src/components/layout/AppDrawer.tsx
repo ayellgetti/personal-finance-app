@@ -22,7 +22,7 @@ export function AppDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="left-[max(0px,calc(50%-24rem))] flex w-72 flex-col gap-0 overflow-hidden p-0 pt-safe">
-        <div className="flex items-center gap-3 px-5 py-5">
+        <div className="flex items-center gap-3 px-5 py-5 pr-16">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-primary shadow-[var(--shadow-glow)]">
             <Briefcase className="h-5 w-5 text-primary-foreground" aria-hidden />
           </div>

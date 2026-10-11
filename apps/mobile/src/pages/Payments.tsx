@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { CreateFollowUpSheet } from "@/components/forms/CreateFollowUpSheet";
 import { CreatePaymentSheet } from "@/components/forms/CreatePaymentSheet";
+import { EditClientSheet } from "@/components/forms/EditClientSheet";
 import { QuickPaymentSheet } from "@/components/forms/QuickPaymentSheet";
 import { QuickReminderSheet, type ReminderTarget } from "@/components/forms/QuickReminderSheet";
 import { EmptyState, ErrorState, ForbiddenState, LoadingState } from "@/components/PageState";
@@ -11,6 +13,7 @@ import { FilterSortBar, type FilterSection } from "@/components/FilterSortSheet"
 import { MonthNav } from "@/components/MonthNav";
 import { ListRow } from "@/components/ListRow";
 import { LoadMore } from "@/components/LoadMore";
+import { ClientDetailSheet } from "@/components/records/ClientDetailSheet";
 import { PaymentDetailSheet } from "@/components/records/PaymentDetailSheet";
 import { RecordShortcuts } from "@/components/records/RecordShortcuts";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +29,9 @@ import {
   paymentTypeClass,
   personLine,
 } from "@/lib/mobile/format";
+import { groupPayments, type PaymentGroup } from "@/lib/mobile/payment-groups";
 import { compareNumber, compareText, compareTime, type SortOrder } from "@/lib/mobile/sort";
-import { fetchClient, fetchContactDetail, listClients, listContacts, listPayments } from "@/lib/mobile/remote";
+import { fetchClient, fetchContactDetail, listCalendarEvents, listClients, listContacts, listPayments } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
 import { useCreateIntent } from "@/lib/mobile/use-create-intent";
 import { usePagedList } from "@/lib/mobile/use-paged-list";
@@ -37,6 +41,7 @@ import {
   CRM_PAYMENT_STATUSES,
   CRM_PAYMENT_TYPES,
   CRM_PERMISSIONS,
+  type CrmClient,
   type CrmPayment,
   type CrmPaymentReferenceType,
   type CrmPaymentStatus,
@@ -88,6 +93,7 @@ function totalsByCurrency(payments: readonly CrmPayment[]): { currency: string; 
 type QuickPayTarget = {
   id: string;
   enquiryId: string | null;
+  bookingId?: string | null;
   label: string;
   referenceType: CrmPaymentReferenceType;
 };
@@ -97,42 +103,58 @@ const TYPE_LABELS: Record<CrmPaymentType, string> = {
   EXPENSE: "Expense",
 };
 
-function PaymentRow({
-  payment,
+function PaymentGroupRow({
+  group,
   payee,
   mobile,
+  bookingTitle,
   onOpen,
   onPay,
   onRemind,
   onFollow,
 }: {
-  payment: CrmPayment;
+  group: PaymentGroup;
   payee: string;
   mobile: string | null;
+  bookingTitle: string | null;
   onOpen: () => void;
   onPay?: () => void;
   onRemind?: () => void;
   onFollow?: () => void;
 }) {
-  const lead = [mobile, payment.reference].filter(Boolean).join(" · ");
-  const trail = [humanize(payment.mode), formatDate(payment.paidAt)].filter(Boolean).join(" · ");
+  const single = group.payments.length === 1 ? group.latest : null;
+  const sharedType = new Set(group.payments.map((payment) => payment.type)).size === 1 ? group.latest.type : null;
+  const tone = sharedType ?? (group.net < 0 ? "EXPENSE" : "INCOME");
+  const shownAmount = sharedType ? group.payments.reduce((sum, payment) => sum + payment.amount, 0) : group.net;
+  const lead = [
+    mobile,
+    bookingTitle,
+    single?.reference,
+    group.payments.length > 1 ? `${group.payments.length} payments` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const trail = single
+    ? [humanize(single.mode), formatDate(single.paidAt)].filter(Boolean).join(" · ")
+    : formatDate(group.paidAt);
 
   return (
     <ListRow
       title={payee}
       detail={
         <>
-          {lead ? `${lead} · ` : null}
-          <span className={paymentTypeClass(payment.type)}>{TYPE_LABELS[payment.type]}</span>
-          {trail ? ` · ${trail}` : null}
+          {lead ? `${lead}${sharedType || trail ? " · " : ""}` : null}
+          {sharedType ? <span className={paymentTypeClass(sharedType)}>{TYPE_LABELS[sharedType]}</span> : null}
+          {sharedType && trail ? " · " : null}
+          {trail || null}
         </>
       }
-      value={formatMoney(payment.amount, payment.currency)}
-      valueClassName={paymentTypeClass(payment.type)}
-      accentClassName={paymentTypeAccent(payment.type)}
+      value={formatMoney(shownAmount, group.currency)}
+      valueClassName={paymentTypeClass(tone)}
+      accentClassName={paymentTypeAccent(tone)}
       badge={
-        <Badge variant={payment.status === "paid" ? "default" : "secondary"} className="rounded-lg text-[10px]">
-          {humanize(payment.status)}
+        <Badge variant={group.status === "paid" ? "default" : "secondary"} className="rounded-lg text-[10px]">
+          {humanize(group.status)}
         </Badge>
       }
       onClick={onOpen}
@@ -170,6 +192,7 @@ export default function Payments() {
   };
   const canReadClients = permissions.includes(CRM_PERMISSIONS.clientsRead);
   const canReadContacts = permissions.includes(CRM_PERMISSIONS.contactsRead);
+  const canReadCalendar = permissions.includes(CRM_PERMISSIONS.calendarRead);
   const [view, setView] = useState<PaymentView>("list");
   const [status, setStatus] = useState<CrmPaymentStatus | "all">("all");
   const [payee, setPayee] = useState<CrmPaymentReferenceType | "all">("all");
@@ -181,13 +204,17 @@ export default function Payments() {
   const [sort, setSort] = useState<PaymentSort>("date");
   const [order, setOrder] = useState<SortOrder>("desc");
   const [selected, setSelected] = useState<CrmPayment | null>(null);
+  const [selectedClient, setSelectedClient] = useState<CrmClient | null>(null);
+  const [editingClient, setEditingClient] = useState<CrmClient | null>(null);
   const [editing, setEditing] = useState<CrmPayment | null>(null);
   const [paying, setPaying] = useState<QuickPayTarget | null>(null);
   const [reminding, setReminding] = useState<ReminderTarget | null>(null);
   const [following, setFollowing] = useState<{ id: string; title: string } | null>(null);
   const [createOpen, setCreateOpen] = useCreateIntent(canCreate);
   const [resolvedPayees, setResolvedPayees] = useState<Record<string, { name: string; mobile: string | null }>>({});
+  const [bookingTitles, setBookingTitles] = useState<Record<string, string>>({});
   const requestedPayees = useRef(new Set<string>());
+  const requestedBookings = useRef(new Set<string>());
 
   useEffect(() => {
     if (params.get("month") !== "current") return;
@@ -298,6 +325,34 @@ export default function Payments() {
     };
   }, [cachedPayee, canReadClients, canReadContacts, list.items, resolvedPayees]);
 
+  useEffect(() => {
+    if (!canReadCalendar) return;
+    const contactIds = new Set<string>();
+    for (const payment of list.items) {
+      if (payment.referenceType !== "client") continue;
+      const client = clients.data?.items.find((item) => item.id === payment.referenceId);
+      if (client && !requestedBookings.current.has(client.contactId)) contactIds.add(client.contactId);
+    }
+    if (contactIds.size === 0) return;
+    for (const contactId of contactIds) requestedBookings.current.add(contactId);
+    let cancelled = false;
+    void (async () => {
+      const updates: Record<string, string> = {};
+      for (const contactId of contactIds) {
+        try {
+          const page = await listCalendarEvents({ contactId, limit: 50 });
+          for (const event of page.items) updates[event.id] = event.title;
+        } catch {
+          // The total still shows when the booking name cannot be loaded.
+        }
+      }
+      if (!cancelled && Object.keys(updates).length > 0) setBookingTitles((current) => ({ ...current, ...updates }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [canReadCalendar, clients.data, list.items]);
+
   const reminderFor = useCallback(
     (payment: CrmPayment): ReminderTarget => {
       const payee = payeeFor(payment);
@@ -312,6 +367,27 @@ export default function Payments() {
       };
     },
     [clients.data, payeeFor],
+  );
+
+  const openPayment = useCallback(
+    async (payment: CrmPayment) => {
+      if (payment.referenceType === "client" && canReadClients) {
+        const loaded = clients.data?.items.find((item) => item.id === payment.referenceId);
+        const client =
+          loaded ??
+          (await fetchClient(payment.referenceId).catch((error: unknown) => {
+            toast.error(error instanceof Error ? error.message : "Unable to open this booking");
+            return null;
+          }));
+        if (client) {
+          setSelected(null);
+          setSelectedClient(client);
+          return;
+        }
+      }
+      setSelected(payment);
+    },
+    [canReadClients, clients.data],
   );
 
   const followFor = useCallback(
@@ -344,12 +420,16 @@ export default function Payments() {
         TYPE_LABELS[payment.type],
       );
     });
-    return [...filtered].sort((left, right) => {
-      if (sort === "amount") return compareNumber(left.amount, right.amount, order);
+    return filtered;
+  }, [list.items, payeeFor, query, type]);
+  const groups = useMemo(() => {
+    const rows = groupPayments(visible);
+    return [...rows].sort((left, right) => {
+      if (sort === "amount") return compareNumber(left.net, right.net, order);
       if (sort === "status") return compareText(left.status, right.status, order);
       return compareTime(left.paidAt, right.paidAt, order);
     });
-  }, [list.items, order, payeeFor, query, sort, type]);
+  }, [order, sort, visible]);
   const filterSections: FilterSection[] = [
     {
       id: "payment-status",
@@ -396,48 +476,70 @@ export default function Payments() {
   const totals = useMemo(() => totalsByCurrency(visible), [visible]);
   const byDay = useMemo(() => {
     if (view !== "month") return [];
-    const groups = new Map<string, CrmPayment[]>();
+    const days = new Map<string, CrmPayment[]>();
     const sorted = [...visible].sort(
       (left, right) => new Date(left.paidAt ?? 0).getTime() - new Date(right.paidAt ?? 0).getTime(),
     );
     for (const payment of sorted) {
       const key = payment.paidAt ? formatDate(payment.paidAt) : "Not paid yet";
-      groups.set(key, [...(groups.get(key) ?? []), payment]);
+      days.set(key, [...(days.get(key) ?? []), payment]);
     }
-    return [...groups.entries()];
+    return [...days.entries()].map(([day, payments]) => [day, groupPayments(payments)] as const);
   }, [visible, view]);
 
   if (!canRead) return <ForbiddenState label="payments" />;
 
-  const renderPayment = (payment: CrmPayment) => (
-    <PaymentRow
-      key={payment.id}
-      payment={payment}
-      payee={payeeFor(payment).name}
-      mobile={payeeFor(payment).mobile}
-      onOpen={() => setSelected(payment)}
-      onPay={
-        canCreate
-          ? () =>
-              setPaying({
-                id: payment.referenceId,
-                enquiryId: payment.enquiryId,
-                label: personLine(payeeFor(payment).name, payeeFor(payment).mobile),
-                referenceType: payment.referenceType,
-              })
-          : undefined
-      }
-      onRemind={canCreateReminder ? () => setReminding(reminderFor(payment)) : undefined}
-      onFollow={
-        canCreateFollowUp && followFor(payment)
-          ? () => {
-              const follow = followFor(payment);
-              if (follow) setFollowing(follow);
-            }
-          : undefined
-      }
-    />
-  );
+  const bookingTitleFor = (group: PaymentGroup): string | null => {
+    if (group.bookingId) return bookingTitles[group.bookingId] ?? null;
+    if (group.referenceType !== "client") return null;
+    const linked = list.items.some(
+      (payment) =>
+        payment.referenceType === "client" && payment.referenceId === group.referenceId && Boolean(payment.bookingId),
+    );
+    if (linked) return null;
+    const client = clients.data?.items.find((item) => item.id === group.referenceId);
+    return client?.bookingId ? (bookingTitles[client.bookingId] ?? null) : null;
+  };
+
+  const renderGroup = (group: PaymentGroup) => {
+    const payment = group.latest;
+    const payee = payeeFor(payment);
+    const client =
+      payment.referenceType === "client"
+        ? clients.data?.items.find((item) => item.id === payment.referenceId)
+        : undefined;
+    return (
+      <PaymentGroupRow
+        key={group.key}
+        group={group}
+        payee={payee.name}
+        mobile={payee.mobile}
+        bookingTitle={bookingTitleFor(group)}
+        onOpen={() => void openPayment(payment)}
+        onPay={
+          canCreate
+            ? () =>
+                setPaying({
+                  id: payment.referenceId,
+                  enquiryId: payment.enquiryId,
+                  bookingId: group.bookingId ?? client?.bookingId ?? null,
+                  label: personLine(payee.name, payee.mobile),
+                  referenceType: payment.referenceType,
+                })
+            : undefined
+        }
+        onRemind={canCreateReminder ? () => setReminding(reminderFor(payment)) : undefined}
+        onFollow={
+          canCreateFollowUp && followFor(payment)
+            ? () => {
+                const follow = followFor(payment);
+                if (follow) setFollowing(follow);
+              }
+            : undefined
+        }
+      />
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -455,9 +557,9 @@ export default function Payments() {
         onOrder={setOrder}
         defaultOrder="desc"
         sections={filterSections}
-        resultCount={visible.length}
-        singular="payment"
-        plural="payments"
+        resultCount={view === "month" ? byDay.reduce((count, [, rows]) => count + rows.length, 0) : groups.length}
+        singular="total"
+        plural="totals"
         onClear={() => {
           setStatus("all");
           setType("all");
@@ -506,15 +608,15 @@ export default function Payments() {
       {list.status === "ready" && visible.length === 0 ? <EmptyState label="No payments found." /> : null}
 
       {list.status === "ready" && visible.length > 0 && (view === "list" || view === "cards") ? (
-        <div className="space-y-2">{visible.map(renderPayment)}</div>
+        <div className="space-y-2">{groups.map(renderGroup)}</div>
       ) : null}
 
       {list.status === "ready" && visible.length > 0 && view === "month" ? (
         <div className="space-y-4">
-          {byDay.map(([day, payments]) => (
+          {byDay.map(([day, dayGroups]) => (
             <section key={day} aria-label={day} className="space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{day}</h3>
-              {payments.map(renderPayment)}
+              {dayGroups.map(renderGroup)}
             </section>
           ))}
         </div>
@@ -524,6 +626,54 @@ export default function Payments() {
         <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />
       ) : null}
 
+      <ClientDetailSheet
+        client={selectedClient}
+        permissions={permissions}
+        onClose={() => setSelectedClient(null)}
+        onRemoved={() => {
+          list.reload();
+          clients.reload();
+        }}
+        onEdit={(client) => {
+          setSelectedClient(null);
+          setEditingClient(client);
+        }}
+        onRemind={
+          canCreateReminder
+            ? (client) => {
+                const contact = contacts.data?.items.find((item) => item.id === client.contactId);
+                setSelectedClient(null);
+                setReminding({
+                  label: personLine(contact?.name || client.billingName, contact?.mobile),
+                  contactId: client.contactId,
+                  enquiryId: client.convertedFromEnquiryId,
+                });
+              }
+            : undefined
+        }
+        onFollow={
+          canCreateFollowUp
+            ? (client) => {
+                if (!client.convertedFromEnquiryId) return;
+                setSelectedClient(null);
+                setFollowing({
+                  id: client.convertedFromEnquiryId,
+                  title: client.billingName,
+                });
+              }
+            : undefined
+        }
+      />
+      <EditClientSheet
+        client={editingClient}
+        onOpenChange={(next) => {
+          if (!next) setEditingClient(null);
+        }}
+        onSaved={() => {
+          clients.reload();
+          list.reload();
+        }}
+      />
       <PaymentDetailSheet
         payment={selected}
         payee={selected ? payeeFor(selected).name : ""}
@@ -542,6 +692,7 @@ export default function Payments() {
           setPaying({
             id: payment.referenceId,
             enquiryId: payment.enquiryId,
+            bookingId: payment.bookingId ?? null,
             label: personLine(payee.name, payee.mobile),
             referenceType: payment.referenceType,
           });

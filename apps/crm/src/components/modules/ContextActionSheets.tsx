@@ -23,6 +23,7 @@ export type PaymentActionTarget = {
   referenceType: CrmPaymentReferenceType;
   referenceId: string;
   enquiryId: string | null;
+  bookingId?: string | null;
   label: string;
 };
 
@@ -120,6 +121,7 @@ export function QuickPaymentSheet({
         referenceType: target.referenceType,
         referenceId: target.referenceId,
         enquiryId: target.enquiryId,
+        bookingId: target.bookingId ?? null,
         amount: parsedAmount,
         type: "INCOME",
         mode,

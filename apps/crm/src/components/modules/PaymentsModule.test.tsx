@@ -147,8 +147,11 @@ describe("PaymentsModule", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Acme Events/ }));
-    expect(await screen.findByRole("heading", { name: /₹25,000|25,000/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Add payment" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Acme Events" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Current booking/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Enquiry/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Payments/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Add payment" }).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Add reminder" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add follow-up" })).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: "Close" })[0] as HTMLElement);

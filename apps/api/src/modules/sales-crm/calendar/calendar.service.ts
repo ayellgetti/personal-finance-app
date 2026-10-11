@@ -127,6 +127,9 @@ export class CalendarService {
     if (query.assigneeId) {
       where.assigneeId = query.assigneeId;
     }
+    if (query.contactId) {
+      where.contactId = query.contactId;
+    }
     if (query.from || query.to) {
       where.AND = [
         query.to ? { startsAt: { lte: query.to } } : {},

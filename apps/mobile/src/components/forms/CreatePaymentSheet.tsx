@@ -1,12 +1,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ChoiceSelect } from "@/components/forms/ChoiceSelect";
 import { FormSheet } from "@/components/forms/FormSheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isoToLocalInput } from "@/lib/mobile/booking";
-import { humanize, personLine } from "@/lib/mobile/format";
-import { createPayment, listClients, listContacts, updatePayment } from "@/lib/mobile/remote";
+import { formatDateTime, formatMoney, humanize, personLine } from "@/lib/mobile/format";
+import { createPayment, listCalendarEvents, listClients, listContacts, listPayments, updatePayment } from "@/lib/mobile/remote";
 import { useDebounced } from "@/lib/mobile/use-debounced";
 import { useResource } from "@/lib/mobile/use-resource";
 import { toPaymentBody, validatePayment } from "@/lib/mobile/validate";
@@ -34,6 +35,7 @@ export function CreatePaymentSheet({
 }) {
   const [referenceType, setReferenceType] = useState<CrmPaymentReferenceType>("client");
   const [referenceId, setReferenceId] = useState("");
+  const [bookingId, setBookingId] = useState("");
   const [amount, setAmount] = useState("");
   const [type, setType] = useState<CrmPaymentType>("INCOME");
   const [mode, setMode] = useState<CrmPaymentMode>("UPI");
@@ -49,6 +51,7 @@ export function CreatePaymentSheet({
     if (!open || !payment) return;
     setReferenceType(payment.referenceType);
     setReferenceId(payment.referenceId);
+    setBookingId(payment.bookingId ?? "");
     setAmount(String(payment.amount));
     setType(payment.type);
     setMode(payment.mode);
@@ -65,28 +68,60 @@ export function CreatePaymentSheet({
     () => listContacts({ page: 1, limit: 20, type: "vendor", search: payeeSearch || undefined }),
     [payeeSearch],
   );
+  const loadClientContacts = useCallback(
+    () => listContacts({ page: 1, limit: 20, type: "client", search: payeeSearch || undefined }),
+    [payeeSearch],
+  );
   const clients = useResource(loadClients, open && referenceType === "client", payeeSearch);
+  const clientContacts = useResource(loadClientContacts, open && referenceType === "client", payeeSearch);
   const vendors = useResource(loadVendors, open && referenceType === "vendor", payeeSearch);
+  const selectedClient = (clients.data?.items ?? []).find((client) => client.id === referenceId) ?? null;
+  const loadBookings = useCallback(
+    () => listCalendarEvents({ contactId: selectedClient?.contactId ?? "", limit: 50 }),
+    [selectedClient?.contactId],
+  );
+  const bookingList = useResource(
+    loadBookings,
+    open && referenceType === "client" && Boolean(selectedClient?.contactId),
+    selectedClient?.contactId ?? "",
+  );
+  const loadPaid = useCallback(() => listPayments({ bookingId, limit: 100 }), [bookingId]);
+  const paidPage = useResource(loadPaid, open && Boolean(bookingId), bookingId);
 
   const payees =
     referenceType === "vendor"
       ? (vendors.data?.items ?? []).map((contact) => ({
-          id: contact.id,
-          label: personLine(contact.name, contact.mobile),
+          value: contact.id,
+          label: contact.name,
+          detail: contact.mobile,
+          text: personLine(contact.name, contact.mobile),
         }))
-      : (clients.data?.items ?? []).map((client) => ({
-          id: client.id,
-          label: client.billingName,
-        }));
+      : (clients.data?.items ?? []).map((client) => {
+          const contact = clientContacts.data?.items.find((item) => item.id === client.contactId);
+          const name = contact?.name ?? client.billingName;
+          return {
+            value: client.id,
+            label: name,
+            detail: contact?.mobile,
+            text: personLine(name, contact?.mobile),
+          };
+        });
   const payeesLoading = referenceType === "vendor" ? vendors.status === "loading" : clients.status === "loading";
   const payeeOptions =
-    referenceId && !payees.some((payee) => payee.id === referenceId)
-      ? [{ id: referenceId, label: "Current record" }, ...payees]
+    referenceId && !payees.some((payee) => payee.value === referenceId)
+      ? [{ value: referenceId, label: "Current record" }, ...payees]
       : payees;
+  const bookings = bookingList.data?.items ?? [];
+  const bookingTotal = (paidPage.data?.items ?? [])
+    .filter((item) => item.status === "paid" && item.type === "INCOME")
+    .reduce((sum, item) => sum + item.amount, 0);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors = validatePayment({ referenceId, amount, reference, paidAt });
+    if (referenceType === "client" && bookings.length > 0 && !bookingId) {
+      nextErrors.bookingId = "Choose the booking this payment belongs to";
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       toast.error(nextErrors.referenceId ?? nextErrors.amount ?? nextErrors.paidAt ?? "Check the payment");
@@ -100,6 +135,7 @@ export function CreatePaymentSheet({
         referenceType,
         referenceId,
         enquiryId: referenceType === "client" ? (payment?.enquiryId ?? selectedClient?.convertedFromEnquiryId ?? null) : null,
+        bookingId: referenceType === "client" ? bookingId || null : null,
         amount,
         type,
         mode,
@@ -144,6 +180,7 @@ export function CreatePaymentSheet({
           onValueChange={(value) => {
             setReferenceType(value as CrmPaymentReferenceType);
             setReferenceId("");
+            setBookingId("");
           }}
         >
           <SelectTrigger id="payment-payee-type" className="h-11 rounded-xl">
@@ -163,26 +200,48 @@ export function CreatePaymentSheet({
           value={payeeQuery}
           onChange={(event) => setPayeeQuery(event.target.value)}
           className="h-11 rounded-xl text-base"
-          placeholder="Search by name"
+          placeholder="Search by name or mobile"
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="payment-payee">{referenceType === "vendor" ? "Vendor" : "Booked"}</Label>
-        <Select value={referenceId} onValueChange={setReferenceId}>
-          <SelectTrigger id="payment-payee" className="h-11 rounded-xl">
-            <SelectValue placeholder={payeesLoading ? "Loading…" : "Pick one"} />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            {payeeOptions.map((payee) => (
-              <SelectItem key={payee.id} value={payee.id}>
-                {payee.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ChoiceSelect
+          id="payment-payee"
+          value={referenceId}
+          onChange={(value) => {
+            setReferenceId(value);
+            setBookingId("");
+          }}
+          showSearch={false}
+          emptyLabel={payeesLoading ? "Loading…" : "Pick one"}
+          options={payeeOptions}
+        />
         {errors.referenceId ? <p className="text-xs text-destructive">{errors.referenceId}</p> : null}
       </div>
+
+      {referenceType === "client" && bookings.length > 0 ? (
+        <div className="space-y-2">
+          <Label htmlFor="payment-booking">Booking</Label>
+          <ChoiceSelect
+            id="payment-booking"
+            value={bookingId}
+            onChange={setBookingId}
+            showSearch={false}
+            emptyLabel="Select booking"
+            options={bookings.map((booking) => ({
+              value: booking.id,
+              label: booking.title,
+              detail: formatDateTime(booking.startsAt),
+              text: `${booking.title} · ${formatDateTime(booking.startsAt)}`,
+            }))}
+          />
+          {bookingId && paidPage.status === "ready" ? (
+            <p className="text-xs text-muted-foreground">Paid for this booking: {formatMoney(bookingTotal, "INR")}</p>
+          ) : null}
+          {errors.bookingId ? <p className="text-xs text-destructive">{errors.bookingId}</p> : null}
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="payment-type">Payment type</Label>

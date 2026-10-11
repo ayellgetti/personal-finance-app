@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FormSheet } from "@/components/forms/FormSheet";
+import { ChoiceSelect } from "@/components/forms/ChoiceSelect";
 import { FieldError, NativeSelect } from "@/components/forms/NativeSelect";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,16 +97,21 @@ export function CreateClientSheet({
           aria-label="Search client contacts"
           className="h-11 rounded-xl text-base"
         />
-        <NativeSelect id="client-contact" value={contactId} onChange={pickContact}>
-          <option value="">
-            {contacts.status === "loading" ? "Loading…" : options.length === 0 ? "No client contacts found" : "Select contact"}
-          </option>
-          {options.map((contact) => (
-            <option key={contact.id} value={contact.id}>
-              {personLine(contact.name, contact.mobile)}
-            </option>
-          ))}
-        </NativeSelect>
+        <ChoiceSelect
+          id="client-contact"
+          value={contactId}
+          onChange={pickContact}
+          showSearch={false}
+          emptyLabel={
+            contacts.status === "loading" ? "Loading…" : options.length === 0 ? "No client contacts found" : "Select contact"
+          }
+          options={options.map((contact) => ({
+            value: contact.id,
+            label: contact.name,
+            detail: contact.mobile,
+            text: personLine(contact.name, contact.mobile),
+          }))}
+        />
         {contacts.status === "error" ? <FieldError message={contacts.errorMessage ?? "Unable to load contacts"} /> : null}
         <FieldError message={errors.contactId} />
       </div>

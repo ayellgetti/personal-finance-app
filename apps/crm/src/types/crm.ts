@@ -170,6 +170,7 @@ export type CrmClient = {
   billingName: string;
   gstin: string | null;
   convertedFromEnquiryId: string | null;
+  bookingId?: string | null;
   startsAt: string | null;
   endsAt: string | null;
 };
@@ -179,6 +180,7 @@ export type CrmPayment = {
   referenceType: CrmPaymentReferenceType;
   referenceId: string;
   enquiryId: string | null;
+  bookingId?: string | null;
   amount: number;
   currency: string;
   type: CrmPaymentType;
@@ -369,6 +371,7 @@ export type CreatePaymentInput = {
   referenceType: CrmPaymentReferenceType;
   referenceId: string;
   enquiryId?: string | null;
+  bookingId?: string | null;
   amount: number;
   currency?: string;
   type?: CrmPaymentType;

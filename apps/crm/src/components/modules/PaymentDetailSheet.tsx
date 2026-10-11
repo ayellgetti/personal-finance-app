@@ -42,10 +42,10 @@ export function PaymentDetailSheet({
   const crm = useCrm();
   return (
     <Sheet open={Boolean(payment)} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-lg">
+      <SheetContent side="right" className="flex w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:w-full sm:max-w-lg">
         {payment ? (
           <>
-            <SheetHeader className="border-b px-6 py-5">
+            <SheetHeader className="shrink-0 border-b bg-background px-6 py-5 pr-16">
               <div className="space-y-1 pr-6">
                 <SheetTitle className={cn("text-lg", paymentTypeClass(payment.type))}>
                   {formatMoney(payment.amount, payment.currency)}
@@ -53,7 +53,7 @@ export function PaymentDetailSheet({
                 <SheetDescription>{payee}</SheetDescription>
               </div>
             </SheetHeader>
-            <div className="flex-1 space-y-5 px-6 py-5">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-5">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">Type</dt>

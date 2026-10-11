@@ -19,6 +19,7 @@ import type {
 } from "./client.request";
 
 export type ClientWithBookingDates = CrmClient & {
+  bookingId: string | null;
   startsAt: Date | null;
   endsAt: Date | null;
 };
@@ -31,17 +32,14 @@ function pickCurrentBooking(
   bookings: CrmCalendarEvent[],
   convertedFromEnquiryId: string | null,
 ): CrmCalendarEvent | null {
-  if (bookings.length === 0) return null;
-  const linked = convertedFromEnquiryId
-    ? bookings.filter((booking) => booking.enquiryId === convertedFromEnquiryId)
-    : bookings;
-  const pool = linked.length > 0 ? linked : bookings;
   const now = Date.now();
-  const upcoming = pool
-    .filter((booking) => eventTime(booking.endsAt) >= now)
-    .sort((left, right) => eventTime(left.startsAt) - eventTime(right.startsAt));
-  if (upcoming[0]) return upcoming[0];
-  return [...pool].sort((left, right) => eventTime(left.startsAt) - eventTime(right.startsAt)).at(-1) ?? null;
+  const upcoming = bookings.filter((booking) => eventTime(booking.endsAt) >= now);
+  if (upcoming.length === 0) return null;
+  const linked = convertedFromEnquiryId
+    ? upcoming.filter((booking) => booking.enquiryId === convertedFromEnquiryId)
+    : [];
+  const pool = linked.length > 0 ? linked : upcoming;
+  return [...pool].sort((left, right) => eventTime(left.startsAt) - eventTime(right.startsAt))[0] ?? null;
 }
 
 export class ClientService {
@@ -61,6 +59,8 @@ export class ClientService {
       where.OR = [
         { billingName: { contains: query.search, mode: "insensitive" } },
         { gstin: { contains: query.search, mode: "insensitive" } },
+        { contact: { is: { name: { contains: query.search, mode: "insensitive" } } } },
+        { contact: { is: { mobile: { contains: query.search, mode: "insensitive" } } } },
       ];
     }
     if (query.from || query.to) {
@@ -122,7 +122,7 @@ export class ClientService {
   async getById(id: string) {
     const client = requireActive(await this.model.readOne({ id }), "Client");
     const [withDates] = await this.withBookingDates([client]);
-    return withDates ?? { ...client, startsAt: null, endsAt: null };
+    return withDates ?? { ...client, bookingId: null, startsAt: null, endsAt: null };
   }
 
   private async withBookingDates(clients: CrmClient[]): Promise<ClientWithBookingDates[]> {
@@ -140,22 +140,32 @@ export class ClientService {
         ...(enquiryIds.length > 0 ? [{ enquiryId: { in: enquiryIds } }] : []),
       ],
     });
-    return clients.map((client) => {
-      const contactEnquiryIds = new Set(
-        enquiryRows.filter((enquiry) => enquiry.contactId === client.contactId).map((enquiry) => enquiry.id),
-      );
-      const related = events.filter(
-        (event) =>
-          event.contactId === client.contactId ||
-          (event.enquiryId != null && contactEnquiryIds.has(event.enquiryId)),
-      );
-      const current = pickCurrentBooking(related, client.convertedFromEnquiryId);
-      return {
-        ...client,
-        startsAt: current?.startsAt ?? null,
-        endsAt: current?.endsAt ?? null,
-      };
-    });
+    return Promise.all(
+      clients.map(async (client) => {
+        const contactEnquiryIds = new Set(
+          enquiryRows.filter((enquiry) => enquiry.contactId === client.contactId).map((enquiry) => enquiry.id),
+        );
+        const related = events.filter(
+          (event) =>
+            event.contactId === client.contactId ||
+            (event.enquiryId != null && contactEnquiryIds.has(event.enquiryId)),
+        );
+        const current = pickCurrentBooking(related, client.convertedFromEnquiryId);
+        const expired = related.length > 0 && !current;
+        let status = client.status;
+        if (expired && client.status === "active") {
+          const updated = await this.model.update({ id: client.id }, { status: "inactive" });
+          status = updated.status;
+        }
+        return {
+          ...client,
+          status,
+          bookingId: current?.id ?? null,
+          startsAt: current?.startsAt ?? null,
+          endsAt: current?.endsAt ?? null,
+        };
+      }),
+    );
   }
 
   async create(actorId: string, input: CreateClientBody) {

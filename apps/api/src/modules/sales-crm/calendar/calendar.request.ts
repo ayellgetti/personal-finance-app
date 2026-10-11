@@ -31,6 +31,7 @@ export const listCalendarEventsQuerySchema = crmListQuerySchema.extend({
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   assigneeId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
 });
 
 export const createCalendarEventBodySchema = z

@@ -15,6 +15,7 @@ export const removePaymentBodySchema = crmRemoveBodySchema;
 export const listPaymentsQuerySchema = crmListQuerySchema.extend({
   referenceType: crmPaymentReferenceTypeSchema.optional(),
   referenceId: z.string().uuid().optional(),
+  bookingId: z.string().uuid().optional(),
   status: crmPaymentStatusSchema.optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
@@ -24,6 +25,7 @@ const paymentBodyBaseSchema = z.object({
   referenceType: crmPaymentReferenceTypeSchema,
   referenceId: z.string().uuid(),
   enquiryId: z.string().uuid().nullable().optional(),
+  bookingId: z.string().uuid().nullable().optional(),
   amount: z.number().finite().positive(),
   currency: z.string().trim().min(1).max(8).optional(),
   type: crmPaymentTypeSchema.optional(),

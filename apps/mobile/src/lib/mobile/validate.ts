@@ -264,6 +264,7 @@ export function toPaymentBody(input: {
   referenceType: CreatePaymentInput["referenceType"];
   referenceId: string;
   enquiryId?: string | null;
+  bookingId?: string | null;
   amount: string;
   type: CreatePaymentInput["type"];
   mode: CreatePaymentInput["mode"];
@@ -275,6 +276,7 @@ export function toPaymentBody(input: {
     referenceType: input.referenceType,
     referenceId: input.referenceId,
     enquiryId: input.enquiryId ?? null,
+    bookingId: input.bookingId ?? null,
     amount: Number(input.amount),
     type: input.type,
     mode: input.mode,

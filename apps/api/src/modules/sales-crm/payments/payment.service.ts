@@ -1,10 +1,12 @@
 import { Prisma, type CrmPaymentReferenceType } from "@prisma/client";
 import { HttpError } from "../../../utils/http-error.util";
 import {
+  crmCalendarEventModel,
   crmClientModel,
   crmContactModel,
   crmEnquiryModel,
   crmPaymentModel,
+  type CrmCalendarEventModel,
   type CrmClientModel,
   type CrmContactModel,
   type CrmEnquiryModel,
@@ -24,6 +26,7 @@ export class PaymentService {
     private readonly clients: CrmClientModel = crmClientModel,
     private readonly enquiries: CrmEnquiryModel = crmEnquiryModel,
     private readonly contacts: CrmContactModel = crmContactModel,
+    private readonly events: CrmCalendarEventModel = crmCalendarEventModel,
   ) {}
 
   list(query: ListPaymentsQuery) {
@@ -33,6 +36,9 @@ export class PaymentService {
     }
     if (query.referenceId) {
       where.referenceId = query.referenceId;
+    }
+    if (query.bookingId) {
+      where.bookingId = query.bookingId;
     }
     if (query.status) {
       where.status = query.status;
@@ -44,7 +50,7 @@ export class PaymentService {
       };
     }
     return this.model.paginate(where, query.page ?? 1, query.limit ?? 25, {
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ paidAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
     });
   }
 
@@ -57,10 +63,14 @@ export class PaymentService {
     if (input.enquiryId) {
       await this.requireActiveEnquiry(input.enquiryId);
     }
+    if (input.bookingId) {
+      await this.requireBooking(input.bookingId, input.referenceType, input.referenceId);
+    }
     return this.model.create({
       referenceType: input.referenceType,
       referenceId: input.referenceId,
       enquiryId: input.enquiryId ?? null,
+      bookingId: input.bookingId ?? null,
       amount: input.amount,
       currency: input.currency ?? "INR",
       type: input.type ?? "INCOME",
@@ -81,6 +91,9 @@ export class PaymentService {
     }
     if (input.enquiryId) {
       await this.requireActiveEnquiry(input.enquiryId);
+    }
+    if (input.bookingId) {
+      await this.requireBooking(input.bookingId, nextReferenceType, nextReferenceId);
     }
     return this.model.update(
       { id },
@@ -121,6 +134,24 @@ export class PaymentService {
       throw new HttpError(422, "Payee contact must be a vendor");
     }
     return contact;
+  }
+
+  private async requireBooking(
+    bookingId: string,
+    referenceType: CrmPaymentReferenceType,
+    referenceId: string,
+  ) {
+    if (referenceType !== "client") {
+      throw new HttpError(422, "Only a client payment can be linked to a booking");
+    }
+    const event = requireActive(await this.events.readOne({ id: bookingId }), "Booking");
+    const client = await this.requireActiveClient(referenceId);
+    if (event.contactId === client.contactId) return event;
+    if (event.enquiryId) {
+      const enquiry = await this.enquiries.readOne({ id: event.enquiryId });
+      if (enquiry && enquiry.contactId === client.contactId) return event;
+    }
+    throw new HttpError(422, "Booking does not belong to this client");
   }
 
   private async requireActiveEnquiry(enquiryId: string) {

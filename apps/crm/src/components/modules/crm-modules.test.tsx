@@ -1259,8 +1259,8 @@ describe("CRM modules", () => {
         {
           id: "event-1",
           title: "Other enquiry",
-          startsAt: "2026-09-26T10:30:00.000Z",
-          endsAt: "2026-09-26T17:30:00.000Z",
+          startsAt: "2026-12-26T10:30:00.000Z",
+          endsAt: "2026-12-26T17:30:00.000Z",
           slot: "evening",
           contactId: contact.id,
           enquiryId: enquiry.id,
@@ -1270,8 +1270,8 @@ describe("CRM modules", () => {
       ],
     });
     renderCrm(<ClientsModule onOpenContact={() => undefined} onOpenPayments={() => undefined} />);
-    expect(await screen.findByText(formatDateTime("2026-09-26T10:30:00.000Z"))).toBeInTheDocument();
-    expect(screen.getByText(formatDateTime("2026-09-26T17:30:00.000Z"))).toBeInTheDocument();
+    expect(await screen.findByText(formatDateTime("2026-12-26T10:30:00.000Z"))).toBeInTheDocument();
+    expect(screen.getByText(formatDateTime("2026-12-26T17:30:00.000Z"))).toBeInTheDocument();
   });
 
   it("shows customer name and mobile in the follow-up enquiry dropdown", async () => {

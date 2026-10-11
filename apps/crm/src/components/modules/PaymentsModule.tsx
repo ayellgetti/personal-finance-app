@@ -14,6 +14,7 @@ import {
 } from "@/components/modules/ContextActionSheets";
 import { MonthCalendar, MonthNav } from "@/components/modules/MonthCalendar";
 import { dayKey, monthRangeIso, type MonthChip } from "@/components/modules/month-calendar";
+import { ClientViewSheet } from "@/components/modules/ClientViewSheet";
 import { PaymentDetailSheet } from "@/components/modules/PaymentDetailSheet";
 import {
   ConfirmRemoveDialog,
@@ -22,6 +23,7 @@ import {
   MODULE_VIEWS,
   ModulePage,
   ModuleStatus,
+  ChoiceSelect,
   NativeSelect,
   RemoveAction,
   RowActions,
@@ -46,9 +48,12 @@ import {
 } from "@/lib/crm/display";
 import { cn } from "@/lib/utils";
 import { useCrm } from "@/lib/crm/store";
+import { listCalendarEvents, listPayments } from "@/lib/crm/remote";
 import {
   CRM_PERMISSIONS,
   type CreatePaymentInput,
+  type CrmCalendarEvent,
+  type CrmClient,
   type CrmPayment,
   type CrmPaymentMode,
   type CrmPaymentReferenceType,
@@ -71,6 +76,7 @@ type FormState = {
   status: CrmPaymentStatus;
   paidAt: string;
   reference: string;
+  bookingId: string;
 };
 
 const EMPTY: FormState = {
@@ -83,6 +89,7 @@ const EMPTY: FormState = {
   status: "pending",
   paidAt: "",
   reference: "",
+  bookingId: "",
 };
 
 function validate(form: FormState): Record<string, string> {
@@ -105,6 +112,7 @@ function toInput(form: FormState, enquiryId: string | null): CreatePaymentInput 
     referenceType: form.referenceType,
     referenceId: vendor ? form.vendorContactId : form.clientId,
     enquiryId: vendor ? null : enquiryId,
+    bookingId: vendor ? null : form.bookingId || null,
     amount: Number(form.amount),
     type: form.type,
     mode: form.mode,
@@ -117,11 +125,15 @@ function toInput(form: FormState, enquiryId: string | null): CreatePaymentInput 
 export function PaymentsModule({
   clientId,
   onClearClientFilter,
+  onOpenContact,
+  onFocusClient,
   createOnDate,
   onCreateOpened,
 }: {
   clientId?: string | null;
   onClearClientFilter?: () => void;
+  onOpenContact?: (contactId: string) => void;
+  onFocusClient?: (clientId: string) => void;
   createOnDate?: string | null;
   onCreateOpened?: () => void;
 }) {
@@ -136,12 +148,15 @@ export function PaymentsModule({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<CrmPayment | null>(null);
   const [viewing, setViewing] = useState<CrmPayment | null>(null);
+  const [viewingClient, setViewingClient] = useState<CrmClient | null>(null);
   const [quickPayment, setQuickPayment] = useState<PaymentActionTarget | null>(null);
   const [quickReminder, setQuickReminder] = useState<ReminderActionTarget | null>(null);
   const [quickFollowUp, setQuickFollowUp] = useState<FollowUpActionTarget | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bookings, setBookings] = useState<CrmCalendarEvent[]>([]);
+  const [bookingTotal, setBookingTotal] = useState<number | null>(null);
 
   const calendarRange = view === "calendar" ? monthRangeIso(cursor) : null;
 
@@ -187,6 +202,7 @@ export function PaymentsModule({
     referenceType: payment.referenceType,
     referenceId: payment.referenceId,
     enquiryId: enquiryIdFor(payment),
+    bookingId: payment.bookingId ?? null,
     label: payeeName(payment),
   });
   const reminderTarget = (payment: CrmPayment): ReminderActionTarget => ({
@@ -198,19 +214,41 @@ export function PaymentsModule({
     const enquiryId = enquiryIdFor(payment);
     return enquiryId ? { enquiryId, label: payeeName(payment) } : null;
   };
+  const clientLabel = (client: CrmClient) => {
+    const contact = contactFor(client.contactId);
+    return personLine(contact?.name ?? client.billingName, contact?.mobile);
+  };
+  const openPayment = (payment: CrmPayment) => {
+    if (payment.referenceType === "client" && crm.hasPermission(CRM_PERMISSIONS.clientsRead)) {
+      const client = clientFor(payment.referenceId);
+      if (client) {
+        setViewing(null);
+        setViewingClient(client);
+        return;
+      }
+    }
+    setViewingClient(null);
+    setViewing(payment);
+  };
   const filteredPayments = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return crm.payments.items;
-    return crm.payments.items.filter((payment) =>
-      [
-        payeeName(payment),
-        payment.reference,
-        payment.amount,
-        payment.status,
-        payment.mode,
-        payment.type,
-      ].some((value) => String(value ?? "").toLowerCase().includes(query)),
-    );
+    const matched = query
+      ? crm.payments.items.filter((payment) =>
+          [
+            payeeName(payment),
+            payment.reference,
+            payment.amount,
+            payment.status,
+            payment.mode,
+            payment.type,
+          ].some((value) => String(value ?? "").toLowerCase().includes(query)),
+        )
+      : crm.payments.items;
+    return [...matched].sort((left, right) => {
+      const leftTime = left.paidAt ? new Date(left.paidAt).getTime() : Number.NEGATIVE_INFINITY;
+      const rightTime = right.paidAt ? new Date(right.paidAt).getTime() : Number.NEGATIVE_INFINITY;
+      return rightTime - leftTime;
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crm.clients.items, crm.contacts.items, crm.payments.items, search]);
 
@@ -247,10 +285,12 @@ export function PaymentsModule({
 
   const openCreate = () => {
     setEditing(null);
+    const presetId = clientId || crm.clients.items[0]?.id || "";
     setForm({
       ...EMPTY,
       referenceType: "client",
-      clientId: clientId || crm.clients.items[0]?.id || "",
+      clientId: presetId,
+      bookingId: crm.clients.items.find((client) => client.id === presetId)?.bookingId ?? "",
       vendorContactId: crm.contacts.items.find((contact) => contact.type === "vendor")?.id || "",
     });
     setErrors({});
@@ -264,6 +304,49 @@ export function PaymentsModule({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createOnDate]);
 
+  const selectedClient = crm.clients.items.find((client) => client.id === form.clientId) ?? null;
+  const clientContactId = selectedClient?.contactId ?? "";
+
+  useEffect(() => {
+    if (!sheetOpen || form.referenceType !== "client" || !clientContactId) {
+      setBookings([]);
+      return;
+    }
+    let cancelled = false;
+    listCalendarEvents({ contactId: clientContactId, limit: 50 })
+      .then((page) => {
+        if (!cancelled) setBookings(page.items);
+      })
+      .catch(() => {
+        if (!cancelled) setBookings([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientContactId, form.referenceType, sheetOpen]);
+
+  useEffect(() => {
+    if (!form.bookingId) {
+      setBookingTotal(null);
+      return;
+    }
+    let cancelled = false;
+    listPayments({ bookingId: form.bookingId, limit: 100 })
+      .then((page) => {
+        if (cancelled) return;
+        const total = page.items
+          .filter((payment) => payment.status === "paid" && payment.type === "INCOME")
+          .reduce((sum, payment) => sum + payment.amount, 0);
+        setBookingTotal(total);
+      })
+      .catch(() => {
+        if (!cancelled) setBookingTotal(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.bookingId]);
+
   const openEdit = (payment: CrmPayment) => {
     setEditing(payment);
     setForm({
@@ -276,6 +359,7 @@ export function PaymentsModule({
       status: payment.status,
       paidAt: isoToLocalInput(payment.paidAt),
       reference: payment.reference ?? "",
+      bookingId: payment.bookingId ?? "",
     });
     setErrors({});
     setSheetOpen(true);
@@ -283,7 +367,7 @@ export function PaymentsModule({
 
   const paymentActions = (payment: CrmPayment) => (
     <RowActions>
-      <ViewAction onClick={() => setViewing(payment)} />
+      <ViewAction onClick={() => openPayment(payment)} />
       {crm.hasPermission(CRM_PERMISSIONS.paymentsUpdate) ? (
         <EditAction onClick={() => openEdit(payment)} />
       ) : null}
@@ -296,6 +380,9 @@ export function PaymentsModule({
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors = validate(form);
+    if (form.referenceType === "client" && bookings.length > 0 && !form.bookingId) {
+      nextErrors.bookingId = "Choose the booking this payment belongs to";
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setBusy(true);
@@ -379,7 +466,7 @@ export function PaymentsModule({
               byDay={calendarByDay}
               onOpen={(id) => {
                 const payment = crm.payments.items.find((item) => item.id === id);
-                if (payment) setViewing(payment);
+                if (payment) openPayment(payment);
               }}
             />
             {calendarMonthCount === 0 ? (
@@ -394,7 +481,7 @@ export function PaymentsModule({
                 <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
                   <div className="min-w-0">
                     <CardTitle className={cn("text-base leading-snug", paymentTypeClass(payment.type))}>
-                      <button type="button" onClick={() => setViewing(payment)}>
+                      <button type="button" onClick={() => openPayment(payment)}>
                         {formatMoney(payment.amount, payment.currency)}
                       </button>
                     </CardTitle>
@@ -456,7 +543,7 @@ export function PaymentsModule({
               {filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell className="font-medium">
-                    <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => setViewing(payment)}>
+                    <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => openPayment(payment)}>
                       {payeeName(payment)}
                     </button>
                   </TableCell>
@@ -518,40 +605,60 @@ export function PaymentsModule({
         </Field>
         {form.referenceType === "vendor" ? (
           <Field id="payment-vendor" label="Vendor" error={errors.vendorContactId}>
-            <NativeSelect
+            <ChoiceSelect
               id="payment-vendor"
               value={form.vendorContactId}
               onChange={(value) => setForm((current) => ({ ...current, vendorContactId: value }))}
-            >
-              <option value="">Select vendor</option>
-              {crm.contacts.items
+              emptyLabel="Select vendor"
+              options={crm.contacts.items
                 .filter((contact) => contact.type === "vendor")
-                .map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {personLine(contact.name, contact.mobile)}
-                  </option>
-                ))}
-            </NativeSelect>
+                .map((contact) => ({
+                  value: contact.id,
+                  label: contact.name,
+                  detail: contact.mobile,
+                  text: personLine(contact.name, contact.mobile),
+                }))}
+            />
           </Field>
         ) : (
           <Field id="payment-client" label="Booked" error={errors.clientId}>
-            <NativeSelect
+            <ChoiceSelect
               id="payment-client"
               value={form.clientId}
-              onChange={(value) => setForm((current) => ({ ...current, clientId: value }))}
+              onChange={(value) => setForm((current) => ({ ...current, clientId: value, bookingId: "" }))}
+              emptyLabel="Select booked record"
+              options={crm.clients.items.map((client) => ({
+                value: client.id,
+                label: contactFor(client.contactId)?.name ?? client.billingName,
+                detail: contactFor(client.contactId)?.mobile,
+                text: personLine(
+                  contactFor(client.contactId)?.name ?? client.billingName,
+                  contactFor(client.contactId)?.mobile,
+                ),
+              }))}
+            />
+          </Field>
+        )}
+        {form.referenceType === "client" && bookings.length > 0 ? (
+          <Field id="payment-booking" label="Booking">
+            <NativeSelect
+              id="payment-booking"
+              value={form.bookingId}
+              onChange={(value) => setForm((current) => ({ ...current, bookingId: value }))}
             >
-              <option value="">Select booked record</option>
-              {crm.clients.items.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {personLine(
-                    contactFor(client.contactId)?.name ?? client.billingName,
-                    contactFor(client.contactId)?.mobile,
-                  )}
+              <option value="">Select booking</option>
+              {bookings.map((booking) => (
+                <option key={booking.id} value={booking.id}>
+                  {booking.title} · {formatDateTime(booking.startsAt)}
                 </option>
               ))}
             </NativeSelect>
+            {bookingTotal != null ? (
+              <p className="text-xs text-muted-foreground">Paid for this booking: {formatMoney(bookingTotal)}</p>
+            ) : null}
+            {errors.bookingId ? <p className="text-xs text-destructive">{errors.bookingId}</p> : null}
           </Field>
-        )}
+        ) : null}
         <Field id="payment-type" label="Payment type">
           <NativeSelect
             id="payment-type"
@@ -609,6 +716,56 @@ export function PaymentsModule({
         </Field>
       </SideSheet>
 
+      <ClientViewSheet
+        client={viewingClient}
+        contact={viewingClient ? contactFor(viewingClient.contactId) : null}
+        onClose={() => setViewingClient(null)}
+        onOpenContact={(contactId) => {
+          setViewingClient(null);
+          onOpenContact?.(contactId);
+        }}
+        onOpenPayments={(nextClientId) => {
+          setViewingClient(null);
+          onFocusClient?.(nextClientId);
+        }}
+        onPay={
+          crm.hasPermission(CRM_PERMISSIONS.paymentsCreate)
+            ? (client) => {
+                setViewingClient(null);
+                setQuickPayment({
+                  referenceType: "client",
+                  referenceId: client.id,
+                  enquiryId: client.convertedFromEnquiryId,
+                  label: clientLabel(client),
+                });
+              }
+            : undefined
+        }
+        onRemind={
+          crm.hasPermission(CRM_PERMISSIONS.calendarCreate)
+            ? (client) => {
+                setViewingClient(null);
+                setQuickReminder({
+                  contactId: client.contactId,
+                  enquiryId: client.convertedFromEnquiryId,
+                  label: clientLabel(client),
+                });
+              }
+            : undefined
+        }
+        onFollow={
+          crm.hasPermission(CRM_PERMISSIONS.followUpsCreate)
+            ? (client) => {
+                if (!client.convertedFromEnquiryId) return;
+                setViewingClient(null);
+                setQuickFollowUp({
+                  enquiryId: client.convertedFromEnquiryId,
+                  label: clientLabel(client),
+                });
+              }
+            : undefined
+        }
+      />
       <PaymentDetailSheet
         payment={viewing}
         payee={viewing ? payeeName(viewing) : ""}

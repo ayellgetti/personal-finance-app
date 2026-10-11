@@ -95,6 +95,11 @@ const Index = () => {
         <PaymentsModule
           clientId={paymentClientId}
           onClearClientFilter={() => setPaymentClientId(null)}
+          onOpenContact={(contactId) => {
+            setContactHighlightId(contactId);
+            setView("contacts");
+          }}
+          onFocusClient={(nextClientId) => setPaymentClientId(nextClientId)}
           createOnDate={createDateFor("payments")}
           onCreateOpened={clearCreateRequest}
         />

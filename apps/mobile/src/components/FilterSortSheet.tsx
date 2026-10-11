@@ -5,6 +5,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { AddButton } from "@/components/ViewSwitch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { bottomSheetFillClass } from "@/components/ui/sheet-frame";
 import {
   Sheet,
   SheetContent,
@@ -198,9 +199,9 @@ export function FilterSortBar({
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="flex h-[92dvh] max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-t-3xl p-0 pb-safe"
+          className={bottomSheetFillClass}
         >
-          <SheetHeader className="space-y-0 px-4 pb-2 pr-12 pt-4 text-left">
+          <SheetHeader className="shrink-0 space-y-0 border-b border-border bg-background px-4 pb-3 pr-16 pt-4 text-left">
             <SheetTitle className="font-display text-lg">Filter & Sort</SheetTitle>
             <SheetDescription className="sr-only">Search, sort, order, and filter this list.</SheetDescription>
           </SheetHeader>

@@ -38,7 +38,7 @@ const sheetVariants = cva(
           "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
-          "inset-y-0 right-0 h-full w-3/4  border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
+          "bottom-0 right-0 top-14 h-auto max-h-[calc(100dvh-3.5rem)] w-[calc(100%-1rem)] border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:inset-y-0 sm:top-0 sm:h-full sm:max-h-none sm:w-3/4 sm:max-w-sm",
       },
     },
     defaultVariants: {
@@ -56,11 +56,13 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
+        <div className="pointer-events-none sticky top-0 z-30 h-0 shrink-0">
+          <SheetPrimitive.Close className="pointer-events-auto absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm ring-offset-background transition-opacity hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close</span>
+          </SheetPrimitive.Close>
+        </div>
         {children}
-        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>
   ),

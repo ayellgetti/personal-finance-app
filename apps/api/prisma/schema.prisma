@@ -972,6 +972,8 @@ model CrmPayment {
   status        CrmPaymentStatus        @default(pending)
   paidAt        DateTime?
   reference     String?
+  /// Calendar event for this client booking. Vendor payments leave this empty.
+  bookingId     String?
   isActive      Int                     @default(1)
   createdBy     String?
   createdAt     DateTime                @default(now())
@@ -980,12 +982,14 @@ model CrmPayment {
   deletedBy     String?
   deletedAt     DateTime?
 
-  enquiry CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  enquiry CrmEnquiry?       @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  booking CrmCalendarEvent? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   @@index([referenceType, referenceId])
   @@index([status])
   @@index([paidAt])
   @@index([enquiryId])
+  @@index([bookingId])
 }
 
 model CrmTask {
@@ -1034,9 +1038,10 @@ model CrmCalendarEvent {
   deletedBy  String?
   deletedAt  DateTime?
 
-  contact  CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  enquiry  CrmEnquiry? @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
-  assignee User?       @relation("CrmCalendarEventAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  contact  CrmContact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  enquiry  CrmEnquiry?  @relation(fields: [enquiryId], references: [id], onDelete: SetNull)
+  assignee User?        @relation("CrmCalendarEventAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  payments CrmPayment[]
 
   @@index([startsAt])
   @@index([assigneeId])

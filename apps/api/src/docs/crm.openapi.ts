@@ -247,6 +247,12 @@ export const crmOpenApiSchemas = {
       referenceType: { type: "string", enum: ["client", "vendor"] },
       referenceId: { type: "string", format: "uuid" },
       enquiryId: { type: "string", format: "uuid", nullable: true },
+      bookingId: {
+        type: "string",
+        format: "uuid",
+        nullable: true,
+        description: "Calendar event for this client booking. Totals for one booking sum payments with this id. Omit for a vendor payment.",
+      },
       amount: { type: "number", minimum: 0, exclusiveMinimum: true },
       currency: { type: "string", default: "INR" },
       type: { type: "string", enum: ["INCOME", "EXPENSE"], default: "INCOME" },
@@ -686,6 +692,7 @@ export const crmOpenApiPaths = {
         limitParam,
         { name: "referenceType", in: "query", schema: { type: "string", enum: ["client", "vendor"] } },
         { name: "referenceId", in: "query", schema: { type: "string", format: "uuid" } },
+        { name: "bookingId", in: "query", schema: { type: "string", format: "uuid" }, description: "Payments for one booking. Results are ordered by paid date, newest first." },
         {
           name: "status",
           in: "query",
@@ -822,6 +829,7 @@ export const crmOpenApiPaths = {
         { name: "from", in: "query", schema: { type: "string", format: "date-time" } },
         { name: "to", in: "query", schema: { type: "string", format: "date-time" } },
         { name: "assigneeId", in: "query", schema: { type: "string", format: "uuid" } },
+        { name: "contactId", in: "query", schema: { type: "string", format: "uuid" } },
       ],
       responses: { ...ok("Paginated events") },
     },

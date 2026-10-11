@@ -6,6 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { bottomSheetCapClass } from "@/components/ui/sheet-frame";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { pickCurrentBooking } from "@/lib/mobile/booking";
 import { formatDate, formatDateTime, formatMoney, humanize, paymentTypeClass } from "@/lib/mobile/format";
@@ -154,10 +155,10 @@ export function ContactHubSheet({
 
   return (
     <Sheet open={Boolean(contact)} onOpenChange={(next) => (next ? undefined : onClose())}>
-      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-3xl pb-safe">
+      <SheetContent side="bottom" className={bottomSheetCapClass}>
         {shown ? (
-          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
-            <SheetHeader className="text-left">
+          <div className="mx-auto flex min-h-0 w-full max-w-tablet flex-1 flex-col">
+            <SheetHeader className="shrink-0 border-b border-border bg-background px-4 pb-3 pr-16 pt-4 text-left">
               <SheetTitle className="font-display text-lg">{shown.name}</SheetTitle>
               <SheetDescription>
                 {humanize(shown.type)}
@@ -165,6 +166,7 @@ export function ContactHubSheet({
               </SheetDescription>
             </SheetHeader>
 
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4">
             <div className="grid grid-cols-2 gap-2">
               <Button asChild variant="outline" className="h-11 rounded-xl">
                 <a href={`tel:${shown.mobile}`}>
@@ -343,6 +345,7 @@ export function ContactHubSheet({
                 </ul>
               )
             ) : null}
+            </div>
           </div>
         ) : null}
       </SheetContent>

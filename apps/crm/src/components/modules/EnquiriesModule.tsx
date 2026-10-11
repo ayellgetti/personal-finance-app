@@ -22,6 +22,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ChoiceSelect,
   ConfirmRemoveDialog,
   EditAction,
   Field,
@@ -329,12 +330,12 @@ function EnquiryDetailSheet({
     <Sheet open={Boolean(enquiry)} onOpenChange={(open) => { if (!open) onClose(); }}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-lg"
+        className="flex w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:w-full sm:max-w-lg"
       >
         {enquiry ? (
           <>
             {/* Header */}
-            <SheetHeader className="border-b px-6 py-5">
+            <SheetHeader className="shrink-0 border-b bg-background px-6 py-5 pr-16">
               <div className="flex items-start justify-between gap-3 pr-6">
                 <div className="space-y-1">
                   <SheetTitle className="text-lg leading-snug">{enquiry.title}</SheetTitle>
@@ -347,7 +348,7 @@ function EnquiryDetailSheet({
             </SheetHeader>
 
             {/* Body */}
-            <div className="flex-1 space-y-6 px-6 py-5">
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-6 py-5">
               {/* Key facts */}
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <div>
@@ -1166,16 +1167,18 @@ export function EnquiriesModule({
             </div>
             {form.contactMode === "existing" ? (
               <Field id="enquiry-contact" label="" error={errors.contactId}>
-                <NativeSelect
+                <ChoiceSelect
                   id="enquiry-contact"
                   value={form.contactId}
                   onChange={(value) => setForm((cur) => ({ ...cur, contactId: value }))}
-                >
-                  <option value="">Select contact</option>
-                  {crm.contacts.items.map((c) => (
-                    <option key={c.id} value={c.id}>{personLine(c.name, c.mobile)}</option>
-                  ))}
-                </NativeSelect>
+                  emptyLabel="Select contact"
+                  options={crm.contacts.items.map((contact) => ({
+                    value: contact.id,
+                    label: contact.name,
+                    detail: contact.mobile,
+                    text: personLine(contact.name, contact.mobile),
+                  }))}
+                />
               </Field>
             ) : (
               <div className="space-y-3 rounded-xl border p-3">
@@ -1212,16 +1215,18 @@ export function EnquiriesModule({
           </>
         ) : (
           <Field id="enquiry-contact" label="Contact" error={errors.contactId}>
-            <NativeSelect
+            <ChoiceSelect
               id="enquiry-contact"
               value={form.contactId}
               onChange={(value) => setForm((cur) => ({ ...cur, contactId: value }))}
-            >
-              <option value="">Select contact</option>
-              {crm.contacts.items.map((c) => (
-                <option key={c.id} value={c.id}>{personLine(c.name, c.mobile)}</option>
-              ))}
-            </NativeSelect>
+              emptyLabel="Select contact"
+              options={crm.contacts.items.map((contact) => ({
+                value: contact.id,
+                label: contact.name,
+                detail: contact.mobile,
+                text: personLine(contact.name, contact.mobile),
+              }))}
+            />
           </Field>
         )}
         <Field id="enquiry-title" label="Title" error={errors.title}>

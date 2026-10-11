@@ -13,6 +13,7 @@ import {
   MODULE_VIEWS,
   ModulePage,
   ModuleStatus,
+  ChoiceSelect,
   NativeSelect,
   RemoveAction,
   RowActions,
@@ -637,19 +638,22 @@ export function FollowUpsModule({
         view !== "calendar" ? (
           <>
             <Field id="followup-enquiry-filter" label="Enquiry">
-              <NativeSelect
+              <ChoiceSelect
                 id="followup-enquiry-filter"
                 aria-label="Enquiry"
                 value={enquiryFilter}
                 onChange={setEnquiryFilter}
-              >
-                <option value="">All enquiries</option>
-                {crm.enquiries.items.map((enquiry) => (
-                  <option key={enquiry.id} value={enquiry.id}>
-                    {enquirySelectLabel(enquiry, contactById(enquiry.contactId))}
-                  </option>
-                ))}
-              </NativeSelect>
+                emptyLabel="All enquiries"
+                options={crm.enquiries.items.map((enquiry) => {
+                  const contact = contactById(enquiry.contactId);
+                  return {
+                    value: enquiry.id,
+                    label: contact?.name ?? enquiry.title,
+                    detail: contact?.mobile,
+                    text: enquirySelectLabel(enquiry, contact),
+                  };
+                })}
+              />
             </Field>
             {view === "timeline" ? (
               <Field id="followup-outcome-filter" label="Outcome">
@@ -785,18 +789,21 @@ export function FollowUpsModule({
         }
       >
         <Field id="followup-enquiry" label="Enquiry" error={errors.enquiryId}>
-          <NativeSelect
+          <ChoiceSelect
             id="followup-enquiry"
             value={form.enquiryId}
             onChange={handleEnquiryChange}
-          >
-            <option value="">Select enquiry</option>
-            {crm.enquiries.items.map((enquiry) => (
-              <option key={enquiry.id} value={enquiry.id}>
-                {enquirySelectLabel(enquiry, contactById(enquiry.contactId))}
-              </option>
-            ))}
-          </NativeSelect>
+            emptyLabel="Select enquiry"
+            options={crm.enquiries.items.map((enquiry) => {
+              const contact = contactById(enquiry.contactId);
+              return {
+                value: enquiry.id,
+                label: contact?.name ?? enquiry.title,
+                detail: contact?.mobile,
+                text: enquirySelectLabel(enquiry, contact),
+              };
+            })}
+          />
         </Field>
 
         <Field id="followup-stage" label="Status">

@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DueDatePicker } from "@/components/forms/DueDatePicker";
 import { FormSheet } from "@/components/forms/FormSheet";
+import { ChoiceSelect } from "@/components/forms/ChoiceSelect";
 import { FieldError, NativeSelect } from "@/components/forms/NativeSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,15 +205,22 @@ export function CreateEnquirySheet({
         aria-label="Search contacts"
         className="h-11 rounded-xl text-base"
       />
-      <NativeSelect id="enquiry-contact" value={contactId} onChange={setContactId}>
-        <option value="">{contacts.status === "loading" ? "Loading…" : "Select contact"}</option>
-        {keepsCurrentContact ? <option value={contactId}>Current contact</option> : null}
-        {contactOptions.map((contact) => (
-          <option key={contact.id} value={contact.id}>
-            {personLine(contact.name, contact.mobile)}
-          </option>
-        ))}
-      </NativeSelect>
+      <ChoiceSelect
+        id="enquiry-contact"
+        value={contactId}
+        onChange={setContactId}
+        showSearch={false}
+        emptyLabel={contacts.status === "loading" ? "Loading…" : "Select contact"}
+        options={[
+          ...(keepsCurrentContact ? [{ value: contactId, label: "Current contact" }] : []),
+          ...contactOptions.map((contact) => ({
+            value: contact.id,
+            label: contact.name,
+            detail: contact.mobile,
+            text: personLine(contact.name, contact.mobile),
+          })),
+        ]}
+      />
       <FieldError message={errors.contactId} />
     </div>
   );

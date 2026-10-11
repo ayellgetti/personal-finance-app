@@ -51,6 +51,15 @@ describe("pickCurrentBooking", () => {
     );
     expect(chosen?.id).toBe("next");
   });
+
+  it("does not keep a booking whose date has passed as the current one", () => {
+    const chosen = pickCurrentBooking(
+      [booking("past", "2026-01-01T00:00:00.000Z", "2026-01-02T00:00:00.000Z", "enq-1")],
+      "enq-1",
+      new Date("2026-10-10T00:00:00.000Z").getTime(),
+    );
+    expect(chosen).toBeNull();
+  });
 });
 
 describe("endsAtFromSlot", () => {

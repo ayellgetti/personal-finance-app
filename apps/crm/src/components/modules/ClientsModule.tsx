@@ -28,6 +28,7 @@ import {
   MODULE_VIEWS,
   ModulePage,
   ModuleStatus,
+  ChoiceSelect,
   NativeSelect,
   RemoveAction,
   RowActions,
@@ -184,6 +185,7 @@ export function ClientsModule({
     referenceType: "client",
     referenceId: client.id,
     enquiryId: client.convertedFromEnquiryId,
+    bookingId: client.bookingId ?? null,
     label: clientLabel(client),
   });
   const reminderTarget = (client: CrmClient): ReminderActionTarget => ({
@@ -513,18 +515,18 @@ export function ClientsModule({
       >
         {!editing ? (
           <Field id="client-contact" label="Contact" error={errors.contactId}>
-            <NativeSelect
+            <ChoiceSelect
               id="client-contact"
               value={form.contactId}
               onChange={(value) => setForm((current) => ({ ...current, contactId: value }))}
-            >
-              <option value="">Select booked contact</option>
-              {clientContacts.map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {personLine(contact.name, contact.mobile)}
-                </option>
-              ))}
-            </NativeSelect>
+              emptyLabel="Select booked contact"
+              options={clientContacts.map((contact) => ({
+                value: contact.id,
+                label: contact.name,
+                detail: contact.mobile,
+                text: personLine(contact.name, contact.mobile),
+              }))}
+            />
           </Field>
         ) : null}
         <Field id="client-billing" label="Billing name" error={errors.billingName}>

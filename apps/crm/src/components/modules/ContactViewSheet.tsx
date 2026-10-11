@@ -121,11 +121,11 @@ export function ContactViewSheet({
     <Sheet open={Boolean(contact)} onOpenChange={(open) => { if (!open) onClose(); }}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-xl"
+        className="flex w-[calc(100%-1rem)] flex-col gap-0 overflow-hidden p-0 sm:w-full sm:max-w-xl"
       >
         {viewing ? (
           <>
-            <SheetHeader className="border-b px-6 py-5">
+            <SheetHeader className="shrink-0 border-b bg-background px-6 py-5 pr-16">
               <div className="flex items-start justify-between gap-3 pr-6">
                 <div className="min-w-0 space-y-1">
                   <SheetTitle className="truncate text-lg leading-snug">{viewing.name}</SheetTitle>
@@ -135,7 +135,7 @@ export function ContactViewSheet({
               </div>
             </SheetHeader>
 
-            <div className="flex-1 space-y-5 px-6 py-5">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-6 py-5">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <div>
                   <dt className="text-xs text-muted-foreground">Email</dt>

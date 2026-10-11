@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ConfirmInline } from "@/components/ConfirmInline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { bottomSheetCapClass } from "@/components/ui/sheet-frame";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime, formatMoney, humanize, paymentTypeClass, personLine } from "@/lib/mobile/format";
@@ -443,12 +444,12 @@ function RecordSheet({
 }) {
   return (
     <Sheet open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
-      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-3xl pb-safe">
-        <div className="mx-auto w-full max-w-tablet space-y-5 pb-4">
-          <SheetHeader className={title ? "text-left" : "sr-only"}>
+      <SheetContent side="bottom" className={bottomSheetCapClass}>
+        <div className="mx-auto flex min-h-0 w-full max-w-tablet flex-1 flex-col">
+          <SheetHeader className={title ? "shrink-0 border-b border-border bg-background px-4 pb-3 pr-16 pt-4 text-left" : "sr-only"}>
             <SheetTitle className={title ? "pr-8 text-lg" : undefined}>{title ?? "Record"}</SheetTitle>
           </SheetHeader>
-          {children}
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">{children}</div>
         </div>
       </SheetContent>
     </Sheet>

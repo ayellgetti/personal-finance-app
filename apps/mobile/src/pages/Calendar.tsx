@@ -44,7 +44,7 @@ import {
 } from "@/lib/mobile/calendar";
 import { matchesQuery, personLine, toDateInputValue } from "@/lib/mobile/format";
 import { compareText, compareTime, type SortOrder } from "@/lib/mobile/sort";
-import { fetchEnquiry, listCalendar, listClients, listContacts, listPayments } from "@/lib/mobile/remote";
+import { fetchClient, fetchEnquiry, listCalendar, listClients, listContacts, listPayments } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
 import { useCreateIntent } from "@/lib/mobile/use-create-intent";
 import { useResource } from "@/lib/mobile/use-resource";
@@ -203,7 +203,11 @@ export default function Calendar() {
 
   const openItem = useCallback(
     async (item: CrmCalendarItem) => {
-      if (item.kind === "booking" || item.kind === "event") {
+      if (item.kind === "booking") {
+        await openRecord(item);
+        return;
+      }
+      if (item.kind === "event") {
         setPickedDay(null);
         setPlainItem(item);
         return;
@@ -211,6 +215,29 @@ export default function Calendar() {
       await openRecord(item);
     },
     [openRecord],
+  );
+
+  const openPaymentRecord = useCallback(
+    async (payment: CrmPayment) => {
+      if (payment.referenceType === "client" && canReadClients) {
+        const loaded = clients.data?.items.find((item) => item.id === payment.referenceId);
+        const client =
+          loaded ??
+          (await fetchClient(payment.referenceId).catch((error: unknown) => {
+            toast.error(error instanceof Error ? error.message : "Unable to open this booking");
+            return null;
+          }));
+        if (client) {
+          setPickedDay(null);
+          setSelectedPayment(null);
+          setPlainItem(null);
+          setSelectedClient(client);
+          return;
+        }
+      }
+      setSelectedPayment(payment);
+    },
+    [canReadClients, clients.data],
   );
 
   const remindItem = useCallback((item: CrmCalendarItem) => {
@@ -280,6 +307,7 @@ export default function Calendar() {
       return {
         id: payment.referenceId,
         enquiryId: payment.enquiryId,
+        bookingId: payment.bookingId ?? null,
         label: personLine(person?.name ?? "Booked", person?.mobile),
         referenceType: payment.referenceType,
       };
@@ -462,7 +490,7 @@ export default function Calendar() {
                   showPayments={canReadPayments}
                   payeeFor={payeeFor}
                   onOpenItem={(item) => void openItem(item)}
-                  onOpenPayment={setSelectedPayment}
+                  onOpenPayment={(payment) => void openPaymentRecord(payment)}
                   onRemindItem={canCreateReminder ? remindItem : undefined}
                   onFollowItem={canCreateFollowUp ? followItem : undefined}
                   onRemindPayment={canCreateReminder ? remindPayment : undefined}
@@ -666,6 +694,10 @@ export default function Calendar() {
         client={selectedClient}
         permissions={permissions}
         onClose={() => setSelectedClient(null)}
+        onRemoved={() => {
+          clients.reload();
+          feed.reload();
+        }}
         onEdit={(client) => {
           setSelectedClient(null);
           setEditingClient(client);

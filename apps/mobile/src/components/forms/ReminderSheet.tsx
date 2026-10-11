@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FieldError, NativeSelect } from "@/components/forms/NativeSelect";
+import { ChoiceSelect } from "@/components/forms/ChoiceSelect";
+import { FieldError } from "@/components/forms/NativeSelect";
 import { FormSheet } from "@/components/forms/FormSheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,15 +130,22 @@ export function ReminderSheet({
           <Label htmlFor="reminder-contact" className="sr-only">
             Contact
           </Label>
-          <NativeSelect id="reminder-contact" value={contactId} onChange={setContactId}>
-            <option value="">No contact</option>
-            {selectedMissing ? <option value={contactId}>Current contact</option> : null}
-            {contactOptions.map((contact) => (
-              <option key={contact.id} value={contact.id}>
-                {personLine(contact.name, contact.mobile)}
-              </option>
-            ))}
-          </NativeSelect>
+          <ChoiceSelect
+            id="reminder-contact"
+            value={contactId}
+            onChange={setContactId}
+            showSearch={false}
+            emptyLabel="No contact"
+            options={[
+              ...(selectedMissing ? [{ value: contactId, label: "Current contact" }] : []),
+              ...contactOptions.map((contact) => ({
+                value: contact.id,
+                label: contact.name,
+                detail: contact.mobile,
+                text: personLine(contact.name, contact.mobile),
+              })),
+            ]}
+          />
         </div>
       ) : null}
       <div className="space-y-2">

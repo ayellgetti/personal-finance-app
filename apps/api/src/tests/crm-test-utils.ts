@@ -86,6 +86,12 @@ export function matchesWhere<T extends Record<string, unknown>>(
       continue;
     }
     const current = row[key];
+    if (isPlainObject(value) && "is" in value && isPlainObject(value.is)) {
+      if (!isPlainObject(current) || !matchesWhere(current, value.is)) {
+        return false;
+      }
+      continue;
+    }
     if (isPlainObject(value)) {
       if (!matchesFilter(current, value)) {
         return false;

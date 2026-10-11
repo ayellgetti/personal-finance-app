@@ -86,6 +86,7 @@ export type ListPaymentsQuery = {
   limit?: number;
   referenceType?: CrmPaymentReferenceType;
   referenceId?: string;
+  bookingId?: string;
   status?: CrmPaymentStatus;
   from?: string;
   to?: string;
@@ -109,6 +110,7 @@ export type ListCalendarEventsQuery = {
   from?: string;
   to?: string;
   assigneeId?: string;
+  contactId?: string;
 };
 
 export type ListCrmUsersQuery = {
@@ -242,6 +244,7 @@ function mapClient(row: Record<string, unknown>): CrmClient {
     billingName: String(row.billingName ?? ""),
     gstin: row.gstin == null ? null : String(row.gstin),
     convertedFromEnquiryId: row.convertedFromEnquiryId == null ? null : String(row.convertedFromEnquiryId),
+    bookingId: row.bookingId == null ? null : String(row.bookingId),
     startsAt: asIsoOrNull(row.startsAt),
     endsAt: asIsoOrNull(row.endsAt),
   };
@@ -253,6 +256,7 @@ function mapPayment(row: Record<string, unknown>): CrmPayment {
     referenceType: row.referenceType as CrmPaymentReferenceType,
     referenceId: String(row.referenceId),
     enquiryId: row.enquiryId == null ? null : String(row.enquiryId),
+    bookingId: row.bookingId == null ? null : String(row.bookingId),
     amount: typeof row.amount === "number" ? row.amount : Number(row.amount),
     currency: String(row.currency ?? "INR"),
     type: row.type as CrmPaymentType,

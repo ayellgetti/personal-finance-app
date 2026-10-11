@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { bottomSheetCapClass } from "@/components/ui/sheet-frame";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatDate, formatMoney, humanize, paymentTypeClass, personLine } from "@/lib/mobile/format";
 import { removePayment } from "@/lib/mobile/remote";
@@ -63,10 +64,10 @@ export function PaymentDetailSheet({
         }
       }}
     >
-      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-3xl pb-safe">
+      <SheetContent side="bottom" className={bottomSheetCapClass}>
         {payment ? (
-          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
-            <SheetHeader className="text-left">
+          <div className="mx-auto flex min-h-0 w-full max-w-tablet flex-1 flex-col">
+            <SheetHeader className="shrink-0 border-b border-border bg-background px-4 pb-3 pr-16 pt-4 text-left">
               <div className="flex items-start justify-between gap-3 pr-8">
                 <div className="min-w-0 space-y-1">
                   <SheetTitle className={`font-display text-lg ${paymentTypeClass(payment.type)}`}>
@@ -79,6 +80,7 @@ export function PaymentDetailSheet({
                 </Badge>
               </div>
             </SheetHeader>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div>
                 <dt className="text-xs text-muted-foreground">Name</dt>
@@ -148,6 +150,7 @@ export function PaymentDetailSheet({
                 ) : null}
               </div>
             )}
+            </div>
           </div>
         ) : null}
       </SheetContent>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { bottomSheetCapClass } from "@/components/ui/sheet-frame";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { KIND_LABELS } from "@/lib/mobile/calendar";
@@ -147,10 +148,10 @@ export function CalendarItemSheet({
 
   return (
     <Sheet open={Boolean(item)} onOpenChange={(next) => { if (!next && !busy) onClose(); }}>
-      <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-3xl pb-safe">
+      <SheetContent side="bottom" className={bottomSheetCapClass}>
         {item ? (
-          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
-            <SheetHeader className="text-left">
+          <div className="mx-auto flex min-h-0 w-full max-w-tablet flex-1 flex-col">
+            <SheetHeader className="shrink-0 border-b border-border bg-background px-4 pb-3 pr-16 pt-4 text-left">
               <div className="flex items-start justify-between gap-3 pr-8">
                 <div className="min-w-0 space-y-1">
                   <SheetTitle className="font-display text-lg">{item.title}</SheetTitle>
@@ -161,6 +162,7 @@ export function CalendarItemSheet({
                 </Badge>
               </div>
             </SheetHeader>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4">
             {editing ? (
               <form onSubmit={(event) => void save(event)} className="space-y-3">
                 <div className="space-y-2">
@@ -279,6 +281,7 @@ export function CalendarItemSheet({
                 ) : null}
               </div>
             ) : null}
+            </div>
           </div>
         ) : null}
       </SheetContent>

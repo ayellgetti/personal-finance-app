@@ -1,5 +1,6 @@
 import { Bell, FolderPlus, ListTodo, PhoneCall } from "lucide-react";
 import { AgendaItem } from "@/components/calendar/AgendaItem";
+import { bottomSheetCapClass } from "@/components/ui/sheet-frame";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CREATE_TARGETS, type CreateTarget } from "@/lib/mobile/calendar";
 import type { CrmCalendarItem } from "@/types/crm";
@@ -34,10 +35,10 @@ export function DaySheet({
 
   return (
     <Sheet open={Boolean(day)} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-3xl pb-safe">
+      <SheetContent side="bottom" className={bottomSheetCapClass}>
         {day ? (
-          <div className="mx-auto w-full max-w-tablet space-y-4 pb-4">
-            <SheetHeader className="text-left">
+          <div className="mx-auto flex min-h-0 w-full max-w-tablet flex-1 flex-col">
+            <SheetHeader className="shrink-0 border-b border-border bg-background px-4 pb-3 pr-16 pt-4 text-left">
               <SheetTitle className="font-display text-lg">
                 {day.toLocaleDateString(undefined, {
                   weekday: "long",
@@ -52,6 +53,7 @@ export function DaySheet({
               </SheetDescription>
             </SheetHeader>
 
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4">
             {items.length > 0 ? (
               <ul className="space-y-2">
                 {items.map((item) => (
@@ -90,6 +92,7 @@ export function DaySheet({
                 })}
               </div>
             ) : null}
+            </div>
           </div>
         ) : null}
       </SheetContent>
