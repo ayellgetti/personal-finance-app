@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HttpError } from "../utils/http-error.util";
+import { parseContactCsv } from "../modules/sales-crm/contacts/contact.import";
 import { ContactService } from "../modules/sales-crm/contacts/contact.service";
 import { createContactBodySchema } from "../modules/sales-crm/contacts/contact.request";
 import type {
@@ -261,6 +262,48 @@ test("contact detail groups follow-ups under each enquiry and lists related paym
   assert.equal(detail.bookings.length, 1);
   assert.equal(detail.bookings[0]?.id, "evt-1");
   assert.equal(detail.bookings[0]?.enquiryId, "e-old");
+});
+
+test("contact import creates valid rows and skips duplicates and bad values", async () => {
+  const { service: contacts } = service([
+    {
+      id: "c-existing",
+      name: "Existing",
+      mobile: "9999999999",
+      type: "lead",
+      email: null,
+      companyName: null,
+      notes: null,
+      isActive: 1,
+    },
+  ]);
+  const parsed = parseContactCsv(`name,mobile no,type
+Ada,98765 43210,Lead
+Ada again,9876543210,client
+Existing person,9999999999,vendor
+Bad,12,employee
+Grace,2222222222,Client
+`);
+  const result = await contacts.importRows("user-1", parsed.rows, parsed.skipped);
+  assert.equal(result.created, 2);
+  assert.deepEqual(
+    result.contacts.map((contact) => contact.name),
+    ["Ada", "Grace"],
+  );
+  assert.equal(result.contacts[0]?.mobile, "9876543210");
+  assert.equal(result.contacts[0]?.type, "lead");
+  assert.equal(result.contacts[1]?.type, "client");
+  const reasons = result.skipped.map((row) => row.reason);
+  assert.ok(reasons.includes("Duplicate mobile in this import"));
+  assert.ok(reasons.includes("Mobile already exists"));
+  assert.ok(reasons.includes("Invalid mobile number"));
+});
+
+test("contact csv import requires name, mobile, and type headers", () => {
+  assert.throws(
+    () => parseContactCsv("name,phone\nAda,9876543210"),
+    (error: unknown) => error instanceof HttpError && error.status === 422,
+  );
 });
 
 test("contact create rejects empty name and invalid mobile", () => {

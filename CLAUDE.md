@@ -638,7 +638,7 @@ When CI exists it must fail on typecheck, lint, tests, and build.
 
 Advisor generation is request-scoped (OpenAI). Redis caches the result.
 
-Do not add a queue until a real job exists (email, exports, scheduled reports).
+Scheduled CRM email, SMS, and in-app messages are claimed by a timer in the API process, then delivered outside any database transaction. Do not add a queue for that.
 
 Do not block HTTP on long work beyond the existing advisor timeout.
 

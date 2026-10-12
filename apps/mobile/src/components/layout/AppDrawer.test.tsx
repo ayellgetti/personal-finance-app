@@ -35,8 +35,10 @@ describe("sales CRM sidebar", () => {
       "Follow-ups",
       "Booked",
       "Payments",
+      "Invoices",
       "Tasks",
       "Reminders",
+      "Communications",
       "Users",
       "Roles",
     ]);

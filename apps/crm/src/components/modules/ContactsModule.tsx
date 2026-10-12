@@ -19,6 +19,7 @@ import {
   ViewAction,
 } from "@/components/modules/shared";
 import { ContactViewSheet } from "@/components/modules/ContactViewSheet";
+import { ImportContactsSheet } from "@/components/modules/ImportContactsSheet";
 import {
   CONTACT_TYPE_LABELS,
   EMAIL_PATTERN,
@@ -204,6 +205,7 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
   const [sheetOpen, setSheetOpen] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const reload = () => {
     void crm.loadContacts({
@@ -292,9 +294,14 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
       toolbar={toolbar}
       actions={
         crm.hasPermission(CRM_PERMISSIONS.contactsCreate) ? (
-          <Button type="button" className="rounded-xl" onClick={openCreate}>
-            Add contact
-          </Button>
+          <>
+            <Button type="button" variant="outline" className="rounded-xl" onClick={() => setImportOpen(true)}>
+              Import
+            </Button>
+            <Button type="button" className="rounded-xl" onClick={openCreate}>
+              Add contact
+            </Button>
+          </>
         ) : null
       }
     >
@@ -393,6 +400,7 @@ export function ContactsModule({ highlightId }: { highlightId?: string | null })
       </SideSheet>
 
       <ContactViewSheet contact={viewing} onClose={() => setViewing(null)} />
+      <ImportContactsSheet open={importOpen} onOpenChange={setImportOpen} onImported={reload} />
 
       <ConfirmRemoveDialog
         open={Boolean(removeId)}

@@ -10,6 +10,7 @@ import { closeRedis } from "../utils/redis.util";
 import { route } from "./route";
 import { middleware } from "./middleware";
 import { util } from "./util";
+import { messageScheduler } from "../modules/sales-crm/communications/message.scheduler";
 import { rbacService } from "../modules/sales-crm/rbac/rbac.service";
 
 export class App {
@@ -44,6 +45,8 @@ export class App {
         environment: setting.environment,
       });
     });
+
+    messageScheduler.start();
 
     void rbacService.ensureCatalog("system").catch((error: unknown) => {
       logger.error("CRM RBAC catalog bootstrap failed", {
@@ -83,6 +86,7 @@ export class App {
 
   private async performShutdown(signal: string, exitCode: number): Promise<void> {
     logger.info("API shutting down", { signal });
+    messageScheduler.stop();
 
     try {
       await this.closeServer();

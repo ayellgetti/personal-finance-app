@@ -25,6 +25,8 @@ const GROUP_LABELS: Record<string, string> = {
   followups: "Follow-ups",
   clients: "Booked",
   payments: "Payments",
+  invoices: "Invoices",
+  communications: "Communications",
   tasks: "Tasks",
   calendar: "Calendar",
   users: "Users",

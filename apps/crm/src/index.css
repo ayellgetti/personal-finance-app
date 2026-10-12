@@ -171,6 +171,25 @@
 }
 
 @media print {
+  body.printing-invoice * {
+    visibility: hidden;
+  }
+
+  body.printing-invoice .crm-invoice-print,
+  body.printing-invoice .crm-invoice-print * {
+    visibility: visible;
+  }
+
+  body.printing-invoice .crm-invoice-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: 0;
+    background: white;
+    color: black;
+  }
+
   @page { size: A4 portrait; margin: 12mm 18mm; }
 
   .banquet-checklist {

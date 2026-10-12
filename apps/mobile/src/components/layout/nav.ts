@@ -10,6 +10,8 @@ import {
   Shield,
   User,
   Users,
+  Receipt,
+  Send,
   Wallet,
 } from "lucide-react";
 import { CRM_PERMISSIONS } from "@/types/crm";
@@ -34,8 +36,10 @@ export const SIDEBAR: SidebarItem[] = [
   { to: "/follow-ups", label: "Follow-ups", icon: PhoneCall, group: "Pipeline" },
   { to: "/booked", label: "Booked", icon: Building2, group: "Pipeline" },
   { to: "/payments", label: "Payments", icon: Wallet, group: "Pipeline" },
+  { to: "/invoices", label: "Invoices", icon: Receipt, group: "Pipeline" },
   { to: "/tasks", label: "Tasks", icon: ListTodo, group: "Work" },
   { to: "/reminders", label: "Reminders", icon: Bell, group: "Work" },
+  { to: "/communications", label: "Communications", icon: Send, group: "Work" },
   { to: "/users", label: "Users", icon: Users, group: "Admin", permission: CRM_PERMISSIONS.usersRead },
   { to: "/roles", label: "Roles", icon: Shield, group: "Admin", permission: CRM_PERMISSIONS.rolesRead },
 ];

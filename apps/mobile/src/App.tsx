@@ -14,6 +14,8 @@ import Enquiries from "./pages/Enquiries.tsx";
 import FollowUps from "./pages/FollowUps.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import Home from "./pages/Home.tsx";
+import Invoices from "./pages/Invoices.tsx";
+import Communications from "./pages/Communications.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Payments from "./pages/Payments.tsx";
@@ -50,6 +52,8 @@ const App = () => (
                 <Route path="/follow-ups" element={<FollowUps />} />
                 <Route path="/booked" element={<Booked />} />
                 <Route path="/payments" element={<Payments />} />
+                <Route path="/invoices" element={<Invoices />} />
+                <Route path="/communications" element={<Communications />} />
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/reminders" element={<Reminders />} />
                 <Route path="/users" element={<Users />} />

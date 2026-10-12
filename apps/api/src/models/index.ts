@@ -79,8 +79,22 @@ export {
 } from "./sales-crm/crm-follow-up.model";
 export { CrmClientModel, crmClientModel } from "./sales-crm/crm-client.model";
 export { CrmPaymentModel, crmPaymentModel } from "./sales-crm/crm-payment.model";
+export {
+  CrmInvoiceModel,
+  CrmInvoiceLineModel,
+  crmInvoiceModel,
+  crmInvoiceLineModel,
+  type InvoiceLineWrite,
+  type InvoiceWithLines,
+} from "./sales-crm/crm-invoice.model";
 export { CrmTaskModel, crmTaskModel } from "./sales-crm/crm-task.model";
 export {
   CrmCalendarEventModel,
   crmCalendarEventModel,
 } from "./sales-crm/crm-calendar-event.model";
+export {
+  CrmMessageModel,
+  CrmMessageTemplateModel,
+  crmMessageModel,
+  crmMessageTemplateModel,
+} from "./sales-crm/crm-message.model";

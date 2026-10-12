@@ -6,6 +6,8 @@ import { ContactsModule } from "@/components/modules/ContactsModule";
 import { DashboardModule } from "@/components/modules/DashboardModule";
 import { EnquiriesModule } from "@/components/modules/EnquiriesModule";
 import { FollowUpsModule, type FollowUpDueFilter } from "@/components/modules/FollowUpsModule";
+import { InvoicesModule } from "@/components/modules/InvoicesModule";
+import { CommunicationsModule } from "@/components/modules/CommunicationsModule";
 import { PaymentsModule } from "@/components/modules/PaymentsModule";
 import { ProfileModule } from "@/components/modules/ProfileModule";
 import { RemindersModule } from "@/components/modules/RemindersModule";
@@ -23,6 +25,8 @@ const META: Record<CrmViewId, { title: string; description: string }> = {
   followUps: { title: "Follow-ups", description: "Next actions and overdue work" },
   clients: { title: "Booked", description: "Converted bookings in a table, cards, or calendar" },
   payments: { title: "Payments", description: "Collections in a table, cards, or calendar" },
+  invoices: { title: "Invoices", description: "Stored invoices you can print again" },
+  communications: { title: "Communications", description: "Email, SMS, and in-app messages, sent now or scheduled" },
   tasks: { title: "Tasks", description: "Work items across the team" },
   reminders: { title: "Reminders", description: "Table, cards, and calendar of timed notes" },
   calendar: { title: "Calendar", description: "Tasks and meetings" },
@@ -104,6 +108,8 @@ const Index = () => {
           onCreateOpened={clearCreateRequest}
         />
       ) : null}
+      {view === "invoices" ? <InvoicesModule /> : null}
+      {view === "communications" ? <CommunicationsModule /> : null}
       {view === "tasks" ? (
         <TasksModule createOnDate={createDateFor("tasks")} onCreateOpened={clearCreateRequest} />
       ) : null}

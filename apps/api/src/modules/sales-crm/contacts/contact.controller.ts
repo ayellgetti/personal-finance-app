@@ -1,8 +1,11 @@
 import type { Request, Response } from "express";
+import { HttpError } from "../../../utils/http-error.util";
 import { BaseController } from "../../shared/base/base.controller";
 import { currentUserId, requireParamId } from "../crm.http";
+import { parseContactCsv } from "./contact.import";
 import type {
   CreateContactBody,
+  ImportContactsBody,
   ListContactsQuery,
   RemoveContactBody,
   UpdateContactBody,
@@ -47,6 +50,21 @@ export class ContactController extends BaseController {
       req.body as RemoveContactBody,
     );
     this.sendSuccess(req, res, result, "Contact removed");
+  }
+
+  async import(req: Request, res: Response) {
+    const body = req.body as ImportContactsBody;
+    const parsed = body.rows?.length
+      ? {
+          rows: body.rows.map((row, index) => ({ row: index + 1, ...row })),
+          skipped: [],
+        }
+      : parseContactCsv(body.csv ?? "");
+    if (parsed.rows.length === 0) {
+      throw new HttpError(422, "No contacts to import");
+    }
+    const result = await this.service.importRows(currentUserId(req), parsed.rows, parsed.skipped);
+    this.sendSuccess(req, res, result, "Contacts imported");
   }
 }
 

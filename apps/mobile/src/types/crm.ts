@@ -41,6 +41,14 @@ export const CRM_PERMISSIONS = {
   paymentsCreate: "crm.payments.create",
   paymentsUpdate: "crm.payments.update",
   paymentsDelete: "crm.payments.delete",
+  invoicesRead: "crm.invoices.read",
+  invoicesCreate: "crm.invoices.create",
+  invoicesUpdate: "crm.invoices.update",
+  invoicesDelete: "crm.invoices.delete",
+  communicationsRead: "crm.communications.read",
+  communicationsCreate: "crm.communications.create",
+  communicationsUpdate: "crm.communications.update",
+  communicationsDelete: "crm.communications.delete",
   tasksRead: "crm.tasks.read",
   tasksCreate: "crm.tasks.create",
   tasksUpdate: "crm.tasks.update",
@@ -102,6 +110,74 @@ export type CrmPaymentStatus = (typeof CRM_PAYMENT_STATUSES)[number];
 
 export const CRM_PAYMENT_REFERENCE_TYPES = ["client", "vendor"] as const;
 export type CrmPaymentReferenceType = (typeof CRM_PAYMENT_REFERENCE_TYPES)[number];
+
+export const CRM_INVOICE_STATUSES = ["draft", "issued", "paid", "cancelled"] as const;
+export type CrmInvoiceStatus = (typeof CRM_INVOICE_STATUSES)[number];
+
+export const CRM_CHANNELS = ["email", "sms", "in_app"] as const;
+export type CrmChannel = (typeof CRM_CHANNELS)[number];
+
+export const CRM_MESSAGE_STATUSES = ["scheduled", "sending", "sent", "failed", "cancelled"] as const;
+export type CrmMessageStatus = (typeof CRM_MESSAGE_STATUSES)[number];
+
+export type CrmMessageTemplate = {
+  id: string;
+  name: string;
+  channel: CrmChannel;
+  subject: string | null;
+  body: string;
+};
+
+export type CrmMessage = {
+  id: string;
+  channel: CrmChannel;
+  templateId: string | null;
+  subject: string | null;
+  body: string;
+  contactId: string | null;
+  recipientUserId: string | null;
+  toAddress: string | null;
+  scheduledAt: string;
+  status: CrmMessageStatus;
+  sentAt: string | null;
+  errorMessage: string | null;
+  read: number;
+  readAt: string | null;
+};
+
+export type CrmStaffRecipient = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+};
+
+export type CreateMessageTemplateInput = {
+  name: string;
+  channel: CrmChannel;
+  subject?: string | null;
+  body: string;
+};
+
+export type CreateMessageInput = {
+  channel: CrmChannel;
+  templateId?: string;
+  subject?: string;
+  body?: string;
+  contactId?: string;
+  recipientUserId?: string;
+  toAddress?: string;
+  variables?: Record<string, string>;
+  scheduledAt?: string;
+};
+
+export type UpdateMessageInput = {
+  subject?: string | null;
+  body?: string;
+  toAddress?: string;
+  variables?: Record<string, string>;
+  scheduledAt?: string;
+};
 
 export const CRM_EVENT_SLOTS = ["morning", "evening", "full_day"] as const;
 export type CrmEventSlot = (typeof CRM_EVENT_SLOTS)[number];
@@ -197,6 +273,33 @@ export type CrmClient = {
   bookingId?: string | null;
   startsAt: string | null;
   endsAt: string | null;
+};
+
+export type CrmInvoiceLine = {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  sortOrder: number;
+};
+
+export type CrmInvoice = {
+  id: string;
+  number: string;
+  contactId: string;
+  status: CrmInvoiceStatus;
+  issuedAt: string;
+  dueAt: string | null;
+  currency: string;
+  notes: string | null;
+  billToName: string;
+  billToMobile: string;
+  taxPercent: number;
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+  lines?: CrmInvoiceLine[];
 };
 
 export type CrmPayment = {
@@ -350,6 +453,29 @@ export type CreateClientInput = {
   status?: CrmClientStatus;
   gstin?: string | null;
   convertedFromEnquiryId?: string | null;
+};
+
+export type CreateInvoiceLineInput = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type CreateInvoiceInput = {
+  contactId: string;
+  status?: CrmInvoiceStatus;
+  issuedAt?: string;
+  dueAt?: string | null;
+  currency?: string;
+  notes?: string | null;
+  taxPercent?: number;
+  lines: CreateInvoiceLineInput[];
+};
+
+export type ContactImportResult = {
+  created: number;
+  skipped: { row: number; mobile: string; reason: string }[];
+  contacts: CrmContact[];
 };
 
 export type CreatePaymentInput = {

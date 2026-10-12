@@ -9,6 +9,10 @@ import type {
   CreateCrmUserInput,
   CreateEnquiryInput,
   CreateFollowUpInput,
+  ContactImportResult,
+  CreateInvoiceInput,
+  CreateMessageInput,
+  CreateMessageTemplateInput,
   CreatePaymentInput,
   CreateTaskInput,
   CrmCalendarEvent,
@@ -23,6 +27,13 @@ import type {
   CrmEnquiryDueDateWindow,
   CrmEnquiryStatus,
   CrmFollowUp,
+  CrmInvoice,
+  CrmInvoiceLine,
+  CrmInvoiceStatus,
+  CrmMessage,
+  CrmMessageStatus,
+  CrmMessageTemplate,
+  CrmStaffRecipient,
   CrmFollowUpCalendar,
   CrmFollowUpCalendarItem,
   CrmMe,
@@ -38,6 +49,7 @@ import type {
   CrmTaskStatus,
   UpdateCrmRoleInput,
   UpdateCrmUserInput,
+  UpdateMessageInput,
 } from "@/types/crm";
 
 export type ListContactsQuery = {
@@ -393,6 +405,27 @@ export async function removeContact(id: string): Promise<void> {
   await api("/api/crm/contacts/remove", { method: "POST", body: { id } });
 }
 
+export async function importContacts(csv: string): Promise<ContactImportResult> {
+  const data = await api<Record<string, unknown>>("/api/crm/contacts/import", {
+    method: "POST",
+    body: { csv },
+  });
+  const contacts = Array.isArray(data.contacts) ? data.contacts : [];
+  const skipped = Array.isArray(data.skipped) ? data.skipped : [];
+  return {
+    created: typeof data.created === "number" ? data.created : contacts.length,
+    contacts: contacts.map((row) => mapContact(asRecord(row))),
+    skipped: skipped.map((row) => {
+      const item = asRecord(row);
+      return {
+        row: typeof item.row === "number" ? item.row : 0,
+        mobile: String(item.mobile ?? ""),
+        reason: String(item.reason ?? "Skipped"),
+      };
+    }),
+  };
+}
+
 export async function listEnquiries(query: ListEnquiriesQuery = {}): Promise<CrmPaginated<CrmEnquiry>> {
   const raw = await api<unknown>(`/api/crm/enquiries${toSearchParams(query)}`);
   return mapPaginated(raw, mapEnquiry);
@@ -489,6 +522,183 @@ export async function removeClient(id: string): Promise<void> {
 export async function listClients(query: ListClientsQuery = {}): Promise<CrmPaginated<CrmClient>> {
   const raw = await api<unknown>(`/api/crm/clients${toSearchParams(query)}`);
   return mapPaginated(raw, mapClient);
+}
+
+function mapInvoiceLine(row: Record<string, unknown>): CrmInvoiceLine {
+  return {
+    id: String(row.id),
+    description: String(row.description ?? ""),
+    quantity: Number(row.quantity ?? 0),
+    unitPrice: Number(row.unitPrice ?? 0),
+    amount: Number(row.amount ?? 0),
+    sortOrder: Number(row.sortOrder ?? 0),
+  };
+}
+
+function mapInvoice(row: Record<string, unknown>): CrmInvoice {
+  const lines = Array.isArray(row.lines) ? row.lines.map((line) => mapInvoiceLine(asRecord(line))) : undefined;
+  return {
+    id: String(row.id),
+    number: String(row.number ?? ""),
+    contactId: String(row.contactId ?? ""),
+    status: row.status as CrmInvoiceStatus,
+    issuedAt: asIso(row.issuedAt),
+    dueAt: asIsoOrNull(row.dueAt),
+    currency: String(row.currency ?? "INR"),
+    notes: row.notes == null ? null : String(row.notes),
+    billToName: String(row.billToName ?? ""),
+    billToMobile: String(row.billToMobile ?? ""),
+    taxPercent: Number(row.taxPercent ?? 0),
+    subtotal: Number(row.subtotal ?? 0),
+    taxAmount: Number(row.taxAmount ?? 0),
+    total: Number(row.total ?? 0),
+    ...(lines ? { lines } : {}),
+  };
+}
+
+export type ListInvoicesQuery = {
+  page?: number;
+  limit?: number;
+  status?: CrmInvoiceStatus;
+  contactId?: string;
+  search?: string;
+};
+
+export async function listInvoices(query: ListInvoicesQuery = {}): Promise<CrmPaginated<CrmInvoice>> {
+  const raw = await api<unknown>(`/api/crm/invoices${toSearchParams(query)}`);
+  return mapPaginated(raw, mapInvoice);
+}
+
+export async function fetchInvoice(id: string): Promise<CrmInvoice> {
+  const data = await api<Record<string, unknown>>(`/api/crm/invoices/${id}`);
+  return mapInvoice(asRecord(requireField(data, "invoice")));
+}
+
+export async function createInvoice(input: CreateInvoiceInput): Promise<CrmInvoice> {
+  const data = await api<Record<string, unknown>>("/api/crm/invoices", { method: "POST", body: input });
+  return mapInvoice(asRecord(requireField(data, "invoice")));
+}
+
+export async function updateInvoice(id: string, input: Partial<CreateInvoiceInput>): Promise<CrmInvoice> {
+  const data = await api<Record<string, unknown>>(`/api/crm/invoices/${id}`, { method: "PATCH", body: input });
+  return mapInvoice(asRecord(requireField(data, "invoice")));
+}
+
+export async function removeInvoice(id: string): Promise<void> {
+  await api("/api/crm/invoices/remove", { method: "POST", body: { id } });
+}
+
+function mapTemplate(row: Record<string, unknown>): CrmMessageTemplate {
+  return {
+    id: String(row.id),
+    name: String(row.name ?? ""),
+    channel: row.channel as CrmMessageTemplate["channel"],
+    subject: row.subject == null ? null : String(row.subject),
+    body: String(row.body ?? ""),
+  };
+}
+
+function mapMessage(row: Record<string, unknown>): CrmMessage {
+  return {
+    id: String(row.id),
+    channel: row.channel as CrmMessage["channel"],
+    templateId: row.templateId == null ? null : String(row.templateId),
+    subject: row.subject == null ? null : String(row.subject),
+    body: String(row.body ?? ""),
+    contactId: row.contactId == null ? null : String(row.contactId),
+    recipientUserId: row.recipientUserId == null ? null : String(row.recipientUserId),
+    toAddress: row.toAddress == null ? null : String(row.toAddress),
+    scheduledAt: asIso(row.scheduledAt),
+    status: row.status as CrmMessageStatus,
+    sentAt: asIsoOrNull(row.sentAt),
+    errorMessage: row.errorMessage == null ? null : String(row.errorMessage),
+    read: Number(row.read ?? 0),
+    readAt: asIsoOrNull(row.readAt),
+  };
+}
+
+export type ListTemplatesQuery = {
+  page?: number;
+  limit?: number;
+  channel?: CrmMessageTemplate["channel"];
+  search?: string;
+};
+
+export type ListMessagesQuery = {
+  page?: number;
+  limit?: number;
+  channel?: CrmMessage["channel"];
+  status?: CrmMessageStatus;
+  contactId?: string;
+  search?: string;
+};
+
+export async function listTemplates(query: ListTemplatesQuery = {}): Promise<CrmPaginated<CrmMessageTemplate>> {
+  const raw = await api<unknown>(`/api/crm/communications/templates${toSearchParams(query)}`);
+  return mapPaginated(raw, mapTemplate);
+}
+
+export async function createTemplate(input: CreateMessageTemplateInput): Promise<CrmMessageTemplate> {
+  const data = await api<Record<string, unknown>>("/api/crm/communications/templates", { method: "POST", body: input });
+  return mapTemplate(asRecord(requireField(data, "template")));
+}
+
+export async function updateTemplate(id: string, input: Partial<CreateMessageTemplateInput>): Promise<CrmMessageTemplate> {
+  const data = await api<Record<string, unknown>>(`/api/crm/communications/templates/${id}`, { method: "PATCH", body: input });
+  return mapTemplate(asRecord(requireField(data, "template")));
+}
+
+export async function removeTemplate(id: string): Promise<void> {
+  await api("/api/crm/communications/templates/remove", { method: "POST", body: { id } });
+}
+
+export async function listRecipients(): Promise<CrmStaffRecipient[]> {
+  const data = await api<Record<string, unknown>>("/api/crm/communications/recipients");
+  const items = data.items;
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => {
+    const row = asRecord(item);
+    return {
+      id: String(row.id),
+      firstName: String(row.firstName ?? ""),
+      lastName: String(row.lastName ?? ""),
+      email: String(row.email ?? ""),
+    };
+  });
+}
+
+export async function listMessages(query: ListMessagesQuery = {}): Promise<CrmPaginated<CrmMessage>> {
+  const raw = await api<unknown>(`/api/crm/communications/messages${toSearchParams(query)}`);
+  return mapPaginated(raw, mapMessage);
+}
+
+export async function createMessage(input: CreateMessageInput): Promise<CrmMessage> {
+  const data = await api<Record<string, unknown>>("/api/crm/communications/messages", { method: "POST", body: input });
+  return mapMessage(asRecord(requireField(data, "message")));
+}
+
+export async function updateMessage(id: string, input: UpdateMessageInput): Promise<CrmMessage> {
+  const data = await api<Record<string, unknown>>(`/api/crm/communications/messages/${id}`, { method: "PATCH", body: input });
+  return mapMessage(asRecord(requireField(data, "message")));
+}
+
+export async function cancelMessage(id: string): Promise<CrmMessage> {
+  const data = await api<Record<string, unknown>>(`/api/crm/communications/messages/${id}/cancel`, { method: "POST" });
+  return mapMessage(asRecord(requireField(data, "message")));
+}
+
+export async function removeMessage(id: string): Promise<void> {
+  await api("/api/crm/communications/messages/remove", { method: "POST", body: { id } });
+}
+
+export async function listNotifications(query: { page?: number; limit?: number; unread?: "0" | "1" } = {}): Promise<CrmPaginated<CrmMessage>> {
+  const raw = await api<unknown>(`/api/crm/notifications${toSearchParams(query)}`);
+  return mapPaginated(raw, mapMessage);
+}
+
+export async function markNotificationRead(id: string): Promise<CrmMessage> {
+  const data = await api<Record<string, unknown>>(`/api/crm/notifications/${id}/read`, { method: "POST" });
+  return mapMessage(asRecord(requireField(data, "message")));
 }
 
 export async function listPayments(query: ListPaymentsQuery = {}): Promise<CrmPaginated<CrmPayment>> {

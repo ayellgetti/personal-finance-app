@@ -9,6 +9,7 @@ import { CRM_PERMISSIONS, type CrmContact } from "@/types/crm";
 const state = vi.hoisted(() => ({ permissions: [] as string[] }));
 const remote = vi.hoisted(() => ({
   listContacts: vi.fn(),
+  importContacts: vi.fn(),
   createContact: vi.fn(),
   updateContact: vi.fn(),
   removeContact: vi.fn(),

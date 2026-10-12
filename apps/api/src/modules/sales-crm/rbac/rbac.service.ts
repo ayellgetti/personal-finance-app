@@ -38,10 +38,17 @@ export class RbacService {
   ) {}
 
   async ensureCatalog(actorId: string): Promise<void> {
-    if ((await this.permissions.count()) > 0) {
+    const existing = await this.permissions.count();
+    if (existing === 0) {
+      await this.bootstrapCatalog(actorId);
       return;
     }
+    if (existing < CRM_PERMISSIONS.length) {
+      await this.syncMissingPermissions(actorId);
+    }
+  }
 
+  private async bootstrapCatalog(actorId: string): Promise<void> {
     for (const permission of CRM_PERMISSIONS) {
       await this.permissions.create({
         code: permission.code,
@@ -70,6 +77,40 @@ export class RbacService {
         if (!permission) {
           throw new HttpError(500, `CRM permission ${code} is missing after catalog bootstrap`);
         }
+        await this.rolePermissions.create({
+          roleId: role.id,
+          permissionId: permission.id,
+          createdBy: actorId,
+          updatedBy: actorId,
+        });
+      }
+    }
+  }
+
+  private async syncMissingPermissions(actorId: string): Promise<void> {
+    const missing: string[] = [];
+    for (const permission of CRM_PERMISSIONS) {
+      const existing = await this.permissions.findOne({ code: permission.code });
+      if (existing) continue;
+      missing.push(permission.code);
+      await this.permissions.create({
+        code: permission.code,
+        name: permission.name,
+        createdBy: actorId,
+        updatedBy: actorId,
+      });
+    }
+    if (missing.length === 0) return;
+
+    for (const slug of CRM_ROLE_SLUGS) {
+      const role = await this.roles.findOne({ slug });
+      if (!role) continue;
+      const grants = await this.rolePermissions.read({ roleId: role.id, isActive: 1 });
+      const granted = new Set(grants.map((grant) => grant.permissionId));
+      for (const code of CRM_ROLE_PERMISSIONS[slug]) {
+        if (!missing.includes(code)) continue;
+        const permission = await this.permissions.findOne({ code });
+        if (!permission || granted.has(permission.id)) continue;
         await this.rolePermissions.create({
           roleId: role.id,
           permissionId: permission.id,

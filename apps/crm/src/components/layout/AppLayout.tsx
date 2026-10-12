@@ -2,6 +2,7 @@ import { type ReactNode, useState } from "react";
 import { Menu, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { UserMenu } from "@/components/UserMenu";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -132,6 +133,7 @@ export function AppLayout({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {actions}
+            <NotificationBell />
             <ThemeToggle />
             <UserMenu onProfile={() => onSelect("profile")} />
           </div>

@@ -60,6 +60,24 @@ export const listContacts = vi.fn(async (query?: { type?: string; search?: strin
 export const createContact = vi.fn();
 export const updateContact = vi.fn();
 export const removeContact = vi.fn();
+export const importContacts = vi.fn();
+export const listInvoices = vi.fn(async () => emptyPage());
+export const fetchInvoice = vi.fn();
+export const createInvoice = vi.fn();
+export const updateInvoice = vi.fn();
+export const removeInvoice = vi.fn();
+export const listTemplates = vi.fn(async () => emptyPage());
+export const createTemplate = vi.fn();
+export const updateTemplate = vi.fn();
+export const removeTemplate = vi.fn();
+export const listRecipients = vi.fn(async () => []);
+export const listMessages = vi.fn(async () => emptyPage());
+export const createMessage = vi.fn();
+export const updateMessage = vi.fn();
+export const cancelMessage = vi.fn();
+export const removeMessage = vi.fn();
+export const listNotifications = vi.fn(async () => emptyPage());
+export const markNotificationRead = vi.fn();
 export const fetchContactDetail = vi.fn(async (id: string): Promise<CrmContactDetail> => ({
   contact: {
     id,

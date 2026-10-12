@@ -6,6 +6,7 @@ import { contactController } from "./contact.controller";
 import {
   createContactBodySchema,
   contactIdParamsSchema,
+  importContactsBodySchema,
   listContactsQuerySchema,
   removeContactBodySchema,
   updateContactBodySchema,
@@ -28,6 +29,15 @@ contactRouter.post(
   validateBody(createContactBodySchema),
   asyncHandler(async (req, res) => {
     await contactController.create(req, res);
+  }),
+);
+
+contactRouter.post(
+  "/import",
+  requirePermission("crm.contacts.create"),
+  validateBody(importContactsBodySchema),
+  asyncHandler(async (req, res) => {
+    await contactController.import(req, res);
   }),
 );
 

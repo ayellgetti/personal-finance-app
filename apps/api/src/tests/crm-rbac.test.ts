@@ -265,6 +265,30 @@ test("authenticated user with no CRM role is 403 after bootstrap already happene
   );
 });
 
+test("catalog sync adds missing permissions and grants them to built-in roles", async () => {
+  const { rbac, permissions, roles, rolePermissions } = fakeRbac();
+  permissions.push({
+    id: "perm-existing",
+    code: "crm.dashboard.read",
+    name: "View dashboard",
+    isActive: 1,
+  });
+  roles.push({ id: "role-admin", name: "Admin", slug: "admin", isActive: 1 });
+  await rbac.ensureCatalog("user-1");
+  assert.ok(permissions.some((permission) => permission.code === "crm.invoices.read"));
+  assert.ok(permissions.some((permission) => permission.code === "crm.invoices.create"));
+  assert.ok(permissions.some((permission) => permission.code === "crm.communications.read"));
+  assert.ok(permissions.some((permission) => permission.code === "crm.communications.create"));
+  const invoiceRead = permissions.find((permission) => permission.code === "crm.invoices.read");
+  assert.ok(invoiceRead);
+  assert.ok(
+    rolePermissions.some(
+      (grant) => grant.roleId === "role-admin" && grant.permissionId === invoiceRead.id,
+    ),
+  );
+  assert.equal(roles.length, 1);
+});
+
 test("catalog bootstrap is skipped when Permission is not empty", async () => {
   const { rbac, permissions, roles } = fakeRbac();
   await rbac.ensureCatalog("user-1");

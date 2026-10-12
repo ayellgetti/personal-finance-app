@@ -15,6 +15,13 @@ import {
   type CrmPaymentModel,
 } from "../../../models/index";
 import { actorCreate, actorDelete, actorUpdate, requireActive } from "../crm.util";
+import {
+  contactRowIssue,
+  normalizeContactType,
+  normalizeMobile,
+  type ContactImportSkip,
+  type ParsedContactRow,
+} from "./contact.import";
 import type {
   CreateContactBody,
   ListContactsQuery,
@@ -156,6 +163,46 @@ export class ContactService {
     await this.getById(input.id);
     await this.model.update({ id: input.id }, actorDelete(actorId));
     return { id: input.id, removed: true };
+  }
+
+  async importRows(actorId: string, rows: ParsedContactRow[], skipped: ContactImportSkip[] = []) {
+    const contacts: CrmContact[] = [];
+    const seen = new Set<string>();
+    for (const row of rows) {
+      const issue = contactRowIssue(row);
+      const mobile = normalizeMobile(row.mobile);
+      if (issue) {
+        skipped.push({ row: row.row, mobile, reason: issue });
+        continue;
+      }
+      const type = normalizeContactType(row.type);
+      if (!type) {
+        skipped.push({ row: row.row, mobile, reason: "Type must be lead, client, vendor, or employee" });
+        continue;
+      }
+      if (seen.has(mobile)) {
+        skipped.push({ row: row.row, mobile, reason: "Duplicate mobile in this import" });
+        continue;
+      }
+      seen.add(mobile);
+      const existing = await this.model.findOne({ mobile, isActive: 1 });
+      if (existing) {
+        skipped.push({ row: row.row, mobile, reason: "Mobile already exists" });
+        continue;
+      }
+      contacts.push(
+        await this.model.create({
+          name: row.name.trim(),
+          mobile,
+          type,
+          email: null,
+          companyName: null,
+          notes: null,
+          ...actorCreate(actorId),
+        }),
+      );
+    }
+    return { created: contacts.length, skipped, contacts };
   }
 
   private async assertUniqueMobile(mobile: string, excludeId?: string) {

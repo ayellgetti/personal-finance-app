@@ -5,9 +5,11 @@ import { EmptyState, ErrorState, ForbiddenState, LoadingState } from "@/componen
 import { FilterSortBar } from "@/components/FilterSortSheet";
 import { FieldError, NativeSelect } from "@/components/forms/NativeSelect";
 import { FormSheet } from "@/components/forms/FormSheet";
+import { ImportContactsSheet } from "@/components/forms/ImportContactsSheet";
 import { LoadMore } from "@/components/LoadMore";
 import { ContactHubSheet } from "@/components/records/ContactHubSheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -226,6 +228,7 @@ export default function Contacts() {
   const [selected, setSelected] = useState<CrmContact | null>(null);
   const [editing, setEditing] = useState<CrmContact | null>(null);
   const [createOpen, setCreateOpen] = useCreateIntent(canCreate);
+  const [importOpen, setImportOpen] = useState(false);
 
   const debouncedSearch = useDebounced(search, 300);
 
@@ -287,6 +290,12 @@ export default function Contacts() {
           addLabel="New"
         />
 
+      {canCreate ? (
+        <Button type="button" variant="outline" className="h-11 w-full rounded-xl" onClick={() => setImportOpen(true)}>
+          Import name, mobile, type
+        </Button>
+      ) : null}
+
       {list.status === "loading" ? <LoadingState label="Loading contacts…" /> : null}
       {list.status === "error" ? <ErrorState message={list.errorMessage} onRetry={list.reload} /> : null}
       {list.status === "forbidden" ? <ForbiddenState label="contacts" /> : null}
@@ -313,6 +322,7 @@ export default function Contacts() {
         }}
         onRemoved={list.reload}
       />
+      <ImportContactsSheet open={importOpen} onOpenChange={setImportOpen} onImported={list.reload} />
       <ContactFormSheet
         open={createOpen || Boolean(editing)}
         onOpenChange={(next) => {

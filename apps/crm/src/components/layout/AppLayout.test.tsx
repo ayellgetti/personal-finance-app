@@ -63,7 +63,7 @@ describe("admin nav", () => {
     const work = visibleNavItems([CRM_PERMISSIONS.dashboardRead])
       .filter((item) => item.group === "Work")
       .map((item) => item.id);
-    expect(work).toEqual(["tasks", "reminders"]);
+    expect(work).toEqual(["tasks", "reminders", "communications"]);
   });
 
   it("filters admin items from the nav catalog without mutating other groups", () => {

@@ -1,5 +1,6 @@
 import { Menu, Plus, User } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +43,8 @@ export function MobileHeader({
             <Plus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
           </button>
         ) : null}
+
+        <NotificationBell />
 
         <NavLink
           to="/profile"

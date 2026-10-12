@@ -1,4 +1,4 @@
-import { Bell, FolderPlus, ListTodo, PhoneCall, UserPlus, Wallet } from "lucide-react";
+import { Bell, FolderPlus, ListTodo, Mail, PhoneCall, UserPlus, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CRM_PERMISSIONS } from "@/types/crm";
@@ -54,6 +54,13 @@ const ACTIONS: QuickAction[] = [
     icon: Bell,
     to: "/calendar?new=1",
     permission: CRM_PERMISSIONS.calendarCreate,
+  },
+  {
+    label: "Send message",
+    hint: "Email, SMS, or in-app",
+    icon: Mail,
+    to: "/communications?new=1",
+    permission: CRM_PERMISSIONS.communicationsCreate,
   },
 ];
 

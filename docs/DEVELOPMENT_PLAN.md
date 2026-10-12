@@ -393,12 +393,12 @@ Second product on the same Express/Prisma API. Frontend is `apps/crm`. Backend m
 
 - Same `User` login identity as Freedom Planner. Staff created later by CRM Admin still need finance `User` fields (`dob`, `gender`, …).
 - RBAC is CRM-only. Finance routes stay `requireAuth` + `userId` ownership.
-- Unused Prisma `Contact` stub stays unused. New tables are `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmTask`, `CrmCalendarEvent` plus `Role` / `Permission` / `RolePermission` / `UserRole`.
+- Unused Prisma `Contact` stub stays unused. New tables are `CrmContact`, `CrmEnquiry`, `CrmFollowUp`, `CrmClient`, `CrmPayment`, `CrmInvoice`, `CrmInvoiceLine`, `CrmMessageTemplate`, `CrmMessage`, `CrmTask`, `CrmCalendarEvent` plus `Role` / `Permission` / `RolePermission` / `UserRole`.
 - No `tenantId`. All CRM rows are company-wide; access is Role + Permission.
 - No second Prisma client, no second API codebase, no `/api/v1`, no envelope change. Extra Compose API containers (`api-travel`, `api-banque`) are the same image pointed at different databases.
 - Do not fold CRM into `apps/web`. Do not copy `apps/crm` into `apps/travel-crm` / `apps/banque-crm`. Do not scaffold banquet-specific entities.
 
-**RBAC bootstrap (no seed script):** if `Permission` is empty, insert the catalog and four roles (`admin`, `manager`, `sales`, `viewer`). If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`. Later authenticated users with no CRM role get `403` on `/api/crm/*` (they can still use `/api/auth` and finance). `POST /api/crm/public/enquiries` is unauthenticated banquet or travel intake and is not behind `requireAuth`. Permissions are loaded per request, not stored in the JWT.
+**RBAC bootstrap (no seed script):** if `Permission` is empty, insert the catalog and four roles (`admin`, `manager`, `sales`, `viewer`). If the catalog already exists but is missing codes, those codes are inserted and granted to the four built-in roles. If `UserRole` is empty, the first authenticated `GET /api/crm/me` caller becomes `admin`. Later authenticated users with no CRM role get `403` on `/api/crm/*` (they can still use `/api/auth` and finance). `POST /api/crm/public/enquiries` is unauthenticated banquet or travel intake and is not behind `requireAuth`. Permissions are loaded per request, not stored in the JWT.
 
 Do not start D2 while D1 typecheck, tests, or migration are failing.
 
@@ -500,4 +500,16 @@ Brings `apps/mobile` to the authenticated feature set of `apps/crm` with phone l
 List screens other than Home use one Filter & Sort sheet (`components/FilterSortSheet.tsx`): search stays on the page, and the sheet adds applied chips, sort, ascending or descending order, and the screen's existing filters. Profile stays a settings form. Sort runs on the loaded rows (`lib/mobile/sort.ts`); it does not add an API sort query.
 
 **Validate (2026-10-10):** `pnpm --filter mobile test` — 31 files, 112 tests, exit 0. `pnpm --filter mobile typecheck` — exit 0. `pnpm --filter mobile lint` — 0 errors, 5 existing `react-refresh/only-export-components` warnings. API and CRM source were not changed for the filter sheet.
+
+### Phase D11 — Communications
+
+**Status: COMPLETED**
+
+Staff can send email, SMS, and in-app notifications from a saved template or by writing the message at send time. Placeholders such as `{{name}}`, `{{mobile}}`, `{{email}}`, and `{{company}}` are filled from the contact (and any extra variables) when the message is saved, and that rendered text is what goes out later. Every message can be scheduled; omitting the time sends it immediately. Scheduled rows can be changed or cancelled until the sender claims them.
+
+`CrmMessageTemplate` and `CrmMessage` live under `/api/crm/communications` with `crm.communications.*`. The signed-in staff member's in-app inbox is `GET /api/crm/notifications` (any CRM role, only their own rows). Delivery uses the existing SMTP and Twilio settings. When those are unset outside production, the message is logged and marked sent. A timer in the API process claims due rows every 15 seconds. There is no separate queue. A send that is still marked `sending` after two minutes can be claimed again.
+
+`apps/crm` and `apps/mobile` both have a Communications screen (messages and templates) and a header inbox for in-app notifications. The unused platform `Notification` stub stays unused.
+
+**Validate:** `pnpm --filter api test` (communications and RBAC), `pnpm --filter api typecheck`, `pnpm --filter crm typecheck`, `pnpm --filter mobile typecheck`.
 

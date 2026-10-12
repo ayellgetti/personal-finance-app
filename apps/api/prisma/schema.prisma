@@ -61,6 +61,7 @@ model User {
   assignedCrmEnquiries       CrmEnquiry[]       @relation("CrmEnquiryAssignedTo")
   assignedCrmTasks           CrmTask[]          @relation("CrmTaskAssignee")
   assignedCrmCalendarEvents  CrmCalendarEvent[] @relation("CrmCalendarEventAssignee")
+  crmMessagesReceived        CrmMessage[]       @relation("CrmMessageRecipient")
 }
 
 model FinancialProfile {
@@ -763,6 +764,13 @@ enum CrmPaymentStatus {
   refunded
 }
 
+enum CrmInvoiceStatus {
+  draft
+  issued
+  paid
+  cancelled
+}
+
 enum CrmPaymentReferenceType {
   client
   vendor
@@ -872,6 +880,8 @@ model CrmContact {
   client         CrmClient?
   tasks          CrmTask[]
   calendarEvents CrmCalendarEvent[]
+  invoices       CrmInvoice[]
+  messages       CrmMessage[]
 
   @@index([mobile])
   @@index([type])
@@ -1047,4 +1057,129 @@ model CrmCalendarEvent {
   @@index([assigneeId])
   @@index([contactId])
   @@index([enquiryId])
+}
+
+model CrmInvoice {
+  id           String           @id @default(uuid())
+  /// Stable document number, for example INV-2026-0001. Unique even after soft-delete so reprints stay distinct.
+  number       String           @unique
+  contactId    String
+  status       CrmInvoiceStatus @default(draft)
+  issuedAt     DateTime
+  dueAt        DateTime?
+  currency     String           @default("INR")
+  notes        String?
+  /// Copied from the contact when the invoice is saved so a later contact edit does not change a stored invoice.
+  billToName   String
+  billToMobile String
+  taxPercent   Float            @default(0)
+  subtotal     Float
+  taxAmount    Float
+  total        Float
+  isActive     Int              @default(1)
+  createdBy    String?
+  createdAt    DateTime         @default(now())
+  updatedBy    String?
+  updatedAt    DateTime         @updatedAt
+  deletedBy    String?
+  deletedAt    DateTime?
+
+  contact CrmContact       @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  lines   CrmInvoiceLine[]
+
+  @@index([contactId])
+  @@index([status])
+  @@index([issuedAt])
+}
+
+model CrmInvoiceLine {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Float
+  unitPrice   Float
+  amount      Float
+  sortOrder   Int
+  isActive    Int      @default(1)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+  deletedBy   String?
+  deletedAt   DateTime?
+
+  invoice CrmInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+enum CrmChannel {
+  email
+  sms
+  in_app
+}
+
+enum CrmMessageStatus {
+  scheduled
+  sending
+  sent
+  failed
+  cancelled
+}
+
+/// Reusable email, SMS, or in-app copy. Placeholders such as {{name}} are filled when a message is created.
+model CrmMessageTemplate {
+  id        String     @id @default(uuid())
+  name      String
+  channel   CrmChannel
+  subject   String?
+  body      String
+  isActive  Int        @default(1)
+  createdBy String?
+  createdAt DateTime   @default(now())
+  updatedBy String?
+  updatedAt DateTime   @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  messages CrmMessage[]
+
+  @@index([channel])
+  @@index([name])
+}
+
+/// One outbound email, SMS, or in-app notification. Subject and body are stored already rendered.
+model CrmMessage {
+  id              String           @id @default(uuid())
+  channel         CrmChannel
+  templateId      String?
+  subject         String?
+  body            String
+  contactId       String?
+  recipientUserId String?
+  toAddress       String?
+  variables       Json             @default("{}")
+  scheduledAt     DateTime
+  status          CrmMessageStatus @default(scheduled)
+  sentAt          DateTime?
+  errorMessage    String?
+  read            Int              @default(0)
+  readAt          DateTime?
+  isActive        Int              @default(1)
+  createdBy       String?
+  createdAt       DateTime         @default(now())
+  updatedBy       String?
+  updatedAt       DateTime         @updatedAt
+  deletedBy       String?
+  deletedAt       DateTime?
+
+  template  CrmMessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  contact   CrmContact?         @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  recipient User?               @relation("CrmMessageRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  @@index([status, scheduledAt])
+  @@index([channel])
+  @@index([contactId])
+  @@index([recipientUserId, status])
+  @@index([templateId])
 }
