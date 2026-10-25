@@ -35,6 +35,7 @@ import {
   listRoles,
   listTasks,
   listCrmUsers,
+  resetCrmUserPassword,
   updateCalendarEvent,
   updateRole,
   updateTaskStatus,
@@ -698,6 +699,38 @@ describe("CRM modules", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Table view" }));
     expect(await screen.findByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+  });
+
+  it("resets a listed user's password", async () => {
+    const grace = {
+      id: "user-2",
+      firstName: "Grace",
+      lastName: "Hopper",
+      email: "grace@example.com",
+      mobileNo: "+919111122222",
+      dob: "1906-12-09",
+      gender: "female",
+      countryCode: "+91",
+      roleIds: ["role-admin"],
+    };
+    listCrmUsers.mockResolvedValue(emptyPage([grace]));
+    listRoles.mockResolvedValue([{ id: "role-admin", name: "Admin", slug: "admin", permissionIds: [] }]);
+    resetCrmUserPassword.mockResolvedValue(grace);
+    renderCrm(<UsersModule />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Reset password for Grace Hopper" }));
+    expect(await screen.findByRole("heading", { name: "Reset password" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "short" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "other" } });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    expect(await screen.findByText("Password must be 8 to 72 characters")).toBeInTheDocument();
+    expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
+    expect(resetCrmUserPassword).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "fresh-password" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "fresh-password" } });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await waitFor(() => expect(resetCrmUserPassword).toHaveBeenCalledWith("user-2", "fresh-password"));
   });
 
   it("switches roles between table and cards", async () => {

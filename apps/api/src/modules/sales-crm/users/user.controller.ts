@@ -4,6 +4,7 @@ import { currentUserId, requireParamId } from "../crm.http";
 import type {
   CreateCrmUserBody,
   ListCrmUsersQuery,
+  ResetCrmUserPasswordBody,
   UpdateCrmUserBody,
 } from "./user.request";
 import { crmUserService, type CrmUserService } from "./user.service";
@@ -33,6 +34,16 @@ export class CrmUserController extends BaseController {
       req.body as UpdateCrmUserBody,
     );
     this.sendSuccess(req, res, { user }, "CRM user updated");
+  }
+
+  async resetPassword(req: Request, res: Response) {
+    const body = req.body as ResetCrmUserPasswordBody;
+    const user = await this.service.resetPassword(
+      currentUserId(req),
+      requireParamId(req, "User"),
+      body.password,
+    );
+    this.sendSuccess(req, res, { user }, "CRM user password reset");
   }
 }
 

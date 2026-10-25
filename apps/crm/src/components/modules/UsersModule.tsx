@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   EditAction,
   Field,
+  IconAction,
   ModulePage,
   ModuleStatus,
   NativeSelect,
@@ -58,6 +60,15 @@ function validate(form: FormState, isCreate: boolean): Record<string, string> {
   return errors;
 }
 
+function validateReset(password: string, confirm: string): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (password.length < 8 || password.length > 72) {
+    errors.password = "Password must be 8 to 72 characters";
+  }
+  if (password !== confirm) errors.confirm = "Passwords do not match";
+  return errors;
+}
+
 function toCreateInput(form: FormState): CreateCrmUserInput {
   return {
     firstName: form.firstName.trim(),
@@ -82,6 +93,11 @@ export function UsersModule() {
   const [editing, setEditing] = useState<CrmStaffUser | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [resetUser, setResetUser] = useState<CrmStaffUser | null>(null);
+  const [nextPassword, setNextPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetErrors, setResetErrors] = useState<Record<string, string>>({});
+  const [resetBusy, setResetBusy] = useState(false);
 
   const reload = () => {
     void crm.loadUsers();
@@ -131,10 +147,25 @@ export function UsersModule() {
     setSheetOpen(true);
   };
 
+  const openReset = (user: CrmStaffUser) => {
+    setResetUser(user);
+    setNextPassword("");
+    setConfirmPassword("");
+    setResetErrors({});
+  };
+
   const userActions = (user: CrmStaffUser) => (
     <RowActions>
       {crm.hasPermission(CRM_PERMISSIONS.usersUpdate) ? (
-        <EditAction label="Edit roles" onClick={() => openEdit(user)} />
+        <>
+          <EditAction label="Edit roles" onClick={() => openEdit(user)} />
+          <IconAction
+            label={`Reset password for ${user.firstName} ${user.lastName}`}
+            onClick={() => openReset(user)}
+          >
+            <KeyRound className="h-4 w-4" />
+          </IconAction>
+        </>
       ) : null}
     </RowActions>
   );
@@ -165,6 +196,23 @@ export function UsersModule() {
       // toast handled in store
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onResetPassword = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!resetUser) return;
+    const nextErrors = validateReset(nextPassword, confirmPassword);
+    setResetErrors(nextErrors);
+    if (Object.keys(nextErrors).length) return;
+    setResetBusy(true);
+    try {
+      await crm.resetUserPassword(resetUser.id, nextPassword);
+      setResetUser(null);
+    } catch {
+      // toast handled in store
+    } finally {
+      setResetBusy(false);
     }
   };
 
@@ -355,6 +403,51 @@ export function UsersModule() {
             </p>
           ) : null}
         </fieldset>
+      </SideSheet>
+
+      <SideSheet
+        open={resetUser !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetUser(null);
+            setNextPassword("");
+            setConfirmPassword("");
+            setResetErrors({});
+          }
+        }}
+        title="Reset password"
+        description={
+          resetUser
+            ? `${resetUser.firstName} ${resetUser.lastName} will be signed out on every device.`
+            : undefined
+        }
+        onSubmit={onResetPassword}
+        footer={
+          <Button type="submit" className="rounded-xl" disabled={resetBusy}>
+            Set password
+          </Button>
+        }
+      >
+        <Field id="reset-password" label="New password" error={resetErrors.password}>
+          <Input
+            id="reset-password"
+            type="password"
+            autoComplete="new-password"
+            value={nextPassword}
+            onChange={(event) => setNextPassword(event.target.value)}
+            className="rounded-xl"
+          />
+        </Field>
+        <Field id="reset-password-confirm" label="Confirm password" error={resetErrors.confirm}>
+          <Input
+            id="reset-password-confirm"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            className="rounded-xl"
+          />
+        </Field>
       </SideSheet>
     </ModulePage>
   );

@@ -150,7 +150,7 @@ const PERMISSION_DESCRIPTIONS: Record<CrmPermissionCode, string> = {
   "crm.calendar.delete": "Remove calendar events that are not locked by a paid booking.",
   "crm.users.read": "See CRM staff accounts and their assigned roles.",
   "crm.users.create": "Create CRM staff accounts and assign roles.",
-  "crm.users.update": "Change staff profile details and role assignments.",
+  "crm.users.update": "Change staff profile details, role assignments, and passwords.",
   "crm.roles.read": "See roles and the permissions granted to each role.",
   "crm.roles.update": "Create roles and change role names or granted permissions.",
 };

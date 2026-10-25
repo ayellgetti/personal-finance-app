@@ -7,17 +7,18 @@ import { ListRow } from "@/components/ListRow";
 import { LoadMore } from "@/components/LoadMore";
 import { FilterSortBar } from "@/components/FilterSortSheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { COUNTRY_DIAL_CODES } from "@/lib/auth/country-dial-codes";
-import { createCrmUser, listCrmUsers, listRoles, updateCrmUser } from "@/lib/mobile/remote";
+import { createCrmUser, listCrmUsers, listRoles, resetCrmUserPassword, updateCrmUser } from "@/lib/mobile/remote";
 import { useMobile } from "@/lib/mobile/store";
 import { useCreateIntent } from "@/lib/mobile/use-create-intent";
 import { useDebounced } from "@/lib/mobile/use-debounced";
 import { compareText, type SortOrder } from "@/lib/mobile/sort";
 import { usePagedList } from "@/lib/mobile/use-paged-list";
 import { useResource } from "@/lib/mobile/use-resource";
-import { validateStaffUser } from "@/lib/mobile/validate";
+import { validateStaffPasswordReset, validateStaffUser } from "@/lib/mobile/validate";
 import { CRM_PERMISSIONS, type CrmRoleDetail, type CrmStaffUser } from "@/types/crm";
 
 type StaffForm = {
@@ -127,7 +128,7 @@ function StaffSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={user ? "Edit staff" : "New staff"}
-      description={user ? "Update profile and roles. Passwords are changed by the user." : "Create a CRM login."}
+      description={user ? "Update profile and roles." : "Create a CRM login."}
       submitLabel={user ? "Save staff" : "Create staff"}
       busy={busy}
       onSubmit={onSubmit}
@@ -211,6 +212,85 @@ function StaffSheet({
   );
 }
 
+function ResetPasswordSheet({
+  user,
+  onOpenChange,
+}: {
+  user: CrmStaffUser | null;
+  onOpenChange: (next: boolean) => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setPassword("");
+    setConfirm("");
+    setErrors({});
+  }, [user]);
+
+  const onSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user || busy) return;
+    const nextErrors = validateStaffPasswordReset({ password, confirm });
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast.error(Object.values(nextErrors)[0] ?? "Check the password");
+      return;
+    }
+    setBusy(true);
+    try {
+      await resetCrmUserPassword(user.id, password);
+      toast.success("Password reset");
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to reset password");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const name = user ? `${user.firstName} ${user.lastName}`.trim() : "This person";
+
+  return (
+    <FormSheet
+      open={Boolean(user)}
+      onOpenChange={onOpenChange}
+      title="Reset password"
+      description={`${name} will be signed out on every device.`}
+      submitLabel="Set password"
+      busy={busy}
+      onSubmit={onSubmit}
+    >
+      <div className="space-y-2">
+        <Label htmlFor="reset-password">New password</Label>
+        <Input
+          id="reset-password"
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className="h-11 rounded-xl text-base"
+        />
+        <FieldError message={errors.password} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="reset-password-confirm">Confirm password</Label>
+        <Input
+          id="reset-password-confirm"
+          type="password"
+          autoComplete="new-password"
+          value={confirm}
+          onChange={(event) => setConfirm(event.target.value)}
+          className="h-11 rounded-xl text-base"
+        />
+        <FieldError message={errors.confirm} />
+      </div>
+    </FormSheet>
+  );
+}
+
 export default function Users() {
   const { permissions } = useMobile();
   const canRead = permissions.includes(CRM_PERMISSIONS.usersRead);
@@ -223,6 +303,7 @@ export default function Users() {
   const [order, setOrder] = useState<SortOrder>("asc");
   const [roleId, setRoleId] = useState("");
   const [editing, setEditing] = useState<CrmStaffUser | null>(null);
+  const [resetting, setResetting] = useState<CrmStaffUser | null>(null);
   const [createOpen, setCreateOpen] = useCreateIntent(canCreate);
   const search = useDebounced(query, 300);
 
@@ -306,6 +387,19 @@ export default function Users() {
                 </span>
               }
               onClick={canUpdate ? () => setEditing(user) : undefined}
+              footer={
+                canUpdate ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-9 rounded-xl"
+                    aria-label={`Reset password for ${user.firstName} ${user.lastName}`}
+                    onClick={() => setResetting(user)}
+                  >
+                    Reset password
+                  </Button>
+                ) : undefined
+              }
             />
           ))}
           <LoadMore hasMore={list.hasMore} loading={list.loadingMore} onLoadMore={list.loadMore} />
@@ -323,6 +417,7 @@ export default function Users() {
         roles={roleItems}
         onSaved={list.reload}
       />
+      <ResetPasswordSheet user={resetting} onOpenChange={(next) => { if (!next) setResetting(null); }} />
     </div>
   );
 }

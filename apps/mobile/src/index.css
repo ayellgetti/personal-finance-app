@@ -187,6 +187,8 @@
   body.printing-invoice .crm-invoice-print,
   body.printing-invoice .crm-invoice-print * {
     visibility: visible;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   body.printing-invoice .crm-invoice-print {
@@ -194,6 +196,7 @@
     left: 0;
     top: 0;
     width: 100%;
+    min-width: 0;
     background: white;
     color: black;
   }

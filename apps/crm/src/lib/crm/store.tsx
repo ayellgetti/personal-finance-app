@@ -41,6 +41,7 @@ import {
   removeFollowUp as removeFollowUpRemote,
   removePayment as removePaymentRemote,
   removeTask as removeTaskRemote,
+  resetCrmUserPassword as resetCrmUserPasswordRemote,
   updateCalendarEvent as updateCalendarEventRemote,
   updateClient as updateClientRemote,
   updateContact as updateContactRemote,
@@ -185,6 +186,7 @@ type CrmContextValue = {
   loadUsers: (query?: ListCrmUsersQuery) => Promise<void>;
   createUser: (input: CreateCrmUserInput) => Promise<CrmStaffUser>;
   updateUser: (id: string, input: UpdateCrmUserInput) => Promise<CrmStaffUser>;
+  resetUserPassword: (id: string, password: string) => Promise<CrmStaffUser>;
   roles: ListCache<CrmRoleDetail>;
   permissionsCatalog: ListCache<CrmPermission>;
   loadRoles: () => Promise<void>;
@@ -739,6 +741,18 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const resetUserPassword = useCallback(async (id: string, password: string) => {
+    try {
+      const next = await resetCrmUserPasswordRemote(id, password);
+      setUsers((current) => ({ ...current, items: upsertById(current.items, next) }));
+      toast.success("Password reset");
+      return next;
+    } catch (error) {
+      toast.error(mutationMessage(error));
+      throw error;
+    }
+  }, []);
+
   const loadRoles = useCallback(async () => {
     setRoles((current) => ({ ...current, status: "loading", errorMessage: null }));
     try {
@@ -836,6 +850,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       loadUsers,
       createUser,
       updateUser,
+      resetUserPassword,
       roles,
       permissionsCatalog,
       loadRoles,
@@ -893,6 +908,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
       loadUsers,
       createUser,
       updateUser,
+      resetUserPassword,
       roles,
       permissionsCatalog,
       loadRoles,

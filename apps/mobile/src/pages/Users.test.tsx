@@ -12,6 +12,7 @@ const remote = vi.hoisted(() => ({
   listRoles: vi.fn(),
   createCrmUser: vi.fn(),
   updateCrmUser: vi.fn(),
+  resetCrmUserPassword: vi.fn(),
 }));
 
 vi.mock("@/lib/mobile/store", () => ({ useMobile: () => ({ permissions: state.permissions }) }));
@@ -75,5 +76,22 @@ describe("users", () => {
         expect.not.objectContaining({ password: expect.anything() }),
       ),
     );
+  });
+
+  it("resets one staff password from the list", async () => {
+    remote.resetCrmUserPassword.mockResolvedValue(staff);
+    renderMobile(<Users />, ["/users"]);
+    fireEvent.click(await screen.findByRole("button", { name: "Reset password for Asha Rao" }));
+    expect(await screen.findByRole("heading", { name: "Reset password" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "short" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "short" } });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    expect(await screen.findByText("Password must be 8 to 72 characters")).toBeInTheDocument();
+    expect(remote.resetCrmUserPassword).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("New password"), { target: { value: "fresh-password" } });
+    fireEvent.change(screen.getByLabelText("Confirm password"), { target: { value: "fresh-password" } });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await waitFor(() => expect(remote.resetCrmUserPassword).toHaveBeenCalledWith("u1", "fresh-password"));
   });
 });

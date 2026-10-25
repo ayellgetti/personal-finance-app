@@ -150,6 +150,7 @@ export const removeCalendarEvent = vi.fn();
 export const listCrmUsers = vi.fn(async () => emptyPage());
 export const createCrmUser = vi.fn();
 export const updateCrmUser = vi.fn();
+export const resetCrmUserPassword = vi.fn();
 export const listRoles = vi.fn(async (): Promise<CrmRoleDetail[]> => []);
 export const listPermissions = vi.fn(async (): Promise<CrmPermission[]> => []);
 export const createRole = vi.fn();

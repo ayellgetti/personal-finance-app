@@ -207,6 +207,15 @@ export function validatePasswordChange(input: {
   return errors;
 }
 
+export function validateStaffPasswordReset(input: { password: string; confirm: string }): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (input.password.length < 8 || input.password.length > 72) {
+    errors.password = "Password must be 8 to 72 characters";
+  }
+  if (input.password !== input.confirm) errors.confirm = "Passwords do not match";
+  return errors;
+}
+
 export function validateStaffUser(input: {
   firstName: string;
   lastName: string;

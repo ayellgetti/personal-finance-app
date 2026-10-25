@@ -237,7 +237,7 @@ function NotesSection({
   return (
     <section
       aria-labelledby={`${id}-heading`}
-      className="mt-3 rounded-lg border border-amber-100 bg-stone-50/70 p-3 print:border-black print:bg-white print:shadow-none"
+      className="flex min-w-0 flex-col rounded-lg border border-amber-100 bg-stone-50/70 p-3 print:border-black print:bg-white print:shadow-none"
     >
       <h2 id={`${id}-heading`} className="mb-2 font-display text-sm font-semibold text-amber-800">
         {title}
@@ -249,7 +249,7 @@ function NotesSection({
         placeholder={placeholder}
         rows={10}
         aria-label={title}
-        className="min-h-[12rem] rounded-xl border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 print:hidden"
+        className="min-h-[12rem] flex-1 rounded-xl border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 print:hidden"
       />
       <PrintValue
         value={value}
@@ -405,7 +405,7 @@ export default function BanquetChecklist() {
           Final checklist to be handed over to the Event Day Manager
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
           <Field id="client-name" label="Client Name">
             <Input
               id="client-name"
@@ -427,66 +427,6 @@ export default function BanquetChecklist() {
             />
             <PrintValue value={eventInfo.mobileNo} className={printFieldClass} />
           </Field>
-          <Field id="event-type" label="Event Type">
-            <NativeSelect
-              id="event-type"
-              value={eventInfo.eventType}
-              onChange={(value) => setEvent("eventType", value)}
-              className={inputClass}
-            >
-              <option value="">Select event...</option>
-              {BANQUET_EVENT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </NativeSelect>
-            <PrintValue value={eventInfo.eventType} className={printFieldClass} />
-          </Field>
-          <Field id="event-date" label="Event Date">
-            <Input
-              id="event-date"
-              type="date"
-              value={eventInfo.eventDate}
-              onChange={(event) => setEvent("eventDate", event.target.value)}
-              className={inputClass}
-            />
-            <PrintValue
-              value={eventInfo.eventDate ? formatDate(eventInfo.eventDate) : ""}
-              className={printFieldClass}
-            />
-          </Field>
-          <Field id="event-time" label="Event Time">
-            <NativeSelect
-              id="event-time"
-              value={eventInfo.eventTime}
-              onChange={(value) => setEvent("eventTime", value)}
-              className={inputClass}
-            >
-              <option value="">Select time...</option>
-              {BANQUET_EVENT_TIMES.map((slot) => (
-                <option key={slot.slug} value={slot.slug}>
-                  {slot.name}
-                </option>
-              ))}
-            </NativeSelect>
-            <PrintValue
-              value={eventTimeBySlug(eventInfo.eventTime)?.name ?? ""}
-              className={printFieldClass}
-            />
-          </Field>
-          <Field id="expected-guests" label="No. of Guests">
-            <Input
-              id="expected-guests"
-              type="number"
-              min={1}
-              value={eventInfo.guests}
-              onChange={(event) => setEvent("guests", event.target.value)}
-              placeholder="Guests"
-              className={inputClass}
-            />
-            <PrintValue value={eventInfo.guests} className={printFieldClass} />
-          </Field>
           <Field id="menu-package" label="Menu">
             <NativeSelect
               id="menu-package"
@@ -505,6 +445,69 @@ export default function BanquetChecklist() {
               value={menuPackageBySlug(eventInfo.menuPackage)?.name ?? ""}
               className={printFieldClass}
             />
+          </Field>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 print:grid-cols-4">
+          <Field id="event-type" label="Event Type" className="min-w-0">
+            <NativeSelect
+              id="event-type"
+              value={eventInfo.eventType}
+              onChange={(value) => setEvent("eventType", value)}
+              className={`${inputClass} min-w-0`}
+            >
+              <option value="">Select event...</option>
+              {BANQUET_EVENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </NativeSelect>
+            <PrintValue value={eventInfo.eventType} className={printFieldClass} />
+          </Field>
+          <Field id="event-date" label="Event Date" className="min-w-0">
+            <Input
+              id="event-date"
+              type="date"
+              value={eventInfo.eventDate}
+              onChange={(event) => setEvent("eventDate", event.target.value)}
+              className={inputClass}
+            />
+            <PrintValue
+              value={eventInfo.eventDate ? formatDate(eventInfo.eventDate) : ""}
+              className={printFieldClass}
+            />
+          </Field>
+          <Field id="event-time" label="Event Time" className="min-w-0">
+            <NativeSelect
+              id="event-time"
+              value={eventInfo.eventTime}
+              onChange={(value) => setEvent("eventTime", value)}
+              className={`${inputClass} min-w-0`}
+            >
+              <option value="">Select time...</option>
+              {BANQUET_EVENT_TIMES.map((slot) => (
+                <option key={slot.slug} value={slot.slug}>
+                  {slot.name}
+                </option>
+              ))}
+            </NativeSelect>
+            <PrintValue
+              value={eventTimeBySlug(eventInfo.eventTime)?.name ?? ""}
+              className={printFieldClass}
+            />
+          </Field>
+          <Field id="expected-guests" label="No. of Guests" className="min-w-0">
+            <Input
+              id="expected-guests"
+              type="number"
+              min={1}
+              value={eventInfo.guests}
+              onChange={(event) => setEvent("guests", event.target.value)}
+              placeholder="Guests"
+              className={inputClass}
+            />
+            <PrintValue value={eventInfo.guests} className={printFieldClass} />
           </Field>
         </div>
 
@@ -625,14 +628,24 @@ export default function BanquetChecklist() {
           </div>
         </section>
 
-        <NotesSection
-          id="decoration"
-          title="Decoration"
-          value={decoration}
-          onChange={setDecoration}
-          placeholder={DECORATION_PLACEHOLDER}
-          hint="Enter all decoration requirements, materials, quantities and special instructions."
-        />
+        <div className="mt-3 grid items-stretch gap-3 md:grid-cols-2 print:grid-cols-2">
+          <NotesSection
+            id="decoration"
+            title="Decoration"
+            value={decoration}
+            onChange={setDecoration}
+            placeholder={DECORATION_PLACEHOLDER}
+            hint="Enter all decoration requirements, materials, quantities and special instructions."
+          />
+          <NotesSection
+            id="instruction"
+            title="Instruction"
+            value={instruction}
+            onChange={setInstruction}
+            placeholder={INSTRUCTION_PLACEHOLDER}
+            hint="Enter event-day instructions for the manager and kitchen."
+          />
+        </div>
 
         <section
           aria-labelledby="payment-heading"
@@ -840,15 +853,6 @@ export default function BanquetChecklist() {
             </table>
           </div>
         </section>
-
-        <NotesSection
-          id="instruction"
-          title="Instruction"
-          value={instruction}
-          onChange={setInstruction}
-          placeholder={INSTRUCTION_PLACEHOLDER}
-          hint="Enter event-day instructions for the manager and kitchen."
-        />
 
         <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Field id="manager-remarks" label="Manager remarks">

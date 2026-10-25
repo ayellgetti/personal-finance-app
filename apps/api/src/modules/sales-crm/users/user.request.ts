@@ -46,7 +46,12 @@ export const updateCrmUserBodySchema = z
     message: "At least one field is required",
   });
 
+export const resetCrmUserPasswordBodySchema = z.object({
+  password: z.string().min(8).max(72),
+});
+
 export type CrmUserIdParams = z.infer<typeof crmUserIdParamsSchema>;
 export type ListCrmUsersQuery = z.infer<typeof listCrmUsersQuerySchema>;
 export type CreateCrmUserBody = z.infer<typeof createCrmUserBodySchema>;
 export type UpdateCrmUserBody = z.infer<typeof updateCrmUserBodySchema>;
+export type ResetCrmUserPasswordBody = z.infer<typeof resetCrmUserPasswordBodySchema>;

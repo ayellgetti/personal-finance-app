@@ -423,6 +423,13 @@ export const crmOpenApiSchemas = {
       roleIds: { type: "array", items: { type: "string", format: "uuid" }, minItems: 1 },
     },
   },
+  ResetCrmUserPasswordRequest: {
+    type: "object",
+    required: ["password"],
+    properties: {
+      password: { type: "string", minLength: 8, maxLength: 72 },
+    },
+  },
   CreateCrmRoleRequest: {
     type: "object",
     required: ["name"],
@@ -1201,6 +1208,23 @@ export const crmOpenApiPaths = {
         ...ok("Updated user"),
         "404": envelopeError,
         "409": envelopeError,
+        "422": validationFailed,
+      },
+    },
+  },
+  "/api/crm/users/{id}/password": {
+    post: {
+      tags: ["CRM Users"],
+      summary: "Reset a CRM user's password",
+      description:
+        "Requires crm.users.update. The new password cannot match the current password or a recently used one. All refresh sessions for that user are revoked. The password is never returned.",
+      security: [{ bearerAuth: [] }],
+      parameters: [requestId, idParam],
+      requestBody: jsonBody("ResetCrmUserPasswordRequest"),
+      responses: {
+        ...ok("Password reset"),
+        "400": envelopeError,
+        "404": envelopeError,
         "422": validationFailed,
       },
     },

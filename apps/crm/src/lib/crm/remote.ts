@@ -846,6 +846,14 @@ export async function updateCrmUser(id: string, input: UpdateCrmUserInput): Prom
   return mapStaffUser(asRecord(requireField(data, "user")));
 }
 
+export async function resetCrmUserPassword(id: string, password: string): Promise<CrmStaffUser> {
+  const data = await api<Record<string, unknown>>(`/api/crm/users/${id}/password`, {
+    method: "POST",
+    body: { password },
+  });
+  return mapStaffUser(asRecord(requireField(data, "user")));
+}
+
 export async function listRoles(): Promise<CrmRoleDetail[]> {
   const data = await api<Record<string, unknown>>("/api/crm/roles");
   const roles = Array.isArray(data.roles) ? data.roles : [];

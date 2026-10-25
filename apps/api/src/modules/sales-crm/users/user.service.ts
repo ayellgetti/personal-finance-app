@@ -7,6 +7,7 @@ import {
   type PublicUser,
   type UserModel,
 } from "../../../models/index";
+import { userService, type UserService } from "../../shared/user/user.service";
 import { actorCreate, actorUpdate, requireActive } from "../crm.util";
 import { rbacService, type RbacService } from "../rbac/rbac.service";
 import type {
@@ -21,6 +22,7 @@ export class CrmUserService {
   constructor(
     private readonly users: UserModel = userModel,
     private readonly rbac: RbacService = rbacService,
+    private readonly passwords: Pick<UserService, "resetPassword"> = userService,
   ) {}
 
   async list(query: ListCrmUsersQuery) {
@@ -112,6 +114,16 @@ export class CrmUserService {
         ...actorUpdate(actorId),
       });
     }
+    return this.getById(id);
+  }
+
+  async resetPassword(actorId: string, id: string, password: string): Promise<CrmUserListItem> {
+    const existing = requireActive(
+      await this.users.findById(id, { includeHidden: true }),
+      "User",
+    );
+    await this.passwords.resetPassword(existing, password);
+    await this.users.updateById(id, actorUpdate(actorId));
     return this.getById(id);
   }
 }

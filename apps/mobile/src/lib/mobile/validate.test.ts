@@ -9,6 +9,7 @@ import {
   validatePayment,
   validateReminder,
   validateRole,
+  validateStaffPasswordReset,
   validateStaffUser,
   validateTask,
 } from "@/lib/mobile/validate";
@@ -114,6 +115,9 @@ describe("mobile form validation", () => {
       validatePasswordChange({ currentPassword: "old-password", newPassword: "new-password", confirmPassword: "nope" })
         .confirmPassword,
     ).toBeTruthy();
+    expect(validateStaffPasswordReset({ password: "short", confirm: "short" }).password).toBeTruthy();
+    expect(validateStaffPasswordReset({ password: "fresh-password", confirm: "other" }).confirm).toBeTruthy();
+    expect(validateStaffPasswordReset({ password: "fresh-password", confirm: "fresh-password" })).toEqual({});
     expect(validateRole({ name: "A" }).name).toBeTruthy();
     expect(validateRole({ name: "Front desk", permissionIds: [] }).permissionIds).toBeTruthy();
   });

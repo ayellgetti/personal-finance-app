@@ -466,7 +466,7 @@ Union of task due dates and `CrmCalendarEvent` rows, including events linked to 
 
 **Status: COMPLETED**
 
-Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`) and patch roles. Roles: list, create, view, and edit name plus permission ids (catalog includes a description for each permission); hidden without `crm.roles.read`, create/edit disabled without `crm.roles.update`. Admin nav still hidden without read permissions.
+Users admin: create staff (`dob`, `gender`, mobile, email, password, `roleIds`), patch profile and roles, and reset one listed user's password (`POST /api/crm/users/{id}/password`, `crm.users.update`). A reset cannot reuse the current or a recent password, and it revokes that user's refresh sessions. Roles: list, create, view, and edit name plus permission ids (catalog includes a description for each permission); hidden without `crm.roles.read`, create/edit disabled without `crm.roles.update`. Admin nav still hidden without read permissions.
 
 ### Phase D9 — `apps/mobile` shell
 

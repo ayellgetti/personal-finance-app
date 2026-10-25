@@ -117,7 +117,7 @@ describe("Banquet public handover checklist", () => {
     expect(screen.getByLabelText("Row 1 item")).toBeDisabled();
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(["Menu Selection", "Decoration", "Payment", "Staff", "Instruction"]);
+    ).toEqual(["Menu Selection", "Decoration", "Instruction", "Payment", "Staff"]);
     expect(screen.getByRole("heading", { name: "Staff" })).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Staff row \d+ role/)).toHaveLength(BANQUET_STAFF_ROLES.length);
     BANQUET_STAFF_ROLES.forEach((role, index) => {

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/lib/auth/store";
 import {
   ConfirmRemoveDialog,
   EditAction,
@@ -31,6 +32,7 @@ import {
   CRM_INVOICE_STATUSES,
   CRM_PERMISSIONS,
   type CreateInvoiceInput,
+  type CrmContact,
   type CrmInvoice,
   type CrmInvoiceStatus,
 } from "@/types/crm";
@@ -76,6 +78,180 @@ function formatWhen(value: string | null): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
 }
 
+function formatLongDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+}
+
+function formatIssuerPhone(countryCode: string | undefined, mobileNo: string): string {
+  const mobile = mobileNo.trim();
+  if (!mobile) return "";
+  if (mobile.startsWith("+")) return mobile;
+  const code = countryCode?.trim();
+  if (!code) return mobile;
+  const codeDigits = code.replace(/\D/g, "");
+  const mobileDigits = mobile.replace(/\D/g, "");
+  if (codeDigits && mobileDigits.startsWith(codeDigits)) return mobile;
+  return `${code} ${mobile}`;
+}
+
+function formatQuantity(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(value);
+}
+
+function lineCopy(description: string): { title: string; detail: string | null } {
+  const [title, ...rest] = description.split(/\r?\n/);
+  const detail = rest.join(" ").trim();
+  return { title: (title ?? description).trim() || description, detail: detail || null };
+}
+
+function DaisyMark() {
+  const petals = Array.from({ length: 12 }, (_, index) => index);
+  return (
+    <svg viewBox="0 0 80 80" className="h-[4.25rem] w-[4.25rem] shrink-0" aria-hidden="true">
+      {petals.map((index) => (
+        <ellipse
+          key={index}
+          cx="40"
+          cy="16"
+          rx="8"
+          ry="15.5"
+          fill="#c9a6de"
+          transform={`rotate(${index * 30} 40 40)`}
+        />
+      ))}
+      <circle cx="40" cy="40" r="11.5" fill="#7b3f9e" />
+      <circle cx="35.5" cy="36" r="1.25" fill="#54286f" />
+      <circle cx="43.5" cy="35.2" r="1.1" fill="#54286f" />
+      <circle cx="39.5" cy="43.2" r="1.2" fill="#54286f" />
+      <circle cx="33.8" cy="42" r="1" fill="#54286f" />
+      <circle cx="45.8" cy="41.5" r="1.05" fill="#54286f" />
+    </svg>
+  );
+}
+
+type InvoiceIssuer = { name: string; email: string; phone: string };
+
+function InvoiceDocument({
+  invoice,
+  contact,
+  issuer,
+  taxId,
+}: {
+  invoice: CrmInvoice;
+  contact: CrmContact | null;
+  issuer: InvoiceIssuer;
+  taxId: string | null;
+}) {
+  const lines = invoice.lines ?? [];
+  const [given, ...familyParts] = issuer.name.trim().split(/\s+/);
+  const family = familyParts.join(" ");
+  const subtitle = contact?.companyName?.trim() || "";
+  const taxLabel = `Tax ${invoice.taxPercent}%${taxId ? ` (${taxId})` : ""}:`;
+  return (
+    <article className="crm-invoice-print bg-white px-6 py-8 text-neutral-900">
+      <header className="flex items-start justify-between gap-8">
+        <div className="flex min-w-0 items-center gap-3">
+          <DaisyMark />
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-[1.85rem] font-normal tracking-tight text-[#a56fbe]">{given || issuer.name}</p>
+            {family ? <p className="mt-1 truncate text-[0.95rem] text-[#8a8a8a]">{family}</p> : null}
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <h2 className="text-[2.7rem] font-normal leading-none tracking-[0.06em] text-neutral-900">INVOICE</h2>
+          {subtitle ? <p className="mt-1 text-sm text-neutral-800">{subtitle}</p> : null}
+          <div className="mt-4 space-y-0.5 text-sm leading-snug text-neutral-800">
+            <p className="font-semibold">{issuer.name}</p>
+            {issuer.email ? <p>{issuer.email}</p> : null}
+            {issuer.phone ? <p>{issuer.phone}</p> : null}
+          </div>
+        </div>
+      </header>
+
+      <div className="mt-8 grid grid-cols-2 gap-8 border-t border-neutral-300 pt-5">
+        <div className="text-sm leading-snug">
+          <p className="text-[11px] font-semibold tracking-[0.16em] text-neutral-800">BILL TO</p>
+          <p className="mt-2 font-semibold">{invoice.billToName}</p>
+          {contact?.email ? <p className="mt-3">{contact.email}</p> : null}
+          <p className={contact?.email ? undefined : "mt-3"}>{invoice.billToMobile}</p>
+        </div>
+        <div className="justify-self-end">
+          <dl className="grid grid-cols-[auto_auto] justify-end gap-x-6 gap-y-1 whitespace-nowrap text-right text-sm">
+            <dt>Invoice Number:</dt>
+            <dd>{invoice.number}</dd>
+            <dt>Invoice Date:</dt>
+            <dd>{formatLongDate(invoice.issuedAt)}</dd>
+            <dt>Payment Due:</dt>
+            <dd>{formatLongDate(invoice.dueAt)}</dd>
+          </dl>
+          <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-4 whitespace-nowrap bg-[#f0f0f0] px-3 py-2 text-sm">
+            <span className="text-right">Amount Due ({invoice.currency}):</span>
+            <span className="font-bold tabular-nums">{formatMoney(invoice.total, invoice.currency)}</span>
+          </div>
+        </div>
+      </div>
+
+      <table className="mt-6 w-full border-collapse text-sm">
+        <thead>
+          <tr className="bg-[#7b3f9e] text-left text-white">
+            <th className="bg-[#7b3f9e] px-3 py-2.5 font-semibold">Services</th>
+            <th className="w-24 bg-[#7b3f9e] px-3 py-2.5 text-right font-semibold">Quantity</th>
+            <th className="w-28 bg-[#7b3f9e] px-3 py-2.5 text-right font-semibold">Rate</th>
+            <th className="w-32 bg-[#7b3f9e] px-3 py-2.5 text-right font-semibold">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => {
+            const copy = lineCopy(line.description);
+            return (
+              <tr key={line.id}>
+                <td className="px-3 py-4 align-top">
+                  <p className="font-semibold">{copy.title}</p>
+                  {copy.detail ? <p className="text-neutral-500">{copy.detail}</p> : null}
+                </td>
+                <td className="px-3 py-4 text-right align-top tabular-nums">{formatQuantity(line.quantity)}</td>
+                <td className="px-3 py-4 text-right align-top tabular-nums">
+                  {formatMoney(line.unitPrice, invoice.currency)}
+                </td>
+                <td className="px-3 py-4 text-right align-top tabular-nums">
+                  {formatMoney(line.amount, invoice.currency)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div className="ml-auto mt-2 w-full max-w-sm border-t border-neutral-300 pt-3 text-sm">
+        <div className="grid grid-cols-[1fr_8.5rem] gap-y-1 text-right">
+          <span>Subtotal:</span>
+          <span className="tabular-nums">{formatMoney(invoice.subtotal, invoice.currency)}</span>
+          <span>{taxLabel}</span>
+          <span className="tabular-nums">{formatMoney(invoice.taxAmount, invoice.currency)}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-[1fr_8.5rem] border-t border-neutral-400 pt-2 text-right">
+          <span>Total:</span>
+          <span className="tabular-nums">{formatMoney(invoice.total, invoice.currency)}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-[1fr_8.5rem] border-t-4 border-double border-neutral-900 pt-2 text-right font-semibold">
+          <span>Amount Due ({invoice.currency}):</span>
+          <span className="tabular-nums">{formatMoney(invoice.total, invoice.currency)}</span>
+        </div>
+      </div>
+
+      {invoice.notes ? (
+        <div className="mt-8 text-sm leading-relaxed">
+          <p className="font-semibold">Notes</p>
+          <p className="mt-2">{invoice.notes}</p>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 function emptyForm(): FormState {
   return {
     contactId: "",
@@ -99,71 +275,9 @@ function printStoredInvoice() {
   window.setTimeout(cleanup, 1500);
 }
 
-function InvoiceDocument({ invoice }: { invoice: CrmInvoice }) {
-  const lines = invoice.lines ?? [];
-  return (
-    <article className="crm-invoice-print space-y-4 rounded-xl border bg-white p-4 text-black">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-stone-500">Invoice</p>
-          <h2 className="font-display text-xl font-bold">{invoice.number}</h2>
-        </div>
-        <p className="text-sm capitalize">{invoice.status}</p>
-      </header>
-      <div className="grid gap-3 text-sm sm:grid-cols-2">
-        <p>
-          <span className="block text-xs uppercase text-stone-500">Bill to</span>
-          {invoice.billToName}
-          <span className="block">{invoice.billToMobile}</span>
-        </p>
-        <p>
-          <span className="block text-xs uppercase text-stone-500">Issued</span>
-          {formatWhen(invoice.issuedAt)}
-          <span className="mt-2 block text-xs uppercase text-stone-500">Due</span>
-          {formatWhen(invoice.dueAt)}
-        </p>
-      </div>
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b text-left">
-            <th className="py-2">Description</th>
-            <th className="py-2 text-right">Qty</th>
-            <th className="py-2 text-right">Rate</th>
-            <th className="py-2 text-right">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((line) => (
-            <tr key={line.id} className="border-b">
-              <td className="py-2">{line.description}</td>
-              <td className="py-2 text-right">{line.quantity}</td>
-              <td className="py-2 text-right">{formatMoney(line.unitPrice, invoice.currency)}</td>
-              <td className="py-2 text-right">{formatMoney(line.amount, invoice.currency)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="ml-auto w-56 space-y-1 text-sm">
-        <p className="flex justify-between">
-          <span>Subtotal</span>
-          <span>{formatMoney(invoice.subtotal, invoice.currency)}</span>
-        </p>
-        <p className="flex justify-between">
-          <span>Tax ({invoice.taxPercent}%)</span>
-          <span>{formatMoney(invoice.taxAmount, invoice.currency)}</span>
-        </p>
-        <p className="flex justify-between font-semibold">
-          <span>Total</span>
-          <span>{formatMoney(invoice.total, invoice.currency)}</span>
-        </p>
-      </div>
-      {invoice.notes ? <p className="text-sm text-stone-700">{invoice.notes}</p> : null}
-    </article>
-  );
-}
-
 export function InvoicesModule() {
   const crm = useCrm();
+  const { user } = useAuth();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.invoicesRead);
   const canCreate = crm.hasPermission(CRM_PERMISSIONS.invoicesCreate);
@@ -247,6 +361,8 @@ export function InvoicesModule() {
   const openView = async (invoice: CrmInvoice) => {
     try {
       setViewing(invoice.lines ? invoice : await fetchInvoice(invoice.id));
+      if (crm.hasPermission(CRM_PERMISSIONS.contactsRead)) void crm.loadContacts({ limit: 200 });
+      if (crm.hasPermission(CRM_PERMISSIONS.clientsRead)) void crm.loadClients({ limit: 200 });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to open invoice");
     }
@@ -462,12 +578,16 @@ export function InvoicesModule() {
           </Field>
         </div>
         <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            The first line of a service is the title. Anything on the next line prints underneath it.
+          </p>
           {form.lines.map((line, index) => (
             <div key={index} className="grid gap-2 rounded-xl border p-3 sm:grid-cols-[1fr_5rem_7rem_auto]">
-              <Input
+              <Textarea
                 aria-label={`Line ${index + 1} description`}
                 value={line.description}
-                placeholder="Description"
+                placeholder="Service title"
+                rows={2}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
@@ -476,7 +596,7 @@ export function InvoicesModule() {
                     ),
                   }))
                 }
-                className="rounded-xl"
+                className="min-h-0 rounded-xl"
               />
               <Input
                 aria-label={`Line ${index + 1} quantity`}
@@ -549,13 +669,25 @@ export function InvoicesModule() {
         }}
         title={viewing?.number ?? "Invoice"}
         description="This copy is stored and can be printed again."
+        className="sm:max-w-4xl"
         footer={
           <Button type="button" className="rounded-xl print:hidden" onClick={printStoredInvoice}>
             Print
           </Button>
         }
       >
-        {viewing ? <InvoiceDocument invoice={viewing} /> : null}
+        {viewing ? (
+          <InvoiceDocument
+            invoice={viewing}
+            contact={crm.contacts.items.find((item) => item.id === viewing.contactId) ?? null}
+            issuer={{
+              name: user?.name?.trim() || "Sales CRM",
+              email: user?.email ?? "",
+              phone: user ? formatIssuerPhone(user.countryCode, user.mobileNo) : "",
+            }}
+            taxId={crm.clients.items.find((item) => item.contactId === viewing.contactId)?.gstin ?? null}
+          />
+        ) : null}
       </SideSheet>
 
       <ConfirmRemoveDialog

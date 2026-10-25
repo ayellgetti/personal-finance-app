@@ -7,6 +7,7 @@ import {
   createCrmUserBodySchema,
   crmUserIdParamsSchema,
   listCrmUsersQuerySchema,
+  resetCrmUserPasswordBodySchema,
   updateCrmUserBodySchema,
 } from "./user.request";
 
@@ -36,5 +37,14 @@ crmUserRouter.patch(
   validate({ params: crmUserIdParamsSchema, body: updateCrmUserBodySchema }),
   asyncHandler(async (req, res) => {
     await crmUserController.update(req, res);
+  }),
+);
+
+crmUserRouter.post(
+  "/:id/password",
+  requirePermission("crm.users.update"),
+  validate({ params: crmUserIdParamsSchema, body: resetCrmUserPasswordBodySchema }),
+  asyncHandler(async (req, res) => {
+    await crmUserController.resetPassword(req, res);
   }),
 );

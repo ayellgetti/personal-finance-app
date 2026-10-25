@@ -11,10 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { bottomSheetFillClass } from "@/components/ui/sheet-frame";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate, humanize } from "@/lib/mobile/format";
+import { useAuth } from "@/lib/auth/store";
+import { humanize } from "@/lib/mobile/format";
 import {
   createInvoice,
   fetchInvoice,
+  listClients,
   listContacts,
   listInvoices,
   removeInvoice,
@@ -28,6 +30,7 @@ import {
   CRM_INVOICE_STATUSES,
   CRM_PERMISSIONS,
   type CreateInvoiceInput,
+  type CrmContact,
   type CrmInvoice,
   type CrmInvoiceStatus,
 } from "@/types/crm";
@@ -98,51 +101,169 @@ function printStoredInvoice() {
   window.setTimeout(cleanup, 1500);
 }
 
-function InvoiceDocument({ invoice }: { invoice: CrmInvoice }) {
+function formatLongDate(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+}
+
+function formatIssuerPhone(countryCode: string | undefined, mobileNo: string): string {
+  const mobile = mobileNo.trim();
+  if (!mobile) return "";
+  if (mobile.startsWith("+")) return mobile;
+  const code = countryCode?.trim();
+  if (!code) return mobile;
+  const codeDigits = code.replace(/\D/g, "");
+  const mobileDigits = mobile.replace(/\D/g, "");
+  if (codeDigits && mobileDigits.startsWith(codeDigits)) return mobile;
+  return `${code} ${mobile}`;
+}
+
+function formatQuantity(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(value);
+}
+
+function lineCopy(description: string): { title: string; detail: string | null } {
+  const [title, ...rest] = description.split(/\r?\n/);
+  const detail = rest.join(" ").trim();
+  return { title: (title ?? description).trim() || description, detail: detail || null };
+}
+
+function DaisyMark() {
+  const petals = Array.from({ length: 12 }, (_, index) => index);
   return (
-    <article className="crm-invoice-print space-y-3 rounded-2xl border bg-white p-4 text-black">
-      <header>
-        <p className="text-[11px] uppercase tracking-wider text-stone-500">Invoice</p>
-        <h2 className="font-display text-lg font-bold">{invoice.number}</h2>
-        <p className="text-sm capitalize">{humanize(invoice.status)}</p>
+    <svg viewBox="0 0 80 80" className="h-14 w-14 shrink-0" aria-hidden="true">
+      {petals.map((index) => (
+        <ellipse
+          key={index}
+          cx="40"
+          cy="16"
+          rx="8"
+          ry="15.5"
+          fill="#c9a6de"
+          transform={`rotate(${index * 30} 40 40)`}
+        />
+      ))}
+      <circle cx="40" cy="40" r="11.5" fill="#7b3f9e" />
+      <circle cx="35.5" cy="36" r="1.25" fill="#54286f" />
+      <circle cx="43.5" cy="35.2" r="1.1" fill="#54286f" />
+      <circle cx="39.5" cy="43.2" r="1.2" fill="#54286f" />
+      <circle cx="33.8" cy="42" r="1" fill="#54286f" />
+      <circle cx="45.8" cy="41.5" r="1.05" fill="#54286f" />
+    </svg>
+  );
+}
+
+function InvoiceDocument({
+  invoice,
+  contact,
+  issuer,
+  taxId,
+}: {
+  invoice: CrmInvoice;
+  contact: CrmContact | null;
+  issuer: { name: string; email: string; phone: string };
+  taxId: string | null;
+}) {
+  const [given, ...familyParts] = issuer.name.trim().split(/\s+/);
+  const family = familyParts.join(" ");
+  const subtitle = contact?.companyName?.trim() || "";
+  const taxLabel = `Tax ${invoice.taxPercent}%${taxId ? ` (${taxId})` : ""}:`;
+  return (
+    <article className="crm-invoice-print min-w-[40rem] bg-white px-5 py-6 text-neutral-900">
+      <header className="flex items-start justify-between gap-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <DaisyMark />
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-3xl font-normal tracking-tight text-[#a56fbe]">{given || issuer.name}</p>
+            {family ? <p className="mt-1 truncate text-sm text-[#8a8a8a]">{family}</p> : null}
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <h2 className="text-4xl font-normal leading-none tracking-[0.06em] text-neutral-900">INVOICE</h2>
+          {subtitle ? <p className="mt-1 text-sm text-neutral-800">{subtitle}</p> : null}
+          <div className="mt-3 space-y-0.5 text-sm leading-snug text-neutral-800">
+            <p className="font-semibold">{issuer.name}</p>
+            {issuer.email ? <p>{issuer.email}</p> : null}
+            {issuer.phone ? <p>{issuer.phone}</p> : null}
+          </div>
+        </div>
       </header>
-      <p className="text-sm">
-        <span className="block text-[11px] uppercase text-stone-500">Bill to</span>
-        {invoice.billToName}
-        <span className="block">{invoice.billToMobile}</span>
-      </p>
-      <p className="text-sm">
-        Issued {formatDate(invoice.issuedAt)}
-        {invoice.dueAt ? ` · Due ${formatDate(invoice.dueAt)}` : ""}
-      </p>
-      <ul className="space-y-2 text-sm">
-        {(invoice.lines ?? []).map((line) => (
-          <li key={line.id} className="flex justify-between gap-3 border-b pb-2">
-            <span>
-              {line.description}
-              <span className="block text-xs text-stone-500">
-                {line.quantity} × {money(line.unitPrice, invoice.currency)}
-              </span>
-            </span>
-            <span>{money(line.amount, invoice.currency)}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="space-y-1 text-sm">
-        <p className="flex justify-between">
-          <span>Subtotal</span>
-          <span>{money(invoice.subtotal, invoice.currency)}</span>
-        </p>
-        <p className="flex justify-between">
-          <span>Tax ({invoice.taxPercent}%)</span>
-          <span>{money(invoice.taxAmount, invoice.currency)}</span>
-        </p>
-        <p className="flex justify-between font-semibold">
-          <span>Total</span>
-          <span>{money(invoice.total, invoice.currency)}</span>
-        </p>
+
+      <div className="mt-6 grid grid-cols-2 gap-6 border-t border-neutral-300 pt-4">
+        <div className="text-sm leading-snug">
+          <p className="text-[11px] font-semibold tracking-[0.16em] text-neutral-800">BILL TO</p>
+          <p className="mt-2 font-semibold">{invoice.billToName}</p>
+          {contact?.email ? <p className="mt-3">{contact.email}</p> : null}
+          <p className={contact?.email ? undefined : "mt-3"}>{invoice.billToMobile}</p>
+        </div>
+        <div>
+          <dl className="grid grid-cols-[auto_auto] justify-end gap-x-4 gap-y-1 whitespace-nowrap text-right text-sm">
+            <dt>Invoice Number:</dt>
+            <dd>{invoice.number}</dd>
+            <dt>Invoice Date:</dt>
+            <dd>{formatLongDate(invoice.issuedAt)}</dd>
+            <dt>Payment Due:</dt>
+            <dd>{formatLongDate(invoice.dueAt)}</dd>
+          </dl>
+          <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3 whitespace-nowrap bg-[#f0f0f0] px-3 py-2 text-sm">
+            <span className="text-right">Amount Due ({invoice.currency}):</span>
+            <span className="font-bold tabular-nums">{money(invoice.total, invoice.currency)}</span>
+          </div>
+        </div>
       </div>
-      {invoice.notes ? <p className="text-sm">{invoice.notes}</p> : null}
+
+      <table className="mt-5 w-full border-collapse text-sm">
+        <thead>
+          <tr className="bg-[#7b3f9e] text-left text-white">
+            <th className="bg-[#7b3f9e] px-3 py-2.5 font-semibold">Services</th>
+            <th className="w-24 bg-[#7b3f9e] px-3 py-2.5 text-right font-semibold">Quantity</th>
+            <th className="w-28 bg-[#7b3f9e] px-3 py-2.5 text-right font-semibold">Rate</th>
+            <th className="w-32 bg-[#7b3f9e] px-3 py-2.5 text-right font-semibold">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(invoice.lines ?? []).map((line) => {
+            const copy = lineCopy(line.description);
+            return (
+              <tr key={line.id}>
+                <td className="px-3 py-4 align-top">
+                  <p className="font-semibold">{copy.title}</p>
+                  {copy.detail ? <p className="text-neutral-500">{copy.detail}</p> : null}
+                </td>
+                <td className="px-3 py-4 text-right align-top tabular-nums">{formatQuantity(line.quantity)}</td>
+                <td className="px-3 py-4 text-right align-top tabular-nums">{money(line.unitPrice, invoice.currency)}</td>
+                <td className="px-3 py-4 text-right align-top tabular-nums">{money(line.amount, invoice.currency)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div className="ml-auto mt-2 w-full max-w-sm border-t border-neutral-300 pt-3 text-sm">
+        <div className="grid grid-cols-[1fr_8.5rem] gap-y-1 text-right">
+          <span>Subtotal:</span>
+          <span className="tabular-nums">{money(invoice.subtotal, invoice.currency)}</span>
+          <span>{taxLabel}</span>
+          <span className="tabular-nums">{money(invoice.taxAmount, invoice.currency)}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-[1fr_8.5rem] border-t border-neutral-400 pt-2 text-right">
+          <span>Total:</span>
+          <span className="tabular-nums">{money(invoice.total, invoice.currency)}</span>
+        </div>
+        <div className="mt-2 grid grid-cols-[1fr_8.5rem] border-t-4 border-double border-neutral-900 pt-2 text-right font-semibold">
+          <span>Amount Due ({invoice.currency}):</span>
+          <span className="tabular-nums">{money(invoice.total, invoice.currency)}</span>
+        </div>
+      </div>
+
+      {invoice.notes ? (
+        <div className="mt-8 text-sm leading-relaxed">
+          <p className="font-semibold">Notes</p>
+          <p className="mt-2">{invoice.notes}</p>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -305,10 +426,11 @@ function InvoiceFormSheet({
       {form.lines.map((line, index) => (
         <div key={index} className="space-y-2 rounded-2xl border p-3">
           <Label htmlFor={`invoice-line-${index}`}>Line {index + 1}</Label>
-          <Input
+          <Textarea
             id={`invoice-line-${index}`}
             value={line.description}
-            placeholder="Description"
+            placeholder="Service title"
+            rows={2}
             onChange={(event) =>
               setForm((current) => ({
                 ...current,
@@ -317,7 +439,7 @@ function InvoiceFormSheet({
                 ),
               }))
             }
-            className="h-11 rounded-xl text-base"
+            className="rounded-xl text-base"
           />
           <div className="grid grid-cols-2 gap-2">
             <Input
@@ -391,8 +513,11 @@ function InvoiceFormSheet({
 }
 
 export default function Invoices() {
+  const { user } = useAuth();
   const { permissions } = useMobile();
   const canRead = permissions.includes(CRM_PERMISSIONS.invoicesRead);
+  const canReadContacts = permissions.includes(CRM_PERMISSIONS.contactsRead);
+  const canReadClients = permissions.includes(CRM_PERMISSIONS.clientsRead);
   const canCreate = permissions.includes(CRM_PERMISSIONS.invoicesCreate);
   const canUpdate = permissions.includes(CRM_PERMISSIONS.invoicesUpdate);
   const canDelete = permissions.includes(CRM_PERMISSIONS.invoicesDelete);
@@ -403,6 +528,8 @@ export default function Invoices() {
 
   const load = useCallback((page: number) => listInvoices({ page, limit: 20 }), []);
   const list = usePagedList(load, "invoices", canRead);
+  const contacts = useResource(() => listContacts({ limit: 200 }), Boolean(viewing) && canReadContacts);
+  const clients = useResource(() => listClients({ limit: 200 }), Boolean(viewing) && canReadClients);
 
   const openInvoice = async (invoice: CrmInvoice, mode: "view" | "edit") => {
     setOpening(true);
@@ -472,8 +599,19 @@ export default function Invoices() {
               <SheetTitle className="font-display text-lg">{viewing?.number ?? "Invoice"}</SheetTitle>
               <SheetDescription>Stored copy. Print it now or open it again later.</SheetDescription>
             </SheetHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-              {viewing ? <InvoiceDocument invoice={viewing} /> : null}
+            <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
+              {viewing ? (
+                <InvoiceDocument
+                  invoice={viewing}
+                  contact={contacts.data?.items.find((item) => item.id === viewing.contactId) ?? null}
+                  issuer={{
+                    name: user?.name?.trim() || "Sales CRM",
+                    email: user?.email ?? "",
+                    phone: user ? formatIssuerPhone(user.countryCode, user.mobileNo) : "",
+                  }}
+                  taxId={clients.data?.items.find((item) => item.contactId === viewing.contactId)?.gstin ?? null}
+                />
+              ) : null}
             </div>
             <div className="flex gap-2 border-t px-4 py-3">
               {canUpdate && viewing ? (
