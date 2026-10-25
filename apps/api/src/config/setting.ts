@@ -44,6 +44,14 @@ export class Setting {
     directory: env.UPLOAD_DIR,
     maxFileSizeBytes: env.UPLOAD_MAX_FILE_SIZE_BYTES,
   };
+  /** Used on invoices when the saved company profile leaves a field blank. */
+  readonly company = {
+    name: env.CRM_COMPANY_NAME ?? "",
+    details: env.CRM_COMPANY_DETAILS ?? "",
+    contactName: env.CRM_COMPANY_CONTACT_NAME ?? "",
+    contactMobile: env.CRM_COMPANY_CONTACT_MOBILE ?? "",
+    logo: env.CRM_COMPANY_LOGO ?? "",
+  };
 
   get isProduction(): boolean {
     return this.environment === "production";

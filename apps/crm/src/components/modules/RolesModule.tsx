@@ -31,6 +31,7 @@ const GROUP_LABELS: Record<string, string> = {
   calendar: "Calendar",
   users: "Users",
   roles: "Roles",
+  company: "Company",
 };
 
 type FormState = {

@@ -53,3 +53,24 @@ export function createRequirePermission(load: PermissionLoader = defaultLoadPerm
 }
 
 export const requirePermission = createRequirePermission();
+
+/** Allows the request when the user holds any one of the listed CRM permission codes. */
+export function requireAnyPermission(...codes: readonly string[]): RequestHandler {
+  const allowed = [...codes];
+  return (req, _res, next) => {
+    if (!req.user) {
+      next(new HttpError(401, "Unauthenticated"));
+      return;
+    }
+
+    void permissionsForRequest(req, defaultLoadPermissions)
+      .then((granted) => {
+        if (!allowed.some((code) => granted.includes(code))) {
+          next(new HttpError(403, "Forbidden"));
+          return;
+        }
+        next();
+      })
+      .catch(next);
+  };
+}

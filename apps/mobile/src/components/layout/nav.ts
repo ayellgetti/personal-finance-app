@@ -4,6 +4,7 @@ import {
   CalendarDays,
   FolderKanban,
   Home,
+  Landmark,
   LayoutDashboard,
   ListTodo,
   PhoneCall,
@@ -42,6 +43,7 @@ export const SIDEBAR: SidebarItem[] = [
   { to: "/communications", label: "Communications", icon: Send, group: "Work" },
   { to: "/users", label: "Users", icon: Users, group: "Admin", permission: CRM_PERMISSIONS.usersRead },
   { to: "/roles", label: "Roles", icon: Shield, group: "Admin", permission: CRM_PERMISSIONS.rolesRead },
+  { to: "/company", label: "Company", icon: Landmark, group: "Admin", permission: CRM_PERMISSIONS.companyRead },
 ];
 
 /** The five bottom tabs. The bar always renders five slots so its layout never shifts. */

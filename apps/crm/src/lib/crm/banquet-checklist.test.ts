@@ -62,7 +62,7 @@ describe("WhatsApp handover message", () => {
   });
 
   it("omits empty sections", () => {
-    expect(buildWhatsAppHandoverMessage(emptyDraft)).toBe("*Event handover*");
+    expect(buildWhatsAppHandoverMessage(emptyDraft)).toBe("*Event Details*");
   });
 
   it("builds a wa.me link for a 10-digit Indian mobile", () => {

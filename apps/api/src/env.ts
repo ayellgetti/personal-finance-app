@@ -74,6 +74,11 @@ const envSchema = z.object({
     (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
     z.string().trim().regex(/^\+[1-9][0-9]{0,3}$/).default("+91"),
   ),
+  CRM_COMPANY_NAME: optionalString,
+  CRM_COMPANY_DETAILS: optionalString,
+  CRM_COMPANY_CONTACT_NAME: optionalString,
+  CRM_COMPANY_CONTACT_MOBILE: optionalString,
+  CRM_COMPANY_LOGO: optionalString,
   UPLOAD_DIR: z.string().trim().min(1).default("uploads"),
   UPLOAD_MAX_FILE_SIZE_BYTES: z.coerce
     .number()

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../../middlewares/jwt-auth.middleware";
 import { calendarEventRouter, calendarRouter } from "./calendar/calendar.route";
+import { companyRouter } from "./company/company.route";
 import { clientRouter } from "./clients/client.route";
 import { contactRouter } from "./contacts/contact.route";
 import { dashboardRouter } from "./dashboard/dashboard.route";
@@ -32,4 +33,5 @@ crmRouter.use("/calendar/events", calendarEventRouter);
 crmRouter.use("/calendar", calendarRouter);
 crmRouter.use("/users", crmUserRouter);
 crmRouter.use("/roles", roleRouter);
+crmRouter.use("/company", companyRouter);
 crmRouter.use("/permissions", permissionRouter);

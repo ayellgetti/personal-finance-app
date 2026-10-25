@@ -11,10 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { bottomSheetFillClass } from "@/components/ui/sheet-frame";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/lib/auth/store";
 import { humanize } from "@/lib/mobile/format";
 import {
   createInvoice,
+  fetchCompanyProfile,
   fetchInvoice,
   listClients,
   listContacts,
@@ -30,6 +30,7 @@ import {
   CRM_INVOICE_STATUSES,
   CRM_PERMISSIONS,
   type CreateInvoiceInput,
+  type CrmCompanyLetterhead,
   type CrmContact,
   type CrmInvoice,
   type CrmInvoiceStatus,
@@ -108,18 +109,6 @@ function formatLongDate(value: string | null): string {
   return date.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 }
 
-function formatIssuerPhone(countryCode: string | undefined, mobileNo: string): string {
-  const mobile = mobileNo.trim();
-  if (!mobile) return "";
-  if (mobile.startsWith("+")) return mobile;
-  const code = countryCode?.trim();
-  if (!code) return mobile;
-  const codeDigits = code.replace(/\D/g, "");
-  const mobileDigits = mobile.replace(/\D/g, "");
-  if (codeDigits && mobileDigits.startsWith(codeDigits)) return mobile;
-  return `${code} ${mobile}`;
-}
-
 function formatQuantity(value: number): string {
   return Number.isInteger(value) ? String(value) : String(value);
 }
@@ -155,39 +144,55 @@ function DaisyMark() {
   );
 }
 
+function CompanyMark({ logoUrl }: { logoUrl: string }) {
+  if (!logoUrl) return <DaisyMark />;
+  return <img src={logoUrl} alt="" className="h-14 w-14 shrink-0 object-contain" />;
+}
+
+const EMPTY_LETTERHEAD: CrmCompanyLetterhead = {
+  name: "",
+  details: "",
+  contactName: "",
+  contactMobile: "",
+  logoUrl: "",
+};
+
 function InvoiceDocument({
   invoice,
   contact,
-  issuer,
+  company,
   taxId,
 }: {
   invoice: CrmInvoice;
   contact: CrmContact | null;
-  issuer: { name: string; email: string; phone: string };
+  company: CrmCompanyLetterhead;
   taxId: string | null;
 }) {
-  const [given, ...familyParts] = issuer.name.trim().split(/\s+/);
-  const family = familyParts.join(" ");
   const subtitle = contact?.companyName?.trim() || "";
   const taxLabel = `Tax ${invoice.taxPercent}%${taxId ? ` (${taxId})` : ""}:`;
   return (
     <article className="crm-invoice-print min-w-[40rem] bg-white px-5 py-6 text-neutral-900">
       <header className="flex items-start justify-between gap-6">
         <div className="flex min-w-0 items-center gap-3">
-          <DaisyMark />
+          <CompanyMark logoUrl={company.logoUrl} />
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-3xl font-normal tracking-tight text-[#a56fbe]">{given || issuer.name}</p>
-            {family ? <p className="mt-1 truncate text-sm text-[#8a8a8a]">{family}</p> : null}
+            {company.name ? (
+              <p className="truncate text-3xl font-normal tracking-tight text-[#a56fbe]">{company.name}</p>
+            ) : null}
+            {company.details ? (
+              <p className="mt-1 whitespace-pre-wrap text-sm text-[#8a8a8a]">{company.details}</p>
+            ) : null}
           </div>
         </div>
         <div className="shrink-0 text-right">
           <h2 className="text-4xl font-normal leading-none tracking-[0.06em] text-neutral-900">INVOICE</h2>
           {subtitle ? <p className="mt-1 text-sm text-neutral-800">{subtitle}</p> : null}
-          <div className="mt-3 space-y-0.5 text-sm leading-snug text-neutral-800">
-            <p className="font-semibold">{issuer.name}</p>
-            {issuer.email ? <p>{issuer.email}</p> : null}
-            {issuer.phone ? <p>{issuer.phone}</p> : null}
-          </div>
+          {company.contactName || company.contactMobile ? (
+            <div className="mt-3 space-y-0.5 text-sm leading-snug text-neutral-800">
+              {company.contactName ? <p className="font-semibold">{company.contactName}</p> : null}
+              {company.contactMobile ? <p>{company.contactMobile}</p> : null}
+            </div>
+          ) : null}
         </div>
       </header>
 
@@ -513,7 +518,6 @@ function InvoiceFormSheet({
 }
 
 export default function Invoices() {
-  const { user } = useAuth();
   const { permissions } = useMobile();
   const canRead = permissions.includes(CRM_PERMISSIONS.invoicesRead);
   const canReadContacts = permissions.includes(CRM_PERMISSIONS.contactsRead);
@@ -528,6 +532,8 @@ export default function Invoices() {
 
   const load = useCallback((page: number) => listInvoices({ page, limit: 20 }), []);
   const list = usePagedList(load, "invoices", canRead);
+  const company = useResource(() => fetchCompanyProfile(), canRead);
+  const letterhead = company.data?.company ?? EMPTY_LETTERHEAD;
   const contacts = useResource(() => listContacts({ limit: 200 }), Boolean(viewing) && canReadContacts);
   const clients = useResource(() => listClients({ limit: 200 }), Boolean(viewing) && canReadClients);
 
@@ -604,11 +610,7 @@ export default function Invoices() {
                 <InvoiceDocument
                   invoice={viewing}
                   contact={contacts.data?.items.find((item) => item.id === viewing.contactId) ?? null}
-                  issuer={{
-                    name: user?.name?.trim() || "Sales CRM",
-                    email: user?.email ?? "",
-                    phone: user ? formatIssuerPhone(user.countryCode, user.mobileNo) : "",
-                  }}
+                  company={letterhead}
                   taxId={clients.data?.items.find((item) => item.contactId === viewing.contactId)?.gstin ?? null}
                 />
               ) : null}

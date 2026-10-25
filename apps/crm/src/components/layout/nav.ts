@@ -11,6 +11,7 @@ import {
   Bell,
   CalendarDays,
   Shield,
+  Landmark,
 } from "lucide-react";
 import { CRM_PERMISSIONS, type CrmViewId } from "@/types/crm";
 
@@ -36,6 +37,7 @@ export const NAV: NavItem[] = [
   { id: "communications", label: "Communications", icon: Send, group: "Work" },
   { id: "users", label: "Users", icon: Users, group: "Admin", permission: CRM_PERMISSIONS.usersRead },
   { id: "roles", label: "Roles", icon: Shield, group: "Admin", permission: CRM_PERMISSIONS.rolesRead },
+  { id: "company", label: "Company", icon: Landmark, group: "Admin", permission: CRM_PERMISSIONS.companyRead },
 ];
 
 export const NAV_GROUPS = ["Overview", "Pipeline", "Work", "Admin"];

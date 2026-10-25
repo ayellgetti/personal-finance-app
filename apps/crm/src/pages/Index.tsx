@@ -10,6 +10,7 @@ import { InvoicesModule } from "@/components/modules/InvoicesModule";
 import { CommunicationsModule } from "@/components/modules/CommunicationsModule";
 import { PaymentsModule } from "@/components/modules/PaymentsModule";
 import { ProfileModule } from "@/components/modules/ProfileModule";
+import { CompanyModule } from "@/components/modules/CompanyModule";
 import { RemindersModule } from "@/components/modules/RemindersModule";
 import { RolesModule } from "@/components/modules/RolesModule";
 import { TasksModule } from "@/components/modules/TasksModule";
@@ -32,6 +33,7 @@ const META: Record<CrmViewId, { title: string; description: string }> = {
   calendar: { title: "Calendar", description: "Tasks and meetings" },
   users: { title: "Users", description: "Staff accounts and role assignment" },
   roles: { title: "Roles", description: "Permission sets for CRM access" },
+  company: { title: "Company", description: "Name, logo, and contact printed on invoices" },
 };
 
 const Index = () => {
@@ -139,6 +141,7 @@ const Index = () => {
       ) : null}
       {view === "users" ? <UsersModule /> : null}
       {view === "roles" ? <RolesModule /> : null}
+      {view === "company" ? <CompanyModule /> : null}
       {view === "profile" ? <ProfileModule /> : null}
     </AppLayout>
   );

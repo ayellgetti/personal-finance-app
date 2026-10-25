@@ -155,3 +155,21 @@ export const listRoles = vi.fn(async (): Promise<CrmRoleDetail[]> => []);
 export const listPermissions = vi.fn(async (): Promise<CrmPermission[]> => []);
 export const createRole = vi.fn();
 export const updateRole = vi.fn();
+export const fetchCompanyProfile = vi.fn(async () => ({
+  saved: { name: "", details: "", contactName: "", contactMobile: "", logoUrl: "" },
+  defaults: {
+    name: "Env Banquet",
+    details: "12 Lake Road",
+    contactName: "Rita Shah",
+    contactMobile: "+919800000000",
+    logoUrl: "",
+  },
+  company: {
+    name: "Env Banquet",
+    details: "12 Lake Road",
+    contactName: "Rita Shah",
+    contactMobile: "+919800000000",
+    logoUrl: "",
+  },
+}));
+export const updateCompanyProfile = vi.fn(async (input: unknown) => input);

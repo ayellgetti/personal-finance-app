@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import {
   KIND_MARK_CLASSES,
   WEEKDAYS,
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 import type { CrmCalendarItem, CrmCalendarKind } from "@/types/crm";
 
 const MAX_DOTS = 4;
+const SWIPE_THRESHOLD = 48;
 
 /** One dot per kind present on the day; a cell has no room for labels. */
 function kindsOn(items: readonly CrmCalendarItem[]): CrmCalendarKind[] {
@@ -25,15 +27,39 @@ export function MonthGrid({
   byDay,
   selectedKey,
   onSelect,
+  onSwipe,
 }: {
   days: Date[];
   cursor: Date;
   byDay: Map<string, CrmCalendarItem[]>;
   selectedKey: string | null;
   onSelect: (day: Date) => void;
+  onSwipe?: (direction: 1 | -1) => void;
 }) {
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const suppressClick = useRef(false);
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-2 shadow-[var(--shadow-card)]">
+    <div
+      className="touch-pan-y rounded-2xl border border-border bg-card p-2 shadow-[var(--shadow-card)]"
+      onTouchStart={(event) => {
+        const touch = event.touches[0];
+        if (!touch) return;
+        touchStart.current = { x: touch.clientX, y: touch.clientY };
+        suppressClick.current = false;
+      }}
+      onTouchEnd={(event) => {
+        const start = touchStart.current;
+        const touch = event.changedTouches[0];
+        touchStart.current = null;
+        if (!start || !touch || !onSwipe) return;
+        const deltaX = touch.clientX - start.x;
+        const deltaY = touch.clientY - start.y;
+        if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+        suppressClick.current = true;
+        onSwipe(deltaX < 0 ? 1 : -1);
+      }}
+    >
       <div className="grid grid-cols-7 pb-1">
         {WEEKDAYS.map((weekday) => (
           <span
@@ -56,7 +82,13 @@ export function MonthGrid({
             <button
               key={key}
               type="button"
-              onClick={() => onSelect(day)}
+              onClick={() => {
+                if (suppressClick.current) {
+                  suppressClick.current = false;
+                  return;
+                }
+                onSelect(day);
+              }}
               aria-label={`${day.toDateString()}, ${items.length} item${items.length === 1 ? "" : "s"}`}
               aria-pressed={selected}
               className={cn(

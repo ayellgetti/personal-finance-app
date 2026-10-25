@@ -1183,3 +1183,20 @@ model CrmMessage {
   @@index([recipientUserId, status])
   @@index([templateId])
 }
+
+/// Invoice letterhead for this company. Blank fields fall back to CRM_COMPANY_* environment settings.
+model CrmCompanyProfile {
+  id            String   @id @default(uuid())
+  name          String   @default("")
+  details       String   @default("")
+  contactName   String   @default("")
+  contactMobile String   @default("")
+  logoDataUrl   String?  @db.Text
+  isActive      Int      @default(1)
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedBy     String?
+  updatedAt     DateTime @updatedAt
+  deletedBy     String?
+  deletedAt     DateTime?
+}

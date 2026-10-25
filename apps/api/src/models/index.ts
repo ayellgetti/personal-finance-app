@@ -78,6 +78,10 @@ export {
   crmFollowUpModel,
 } from "./sales-crm/crm-follow-up.model";
 export { CrmClientModel, crmClientModel } from "./sales-crm/crm-client.model";
+export {
+  CrmCompanyProfileModel,
+  crmCompanyProfileModel,
+} from "./sales-crm/crm-company.model";
 export { CrmPaymentModel, crmPaymentModel } from "./sales-crm/crm-payment.model";
 export {
   CrmInvoiceModel,

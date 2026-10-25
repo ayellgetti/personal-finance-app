@@ -44,6 +44,8 @@ export const CRM_PERMISSION_CODES = [
   "crm.users.update",
   "crm.roles.read",
   "crm.roles.update",
+  "crm.company.read",
+  "crm.company.update",
 ] as const;
 
 export type CrmPermissionCode = (typeof CRM_PERMISSION_CODES)[number];
@@ -107,6 +109,8 @@ const PERMISSION_NAMES: Record<CrmPermissionCode, string> = {
   "crm.users.update": "Update CRM users",
   "crm.roles.read": "View roles",
   "crm.roles.update": "Update roles",
+  "crm.company.read": "View company profile",
+  "crm.company.update": "Update company profile",
 };
 
 const PERMISSION_DESCRIPTIONS: Record<CrmPermissionCode, string> = {
@@ -153,6 +157,8 @@ const PERMISSION_DESCRIPTIONS: Record<CrmPermissionCode, string> = {
   "crm.users.update": "Change staff profile details, role assignments, and passwords.",
   "crm.roles.read": "See roles and the permissions granted to each role.",
   "crm.roles.update": "Create roles and change role names or granted permissions.",
+  "crm.company.read": "See the company name, logo, and contact printed on invoices.",
+  "crm.company.update": "Change the company name, logo, organization details, and invoice contact.",
 };
 
 export const CRM_PERMISSIONS: { code: CrmPermissionCode; name: string; description: string }[] =
@@ -167,6 +173,9 @@ function isSalesPermission(code: CrmPermissionCode): boolean {
     return true;
   }
   if (code.startsWith("crm.users.") || code.startsWith("crm.roles.")) {
+    return false;
+  }
+  if (code === "crm.company.update") {
     return false;
   }
   return true;

@@ -29,7 +29,7 @@ const ITEMS: CrmCalendarItem[] = [
   },
 ];
 
-function renderGrid(onSelect = vi.fn()) {
+function renderGrid(onSelect = vi.fn(), onSwipe = vi.fn()) {
   renderMobile(
     <MonthGrid
       days={monthGrid(CURSOR)}
@@ -37,9 +37,10 @@ function renderGrid(onSelect = vi.fn()) {
       byDay={groupByDay(ITEMS)}
       selectedKey={null}
       onSelect={onSelect}
+      onSwipe={onSwipe}
     />,
   );
-  return onSelect;
+  return { onSelect, onSwipe };
 }
 
 describe("month grid", () => {
@@ -51,12 +52,26 @@ describe("month grid", () => {
   });
 
   it("selects the tapped day", () => {
-    const onSelect = renderGrid();
+    const { onSelect } = renderGrid();
 
     fireEvent.click(screen.getByRole("button", { name: /Fri Oct 09 2026/ }));
 
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect.mock.calls[0]?.[0]).toBeInstanceOf(Date);
+  });
+
+  it("moves to the next or previous month with horizontal swipes", () => {
+    const { onSwipe } = renderGrid();
+    const grid = screen.getByRole("button", { name: /Fri Oct 09 2026/ }).parentElement?.parentElement;
+    expect(grid).not.toBeNull();
+
+    fireEvent.touchStart(grid!, { touches: [{ clientX: 240, clientY: 120 }] });
+    fireEvent.touchEnd(grid!, { changedTouches: [{ clientX: 120, clientY: 125 }] });
+    fireEvent.touchStart(grid!, { touches: [{ clientX: 100, clientY: 120 }] });
+    fireEvent.touchEnd(grid!, { changedTouches: [{ clientX: 210, clientY: 125 }] });
+
+    expect(onSwipe).toHaveBeenNthCalledWith(1, 1);
+    expect(onSwipe).toHaveBeenNthCalledWith(2, -1);
   });
 
   it("renders a full six week grid", () => {

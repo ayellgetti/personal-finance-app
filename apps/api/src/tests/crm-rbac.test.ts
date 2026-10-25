@@ -217,6 +217,8 @@ test("default CRM roles match admin / manager / sales / viewer grants", () => {
   );
   assert.ok(CRM_ROLE_PERMISSIONS.sales.includes("crm.dashboard.read"));
   assert.ok(CRM_ROLE_PERMISSIONS.sales.includes("crm.enquiries.convert"));
+  assert.ok(CRM_ROLE_PERMISSIONS.sales.includes("crm.company.read"));
+  assert.ok(!CRM_ROLE_PERMISSIONS.sales.includes("crm.company.update"));
   assert.ok(!CRM_ROLE_PERMISSIONS.sales.includes("crm.users.read"));
   assert.ok(!CRM_ROLE_PERMISSIONS.sales.includes("crm.roles.read"));
   for (const code of CRM_ROLE_PERMISSIONS.viewer) {

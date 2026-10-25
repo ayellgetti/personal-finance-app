@@ -33,6 +33,7 @@ const GROUP_LABELS: Record<string, string> = {
   calendar: "Calendar",
   users: "Users",
   roles: "Roles",
+  company: "Company",
 };
 
 function groupPermissions(items: CrmPermission[]): { key: string; label: string; items: CrmPermission[] }[] {

@@ -21,6 +21,7 @@ import { ClientDetailSheet } from "@/components/records/ClientDetailSheet";
 import { EnquiryDetailSheet } from "@/components/records/EnquiryDetailSheet";
 import { PaymentDetailSheet } from "@/components/records/PaymentDetailSheet";
 import { FilterSortBar, type FilterSection } from "@/components/FilterSortSheet";
+import { MonthYearPicker } from "@/components/MonthYearPicker";
 import { ViewSwitch } from "@/components/ViewSwitch";
 import { Button } from "@/components/ui/button";
 import {
@@ -441,7 +442,15 @@ export default function Calendar() {
           <ChevronLeft className="h-5 w-5" aria-hidden />
         </Button>
         <div className="min-w-0 text-center">
-          <p className="truncate text-sm font-semibold">{rangeLabel(view, days, cursor)}</p>
+          {view === "month" ? (
+            <MonthYearPicker
+              cursor={cursor}
+              onChange={setCursor}
+              className="mx-auto flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 text-sm font-semibold tap-highlight-none"
+            />
+          ) : (
+            <p className="truncate text-sm font-semibold">{rangeLabel(view, days, cursor)}</p>
+          )}
           <button
             type="button"
             className="text-[11px] text-primary tap-highlight-none"
@@ -479,6 +488,7 @@ export default function Calendar() {
                 byDay={byDay}
                 selectedKey={pickedDay ? dayKey(pickedDay) : null}
                 onSelect={openDay}
+                onSwipe={(direction) => setCursor(shiftCursor("month", cursor, direction))}
               />
               {feed.status === "ready" ? (
                 <MonthCategories

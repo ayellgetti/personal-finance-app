@@ -9,6 +9,7 @@ import { AuthProvider } from "@/lib/auth/store";
 import { MobileProvider } from "@/lib/mobile/store";
 import Booked from "./pages/Booked.tsx";
 import Calendar from "./pages/Calendar.tsx";
+import Company from "./pages/Company.tsx";
 import Contacts from "./pages/Contacts.tsx";
 import Enquiries from "./pages/Enquiries.tsx";
 import FollowUps from "./pages/FollowUps.tsx";
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="/reminders" element={<Reminders />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/roles" element={<Roles />} />
+                <Route path="/company" element={<Company />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>

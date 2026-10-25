@@ -33,6 +33,9 @@ import type {
   CrmInvoice,
   CrmInvoiceLine,
   CrmInvoiceStatus,
+  CrmCompanyProfile,
+  CrmCompanyLetterhead,
+  UpdateCrmCompanyInput,
   CrmMessage,
   CrmMessageStatus,
   CrmMessageTemplate,
@@ -877,4 +880,33 @@ export async function updateRole(id: string, input: UpdateCrmRoleInput): Promise
     body: input,
   });
   return mapRoleDetail(asRecord(requireField(data, "role")));
+}
+
+function mapLetterhead(value: unknown): CrmCompanyLetterhead {
+  const row = asRecord(value);
+  return {
+    name: String(row.name ?? ""),
+    details: String(row.details ?? ""),
+    contactName: String(row.contactName ?? ""),
+    contactMobile: String(row.contactMobile ?? ""),
+    logoUrl: String(row.logoUrl ?? ""),
+  };
+}
+
+function mapCompanyProfile(data: Record<string, unknown>): CrmCompanyProfile {
+  return {
+    saved: mapLetterhead(data.saved),
+    defaults: mapLetterhead(data.defaults),
+    company: mapLetterhead(data.company),
+  };
+}
+
+export async function fetchCompanyProfile(): Promise<CrmCompanyProfile> {
+  const data = await api<Record<string, unknown>>("/api/crm/company");
+  return mapCompanyProfile(data);
+}
+
+export async function updateCompanyProfile(input: UpdateCrmCompanyInput): Promise<CrmCompanyProfile> {
+  const data = await api<Record<string, unknown>>("/api/crm/company", { method: "PUT", body: input });
+  return mapCompanyProfile(data);
 }

@@ -21,7 +21,7 @@ function renderDrawer(permissions: string[], path = "/enquiries") {
 
 describe("sales CRM sidebar", () => {
   it("lists the web CRM groups and items in the same order", () => {
-    renderDrawer([CRM_PERMISSIONS.usersRead, CRM_PERMISSIONS.rolesRead]);
+    renderDrawer([CRM_PERMISSIONS.usersRead, CRM_PERMISSIONS.rolesRead, CRM_PERMISSIONS.companyRead]);
 
     expect(screen.getByRole("heading", { name: "Sales CRM" })).toBeInTheDocument();
     expect(screen.getByText("Pipeline & collections")).toBeInTheDocument();
@@ -41,6 +41,7 @@ describe("sales CRM sidebar", () => {
       "Communications",
       "Users",
       "Roles",
+      "Company",
     ]);
     expect(screen.getByText("Overview")).toBeInTheDocument();
     expect(screen.getByText("Pipeline")).toBeInTheDocument();
@@ -50,13 +51,14 @@ describe("sales CRM sidebar", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
   });
 
-  it("hides Users, Roles, and the Admin group without those permissions", () => {
+  it("hides Users, Roles, Company, and the Admin group without those permissions", () => {
     renderDrawer([CRM_PERMISSIONS.dashboardRead]);
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Follow-ups" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Users" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Roles" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Company" })).not.toBeInTheDocument();
     expect(screen.queryByText("Admin")).not.toBeInTheDocument();
   });
 });

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/lib/auth/store";
 import {
   ConfirmRemoveDialog,
   EditAction,
@@ -22,6 +21,7 @@ import { formatMoney } from "@/lib/crm/display";
 import { useCrm } from "@/lib/crm/store";
 import {
   createInvoice,
+  fetchCompanyProfile,
   fetchInvoice,
   listInvoices,
   removeInvoice,
@@ -32,6 +32,7 @@ import {
   CRM_INVOICE_STATUSES,
   CRM_PERMISSIONS,
   type CreateInvoiceInput,
+  type CrmCompanyLetterhead,
   type CrmContact,
   type CrmInvoice,
   type CrmInvoiceStatus,
@@ -85,18 +86,6 @@ function formatLongDate(value: string | null): string {
   return date.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
 }
 
-function formatIssuerPhone(countryCode: string | undefined, mobileNo: string): string {
-  const mobile = mobileNo.trim();
-  if (!mobile) return "";
-  if (mobile.startsWith("+")) return mobile;
-  const code = countryCode?.trim();
-  if (!code) return mobile;
-  const codeDigits = code.replace(/\D/g, "");
-  const mobileDigits = mobile.replace(/\D/g, "");
-  if (codeDigits && mobileDigits.startsWith(codeDigits)) return mobile;
-  return `${code} ${mobile}`;
-}
-
 function formatQuantity(value: number): string {
   return Number.isInteger(value) ? String(value) : String(value);
 }
@@ -132,42 +121,56 @@ function DaisyMark() {
   );
 }
 
-type InvoiceIssuer = { name: string; email: string; phone: string };
+function CompanyMark({ logoUrl }: { logoUrl: string }) {
+  if (!logoUrl) return <DaisyMark />;
+  return <img src={logoUrl} alt="" className="h-[4.25rem] w-[4.25rem] shrink-0 object-contain" />;
+}
+
+const EMPTY_LETTERHEAD: CrmCompanyLetterhead = {
+  name: "",
+  details: "",
+  contactName: "",
+  contactMobile: "",
+  logoUrl: "",
+};
 
 function InvoiceDocument({
   invoice,
   contact,
-  issuer,
+  company,
   taxId,
 }: {
   invoice: CrmInvoice;
   contact: CrmContact | null;
-  issuer: InvoiceIssuer;
+  company: CrmCompanyLetterhead;
   taxId: string | null;
 }) {
   const lines = invoice.lines ?? [];
-  const [given, ...familyParts] = issuer.name.trim().split(/\s+/);
-  const family = familyParts.join(" ");
   const subtitle = contact?.companyName?.trim() || "";
   const taxLabel = `Tax ${invoice.taxPercent}%${taxId ? ` (${taxId})` : ""}:`;
   return (
     <article className="crm-invoice-print bg-white px-6 py-8 text-neutral-900">
       <header className="flex items-start justify-between gap-8">
         <div className="flex min-w-0 items-center gap-3">
-          <DaisyMark />
+          <CompanyMark logoUrl={company.logoUrl} />
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-[1.85rem] font-normal tracking-tight text-[#a56fbe]">{given || issuer.name}</p>
-            {family ? <p className="mt-1 truncate text-[0.95rem] text-[#8a8a8a]">{family}</p> : null}
+            {company.name ? (
+              <p className="truncate text-[1.85rem] font-normal tracking-tight text-[#a56fbe]">{company.name}</p>
+            ) : null}
+            {company.details ? (
+              <p className="mt-1 whitespace-pre-wrap text-[0.95rem] text-[#8a8a8a]">{company.details}</p>
+            ) : null}
           </div>
         </div>
         <div className="shrink-0 text-right">
           <h2 className="text-[2.7rem] font-normal leading-none tracking-[0.06em] text-neutral-900">INVOICE</h2>
           {subtitle ? <p className="mt-1 text-sm text-neutral-800">{subtitle}</p> : null}
-          <div className="mt-4 space-y-0.5 text-sm leading-snug text-neutral-800">
-            <p className="font-semibold">{issuer.name}</p>
-            {issuer.email ? <p>{issuer.email}</p> : null}
-            {issuer.phone ? <p>{issuer.phone}</p> : null}
-          </div>
+          {company.contactName || company.contactMobile ? (
+            <div className="mt-4 space-y-0.5 text-sm leading-snug text-neutral-800">
+              {company.contactName ? <p className="font-semibold">{company.contactName}</p> : null}
+              {company.contactMobile ? <p>{company.contactMobile}</p> : null}
+            </div>
+          ) : null}
         </div>
       </header>
 
@@ -277,7 +280,6 @@ function printStoredInvoice() {
 
 export function InvoicesModule() {
   const crm = useCrm();
-  const { user } = useAuth();
   const sessionReady = crm.status === "ready";
   const allowed = crm.hasPermission(CRM_PERMISSIONS.invoicesRead);
   const canCreate = crm.hasPermission(CRM_PERMISSIONS.invoicesCreate);
@@ -286,6 +288,7 @@ export function InvoicesModule() {
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [items, setItems] = useState<CrmInvoice[]>([]);
+  const [letterhead, setLetterhead] = useState<CrmCompanyLetterhead>(EMPTY_LETTERHEAD);
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -320,6 +323,19 @@ export function InvoicesModule() {
     if (sessionReady && allowed) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when filters change
   }, [sessionReady, allowed, appliedSearch, statusFilter]);
+
+  useEffect(() => {
+    if (!sessionReady || !allowed) return;
+    let cancelled = false;
+    void fetchCompanyProfile()
+      .then((profile) => {
+        if (!cancelled) setLetterhead(profile.company);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionReady, allowed]);
 
   const openCreate = () => {
     setEditing(null);
@@ -680,11 +696,7 @@ export function InvoicesModule() {
           <InvoiceDocument
             invoice={viewing}
             contact={crm.contacts.items.find((item) => item.id === viewing.contactId) ?? null}
-            issuer={{
-              name: user?.name?.trim() || "Sales CRM",
-              email: user?.email ?? "",
-              phone: user ? formatIssuerPhone(user.countryCode, user.mobileNo) : "",
-            }}
+            company={letterhead}
             taxId={crm.clients.items.find((item) => item.contactId === viewing.contactId)?.gstin ?? null}
           />
         ) : null}

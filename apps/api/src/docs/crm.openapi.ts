@@ -85,6 +85,7 @@ export const crmOpenApiTags = [
   { name: "CRM Calendar", description: "Task due dates, booked enquiries, and standalone events. Follow-ups live under Follow-ups calendar." },
   { name: "CRM Users", description: "Admin create and assign CRM roles" },
   { name: "CRM Roles", description: "Roles and permission catalog" },
+  { name: "CRM Company", description: "Invoice letterhead: company name, logo, organization details, and contact" },
 ];
 
 export const crmOpenApiSchemas = {
@@ -444,6 +445,21 @@ export const crmOpenApiSchemas = {
     properties: {
       name: { type: "string", minLength: 2, maxLength: 80 },
       permissionIds: { type: "array", items: { type: "string", format: "uuid" } },
+    },
+  },
+  UpdateCrmCompanyRequest: {
+    type: "object",
+    required: ["name", "details", "contactName", "contactMobile"],
+    properties: {
+      name: { type: "string", maxLength: 160 },
+      details: { type: "string", maxLength: 2000, description: "Address and other organization details printed under the company name" },
+      contactName: { type: "string", maxLength: 120 },
+      contactMobile: { type: "string", maxLength: 20 },
+      logo: {
+        type: "string",
+        nullable: true,
+        description: "PNG, JPEG, WebP, or GIF data URL. Null clears a saved logo so the environment logo is used.",
+      },
     },
   },
 };
@@ -1265,6 +1281,27 @@ export const crmOpenApiPaths = {
       security: [{ bearerAuth: [] }],
       parameters: [requestId],
       responses: { ...ok("Permissions") },
+    },
+  },
+  "/api/crm/company": {
+    get: {
+      tags: ["CRM Company"],
+      summary: "Read the invoice company profile",
+      description:
+        "Returns the saved letterhead, the CRM_COMPANY_* environment defaults, and the effective company used on invoices. A blank saved field uses the environment value. Requires crm.company.read or crm.invoices.read.",
+      security: [{ bearerAuth: [] }],
+      parameters: [requestId],
+      responses: { ...ok("Company profile") },
+    },
+    put: {
+      tags: ["CRM Company"],
+      summary: "Save the invoice company profile",
+      description:
+        "Requires crm.company.update. Omit logo to leave the saved image unchanged. Null clears it. Blank text fields fall back to the environment defaults when an invoice is printed.",
+      security: [{ bearerAuth: [] }],
+      parameters: [requestId],
+      requestBody: jsonBody("UpdateCrmCompanyRequest"),
+      responses: { ...ok("Company profile saved"), "422": validationFailed },
     },
   },
 };

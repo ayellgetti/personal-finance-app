@@ -62,6 +62,8 @@ export const CRM_PERMISSIONS = {
   usersUpdate: "crm.users.update",
   rolesRead: "crm.roles.read",
   rolesUpdate: "crm.roles.update",
+  companyRead: "crm.company.read",
+  companyUpdate: "crm.company.update",
 } as const;
 
 export type CrmPermissionCode = (typeof CRM_PERMISSIONS)[keyof typeof CRM_PERMISSIONS];
@@ -113,6 +115,28 @@ export type CrmPaymentReferenceType = (typeof CRM_PAYMENT_REFERENCE_TYPES)[numbe
 
 export const CRM_INVOICE_STATUSES = ["draft", "issued", "paid", "cancelled"] as const;
 export type CrmInvoiceStatus = (typeof CRM_INVOICE_STATUSES)[number];
+
+export type CrmCompanyLetterhead = {
+  name: string;
+  details: string;
+  contactName: string;
+  contactMobile: string;
+  logoUrl: string;
+};
+
+export type CrmCompanyProfile = {
+  saved: CrmCompanyLetterhead;
+  defaults: CrmCompanyLetterhead;
+  company: CrmCompanyLetterhead;
+};
+
+export type UpdateCrmCompanyInput = {
+  name: string;
+  details: string;
+  contactName: string;
+  contactMobile: string;
+  logo?: string | null;
+};
 
 export const CRM_CHANNELS = ["email", "sms", "in_app"] as const;
 export type CrmChannel = (typeof CRM_CHANNELS)[number];
