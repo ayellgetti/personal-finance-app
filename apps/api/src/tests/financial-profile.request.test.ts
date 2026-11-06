@@ -25,7 +25,7 @@ test("financial profile accepts zero dependents with no family members", () => {
   assert.deepEqual(parsed.familyMembers, []);
 });
 
-test("financial profile requires family member details to match dependents", () => {
+test("financial profile allows fewer member details than dependents but never more", () => {
   const parsed = upsertFinancialProfileBodySchema.parse({
     ...validProfile,
     dependents: 1,
@@ -38,6 +38,18 @@ test("financial profile requires family member details to match dependents", () 
       ...validProfile,
       dependents: 2,
       familyMembers: [validMember],
+    }).success,
+    true,
+  );
+  assert.equal(
+    upsertFinancialProfileBodySchema.safeParse({ ...validProfile, dependents: 2, familyMembers: [] }).success,
+    true,
+  );
+  assert.equal(
+    upsertFinancialProfileBodySchema.safeParse({
+      ...validProfile,
+      dependents: 1,
+      familyMembers: [validMember, validMember],
     }).success,
     false,
   );
