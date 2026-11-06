@@ -325,6 +325,44 @@ at 320, 360, 390, and 430 CSS pixels. Playwright remains deferred.
 
 ---
 
+### Phase B8 — Product review remediation (Nov 2026 review)
+
+Source: "Freedom Planner — Product, UX & Customer Experience Review" (5/10 verdict).
+
+**P0 (trust, correctness, copy): IN PROGRESS**
+
+Done in `apps/web` (+ tax catalog):
+
+- `dataReadiness()` gates verdicts: no net-worth/freedom hero, health score, coach verdicts, projection or cashflow charts until income and expenses exist.
+- Health score shows "unlocks after income, expenses and one saving" with unscored sub-checks greyed.
+- Empty states no longer claim "debt free", "Adequately Covered", "Funded", or "On track" at ₹0.
+- Wizard: no jargon footer, emergency target prefilled from expenses and skippable, FIRE path optional, implementation words removed.
+- Tax catalog adds FY 2026-27 (default, carried forward from 2025-26).
+- Advisor copy: plain language, not-regulated-advice and data-use note.
+
+Open P0 work (needs a human or backend): CA review of section references against the Income-tax Act, 2025; legal review of the disclaimer; a "delete my data" endpoint; Yes/No/Later EMI question (needs a persisted flag).
+
+**P1 (in progress):**
+
+- Done: 6-section navigation (Home, Money In/Out incl. Investments and Insurance, Goals, Advisor, Learn, Tools incl. Freedom Calculator and Tax; multi-screen sections expand in place; AI Chat and five niche calculators stay routable but unlisted). Tax screen prefilled from saved income, EPF/PPF/NPS and premiums (`lib/finance/tax-inputs.ts`), with a "switch regime and save ₹X" headline and 80C usage.
+- Done: one-headline dashboard (health score + "Fix this first" card; full numbers behind a toggle) and one action button per tip on the dashboard and advisor plan (`actionForCategory`, `Recommendation.action`); tips are ranked High impact first and empty until income and expenses exist.
+- Done: verified-vs-assumed tags on dashboard tips (`Recommendation.basis`, `BasisChips`: "From your data" / "Assumption" as text) and assumption captions on the insurance targets. AI-generated advisor steps are not tagged (the API response has no per-step basis).
+- Done (partial): quick start. Setup is now Profile, Income, Expenses, then a "First result" step (surplus, savings rate, months of safety) with "See my dashboard now"; loans, investments, insurance, emergency fund, goals and review follow as optional. The Profile step now needs only retirement age, employment type, inflation and a dependents count (all prefilled); dependent names and details are optional and added later in Profile. The profile API now accepts fewer member details than dependents (never more).
+- Done: single expense hub (`ExpenseHub`): Expenses is one screen with Monthly bills, Daily log and Import statement tabs under a "Spending this month" total (bills + this month's daily log). Budget Tracker and Statement Analyzer are listed under Tools in the sidebar and open as their own screens; the same two screens are also tabs in the Expenses hub. Statement analysis is still separate server data and is not added to the total.
+- Done: emergency-fund advice has one owner (Goals). A plan lists it once (`keepOneEmergencyItem`, applied to the local advisor and to AI plans on display), the Learning Hub coach points to Goals instead of repeating the target, and the dashboard tip links there.
+- P1 remaining: importing parsed statement lines into the expense total (needs a de-duplication rule).
+
+**P2 (in progress):**
+
+- Done: monthly check-in and history. New `CheckIn` table (one row per user per month, migration `check_in`), `GET/PUT /api/check-ins` (OpenAPI + tests), and a Progress screen under Home: review five numbers (net worth, income, expenses, health score) and save in one tap, trend chart, milestones (first ₹1 L, ₹10 L, score 50/75) and year-over-year once the same month a year earlier exists. The client supplies the numbers from its saved data.
+- Done: goal fixes (`goalFixes`): an off-track or at-risk life goal shows three ways back (more monthly cash, a later date the current surplus can reach, or a lower target in today's money), with the 11% return and inflation assumptions stated. The emergency fund is excluded (owned by its own card).
+- Done (term cover only): term target now depends on the person (`termCoverMultiple`): 5× income with no dependents, 10× with one, 15× with two or more, capped at years left to retirement, plus loans. The coach's life-insurance rule uses the same target. Health cover is unchanged (₹10 L floor, ₹7.5 L per person above two people); city tier needs a profile field that does not exist. Multipliers are rules of thumb pending an adviser's review.
+- Done (spot-check findings only): accessibility. Menu and chat-send buttons named; setup profile and emergency-fund inputs labelled (Full Name, Age, Employment Type, target, saved, date); field errors announced (`role="alert"`); status badges (success, warning, danger) carry an icon as well as colour; toasts moved to bottom-right so they stop covering the page title. A full audit (every screen, dark-mode contrast, keyboard and screen-reader pass) has not been run.
+- Done: saved what-ifs. New `FreedomScenario` table (migration `freedom_scenario`), `GET/POST /api/freedom-scenarios` and `POST /api/freedom-scenarios/remove` (max three per user, 409 beyond that; OpenAPI + tests). The Freedom Calculator can save the current edit under a name and compares it side by side with up to three saved what-ifs. Compare only: there is no "load" back into the calculator, because retirement age and inflation edits there write to the profile.
+- Done: India-aware retirement view (`lib/finance/retirement-india.ts`, `IndiaRetirement` panel in the Freedom Calculator, web only, no API change). Shows retirement corpus by source (EPF, PPF, NPS, market, fixed income, gold and property), estimated gratuity (15/26 formula, basic = 40% of salary, career from 22, capped at ₹20 L), the NPS 40% annuity kept out of the spendable corpus and turned into pension, and healthcare inflated faster than general inflation, beside the standard number. All assumptions are editable and default to: healthcare 15% of spending at 8% inflation, annuity 6%, blank-return fallbacks EPF 8.25%, PPF 7.1%, NPS 9%. The headline Freedom Calculator numbers are unchanged. Defaults need an adviser's confirmation. Open: NPS quick-add still defaults to 10% (this view respects a holding's own return), PPF/EPF maturity dates and withdrawal timing are not modelled.
+- Review fixes (code review of P0 to P2): check-in list query now parsed in the controller (Express 5 re-reads `req.query`, so the validation middleware's coercion is lost; other list endpoints only work because Prisma-free paging coerces strings, so the middleware should be fixed separately); Profile saves with a dependents count and no details; Tax prefill follows late-loading data without overwriting typed figures; bare-date daily-log entries read as local dates; the three what-if limit is held under a per-user advisory lock; healthcare inflation never below general inflation; check-in month rebuilt at save time, rejected when in the future, and net worth must equal assets minus liabilities; what-if load failure blocks saving; insurance term bar follows the gated target; `Progress` now exposes `aria-valuenow`.
+- Not started: a due-this-month nudge on the dashboard and salary-day / tax-deadline reminders.
+
 # Track C — Engineering platform (optional)
 
 **Status: NOT STARTED** (entire track)
