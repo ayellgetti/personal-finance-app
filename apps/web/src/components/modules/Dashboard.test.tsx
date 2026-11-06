@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { FinanceData } from "@/types/finance";
 
 const data: FinanceData = {
@@ -97,6 +97,7 @@ describe("Dashboard", () => {
 
   it("explains the net-worth path and health-score checks", () => {
     render(<Dashboard onNavigate={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Show all numbers and charts" }));
 
     expect(screen.getByRole("heading", { name: "Projected net worth (Moderate)" })).toBeInTheDocument();
     expect(screen.getByText(/SIPs keep investing at your stated returns/)).toBeInTheDocument();
@@ -115,5 +116,16 @@ describe("Dashboard", () => {
     expect(screen.getByText(/Day 5/)).toBeInTheDocument();
     expect(screen.getByText("Conservative")).toBeInTheDocument();
     expect(screen.getByText("Aggressive")).toBeInTheDocument();
+  });
+
+  it("leads with one fix-first card whose button opens the right screen", () => {
+    const onAction = vi.fn();
+    render(<Dashboard onNavigate={vi.fn()} onAction={onAction} />);
+
+    expect(screen.getByText("Fix this first")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Debt paydown" })).not.toBeInTheDocument();
+    const card = screen.getByText("Fix this first").parentElement!;
+    fireEvent.click(within(card).getByRole("button"));
+    expect(onAction).toHaveBeenCalledWith(expect.objectContaining({ target: expect.any(String) }));
   });
 });

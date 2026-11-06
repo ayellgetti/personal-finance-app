@@ -39,6 +39,7 @@ export function EmergencyFundModule() {
   const alerts = emergencyFundAlerts(data);
   const recs = emergencyFundRecommendations(data);
   const status = STATUS_TONE[ef.status];
+  const targetSet = ef.recommendedTarget > 0;
 
   const fields: FieldDef[] = [
     { name: "employmentType", label: "Employment Type", type: "select", options: EMPLOYMENT_TYPES, defaultValue: data.profile.employmentType, span: 2 },
@@ -60,16 +61,27 @@ export function EmergencyFundModule() {
               {ef.status === "Green" ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
               Emergency Fund · {data.profile.employmentType}
             </div>
-            <p className="mt-1 font-display text-4xl font-bold md:text-5xl">{ef.coverageMonths.toFixed(1)} months</p>
-            <p className="mt-2 text-sm text-primary-foreground/80">
-              {formatCurrency(ef.totalAvailable, cur, true)} available of {formatCurrency(ef.recommendedTarget, cur, true)} target · Rule: {EF_RULE_LABEL[ef.employmentType]}
-            </p>
+            {targetSet ? (
+              <>
+                <p className="mt-1 font-display text-4xl font-bold md:text-5xl">{ef.coverageMonths.toFixed(1)} months</p>
+                <p className="mt-2 text-sm text-primary-foreground/80">
+                  {formatCurrency(ef.totalAvailable, cur, true)} available of {formatCurrency(ef.recommendedTarget, cur, true)} target · Rule: {EF_RULE_LABEL[ef.employmentType]}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 font-display text-3xl font-bold md:text-4xl">Target not set yet</p>
+                <p className="mt-2 text-sm text-primary-foreground/80">
+                  Add your monthly expenses and we will suggest {EF_RULE_LABEL[ef.employmentType]} as your target.
+                </p>
+              </>
+            )}
           </div>
           <div className="rounded-2xl bg-background/10 p-4 backdrop-blur-sm">
             <p className="text-xs text-primary-foreground/70">Safety Score</p>
-            <p className="font-display text-3xl font-bold">{ef.safetyScore}/100</p>
+            <p className="font-display text-3xl font-bold">{targetSet ? `${ef.safetyScore}/100` : "—"}</p>
             <span className="mt-1 inline-block rounded-full bg-background/20 px-2.5 py-0.5 text-xs font-semibold">
-              Status: {status.label}
+              {targetSet ? `Status: ${status.label}` : "Not set"}
             </span>
           </div>
         </div>
@@ -129,7 +141,7 @@ export function EmergencyFundModule() {
         <StatCard label="Current Coverage" value={`${ef.coverageMonths.toFixed(1)} mo`} sub={status.label} trend={ef.status === "Green" ? "up" : "down"} icon={ShieldCheck} accent={ef.status === "Green" ? "primary" : "danger"} />
         <StatCard label="Shortfall" value={formatCurrency(ef.shortfall, cur, true)} icon={ShieldAlert} accent="danger" />
         <StatCard label="Monthly Contribution" value={formatCurrency(ef.monthlyContribution, cur)} icon={PiggyBank} accent="gold" />
-        <StatCard label="Est. Completion" value={ef.completionDate ? ef.completionDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "Funded ✓"} sub={ef.monthsToComplete ? `${ef.monthsToComplete} mo` : undefined} icon={CalendarClock} accent="default" />
+        <StatCard label="Est. Completion" value={!targetSet ? "Not set" : ef.completionDate ? ef.completionDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : ef.shortfall > 0 ? "Add a monthly amount" : "Funded ✓"} sub={ef.monthsToComplete ? `${ef.monthsToComplete} mo` : undefined} icon={CalendarClock} accent="default" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

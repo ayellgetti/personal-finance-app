@@ -1,5 +1,6 @@
 import { AdvisorReport, AdvisorSource } from "@/lib/finance/advisor";
-import { formatCurrency } from "@/lib/finance/calculations";
+import { actionForCategory, formatCurrency, keepOneEmergencyItem, type TipAction } from "@/lib/finance/calculations";
+import { Button } from "@/components/ui/button";
 import { Panel, Badge } from "./shared";
 import {
   AlertTriangle, CheckCircle2, Landmark, Lightbulb, ListChecks, PiggyBank,
@@ -24,9 +25,9 @@ const WARN_TONE: Record<string, "danger" | "gold" | "muted"> = {
 };
 
 const SOURCE_LABEL: Record<AdvisorSource, string> = {
-  openai: "OpenAI",
-  cache: "Saved",
-  rules: "Rule engine",
+  openai: "AI plan",
+  cache: "Saved plan",
+  rules: "Standard guidelines",
 };
 
 export function AdvisorSummary({
@@ -89,20 +90,22 @@ export function AdvisorSummary({
 export function AdvisorPlanOfAction({
   advice,
   currency,
+  onAction,
 }: {
   advice: AdvisorReport;
   currency: string;
+  onAction?: (action: TipAction) => void;
 }) {
   return (
     <div className="space-y-6">
       <Panel title="Plan of action" action={<ListChecks className="h-4 w-4 text-primary" />}>
         <div className="space-y-4">
-          {advice.planOfAction.map((step) => {
+          {keepOneEmergencyItem(advice.planOfAction).map((step, index) => {
             const Icon = CAT_ICON[step.category] ?? Lightbulb;
             return (
-              <div key={`${step.priority}-${step.action}`} className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+              <div key={`${index}-${step.action}`} className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-display font-bold text-primary">
-                  {step.priority}
+                  {index + 1}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -114,6 +117,16 @@ export function AdvisorPlanOfAction({
                   {step.monthlyAmount != null && step.monthlyAmount > 0 && (
                     <p className="mt-2 text-sm font-medium">{formatCurrency(step.monthlyAmount, currency)} / month</p>
                   )}
+                  {onAction && actionForCategory(step.category) ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3 rounded-lg"
+                      onClick={() => onAction(actionForCategory(step.category)!)}
+                    >
+                      {actionForCategory(step.category)!.label}
+                    </Button>
+                  ) : null}
                 </div>
                 <Icon className="hidden h-5 w-5 shrink-0 text-muted-foreground sm:block" />
               </div>

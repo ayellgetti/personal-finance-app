@@ -460,6 +460,7 @@ export function AdvisorChat() {
                 <Button
                   size="icon"
                   disabled={!input.trim() || isLoading}
+                  aria-label="Send message"
                   onClick={() => void sendMessage(input)}
                   className="h-8 w-8 shrink-0 rounded-xl"
                 >

@@ -20,6 +20,17 @@ import {
   coveragePercent,
   positionSnapshot,
   healthScore,
+  dataReadiness,
+  coachInsights,
+  emergencyFund,
+  generateRecommendations,
+  keepOneEmergencyItem,
+  dailySpentThisMonth,
+  goalFixes,
+  termCoverMultiple,
+  analyzeInsurance,
+  analyzeGoal,
+  monthlySavings,
 } from "./calculations";
 import { sampleData } from "./sampleData";
 import type { FinanceData, Loan } from "@/types/finance";
@@ -307,5 +318,178 @@ describe("credit cards", () => {
         sampleData.creditCards.reduce((sum, card) => sum + card.outstanding, 0),
     );
     expect(creditUtilization(sampleData)).toBe(15);
+  });
+});
+
+describe("empty-data gating", () => {
+  const empty: FinanceData = {
+    ...sampleData,
+    incomes: [],
+    expenses: [],
+    loans: [],
+    creditCards: [],
+    investments: [],
+    insurances: [],
+    goals: [],
+    profile: { ...sampleData.profile, emergencyFund: 0, liquidAssets: 0, monthlyEssentialExpenses: 0 },
+  };
+
+  it("reports what is missing before income and expenses exist", () => {
+    const r = dataReadiness(empty);
+    expect(r.ready).toBe(false);
+    expect(r.missing).toEqual(["your monthly income", "your monthly expenses", "one saving or investment"]);
+  });
+
+  it("does not score the health check on no data", () => {
+    const hs = healthScore(empty);
+    expect(hs.ready).toBe(false);
+    expect(hs.components.filter((c) => c.answered)).toHaveLength(0);
+  });
+
+  it("scores once data exists", () => {
+    expect(dataReadiness(sampleData).ready).toBe(true);
+    expect(healthScore(sampleData).ready).toBe(true);
+  });
+
+  it("returns one prompt instead of verdicts from the coach", () => {
+    const insights = coachInsights(empty);
+    expect(insights).toHaveLength(1);
+    expect(insights[0]?.message).toMatch(/Add your monthly income/);
+  });
+
+  it("treats a zero emergency target as unset, not funded", () => {
+    expect(emergencyFund(empty).progress).toBe(0);
+  });
+});
+
+describe("recommendations", () => {
+  it("returns none on empty data", () => {
+    const empty: FinanceData = { ...sampleData, incomes: [], expenses: [], loans: [], investments: [], insurances: [] };
+    expect(generateRecommendations(empty)).toEqual([]);
+  });
+
+  it("ranks High impact first and gives every tip a button", () => {
+    const recs = generateRecommendations(sampleData);
+    expect(recs.length).toBeGreaterThan(0);
+    const rank = { High: 0, Medium: 1, Low: 2 };
+    for (let i = 1; i < recs.length; i++) {
+      expect(rank[recs[i]!.impact]).toBeGreaterThanOrEqual(rank[recs[i - 1]!.impact]);
+    }
+    expect(recs.every((r) => r.action)).toBe(true);
+  });
+});
+
+describe("tip basis", () => {
+  it("labels each rule-of-thumb input as an assumption and each saved figure as data", () => {
+    const recs = generateRecommendations(sampleData);
+    expect(recs.length).toBeGreaterThan(0);
+    for (const rec of recs) {
+      expect(rec.basis?.some((b) => b.kind === "data")).toBe(true);
+    }
+    const emergency = recs.find((r) => r.title.startsWith("Top up your emergency"));
+    if (emergency) expect(emergency.basis).toContainEqual({ kind: "assumption", label: "6-month target" });
+  });
+});
+
+describe("keepOneEmergencyItem", () => {
+  const item = (category: string, impact: "High" | "Medium" | "Low", name: string) => ({ category, impact, name });
+
+  it("keeps only the highest-impact emergency item, in place", () => {
+    const out = keepOneEmergencyItem([
+      item("Emergency Fund", "Medium", "a"),
+      item("Debt", "High", "b"),
+      item("Safety", "High", "c"),
+      item("Emergency Fund", "Low", "d"),
+    ]);
+    expect(out.map((i) => i.name)).toEqual(["b", "c"]);
+  });
+
+  it("leaves lists with a single emergency item alone", () => {
+    const list = [item("Debt", "High", "b"), item("Emergency Fund", "Low", "a")];
+    expect(keepOneEmergencyItem(list)).toBe(list);
+  });
+});
+
+describe("goalFixes", () => {
+  const inYears = (years: number) => new Date(Date.now() + years * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const base: FinanceData = {
+    ...sampleData,
+    incomes: [{ id: "i", name: "Job", type: "Salary", monthlyAmount: 100_000, growthRate: 0, startDate: "2024-01-01" }],
+    expenses: [{ id: "e", name: "Rent", category: "House Rent / EMI", amount: 90_000, recurring: true, date: "2024-01-01" }],
+    loans: [],
+    creditCards: [],
+    investments: [],
+    insurances: [],
+  };
+  const goal = (targetAmount: number, years: number) => ({
+    id: "g", name: "Car", type: "Dream Car" as const, targetAmount, targetDate: inYears(years), priority: "High" as const, currentSaved: 0,
+  });
+
+  it("returns null for the emergency fund and for goals that are on track", () => {
+    const ef = base.goals.find((g) => g.type === "Emergency Fund")!;
+    expect(goalFixes(base, ef)).toBeNull();
+    const easy = goal(10_000, 10);
+    expect(analyzeGoal(base, easy).status).toBe("On Track");
+    expect(goalFixes(base, easy)).toBeNull();
+  });
+
+  it("offers more cash, a later date and a lower target for an off-track goal", () => {
+    const hard = goal(3_000_000, 2);
+    expect(analyzeGoal(base, hard).status).not.toBe("On Track");
+    const fixes = goalFixes(base, hard)!;
+    expect(fixes.monthlyAvailable).toBe(monthlySavings(base));
+    expect(fixes.extraMonthlyNeeded).toBeCloseTo(fixes.monthlyNeeded - fixes.monthlyAvailable, 2);
+    expect(fixes.extraMonthlyNeeded).toBeGreaterThan(0);
+    expect(fixes.laterDate && fixes.laterDate.getTime()).toBeGreaterThan(new Date(hard.targetDate).getTime());
+    expect(fixes.affordableTarget).toBeLessThan(hard.targetAmount);
+    expect(fixes.affordableTarget).toBeGreaterThan(0);
+  });
+
+  it("has no later date when there is no surplus to save", () => {
+    const broke: FinanceData = { ...base, expenses: [{ ...base.expenses[0]!, amount: 120_000 }] };
+    const fixes = goalFixes(broke, goal(3_000_000, 2))!;
+    expect(fixes.monthlyAvailable).toBe(0);
+    expect(fixes.laterDate).toBeNull();
+  });
+});
+
+describe("term cover target", () => {
+  const person = (dependents: number, age: number, retirementAge = 60): FinanceData => ({
+    ...sampleData,
+    incomes: [{ id: "i", name: "Job", type: "Salary", monthlyAmount: 100_000, growthRate: 0, startDate: "2024-01-01" }],
+    loans: [],
+    creditCards: [],
+    profile: { ...sampleData.profile, dependents, age, retirementAge },
+  });
+
+  it("asks for more years of income as dependents increase", () => {
+    expect(termCoverMultiple(person(0, 30))).toBe(5);
+    expect(termCoverMultiple(person(1, 30))).toBe(10);
+    expect(termCoverMultiple(person(3, 30))).toBe(15);
+  });
+
+  it("never asks for more years of cover than remain before retirement", () => {
+    expect(termCoverMultiple(person(3, 52, 60))).toBe(8);
+    expect(termCoverMultiple(person(3, 61, 60))).toBe(0);
+  });
+
+  it("gives a single renter and a family of four different targets", () => {
+    const single = analyzeInsurance(person(0, 30)).recommendedTermCover;
+    const family = analyzeInsurance(person(3, 30)).recommendedTermCover;
+    expect(single).toBe(6_000_000);
+    expect(family).toBe(18_000_000);
+  });
+});
+
+describe("dailySpentThisMonth", () => {
+  it("reads a bare date as local time, so the 1st stays in its own month", () => {
+    const now = new Date(2026, 11, 15);
+    expect(dailySpentThisMonth([{ amount: 100, date: "2026-12-01" }], now)).toBe(100);
+    expect(dailySpentThisMonth([{ amount: 100, date: "2026-11-30" }], now)).toBe(0);
+  });
+
+  it("still handles full ISO timestamps", () => {
+    const now = new Date(2026, 11, 15);
+    expect(dailySpentThisMonth([{ amount: 5, date: new Date(2026, 11, 10, 9).toISOString() }], now)).toBe(5);
   });
 });

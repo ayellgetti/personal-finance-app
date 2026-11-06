@@ -1,5 +1,5 @@
 import { forwardRef, ComponentPropsWithoutRef, ReactNode } from "react";
-import { Trash2, Inbox, Pencil } from "lucide-react";
+import { Trash2, Inbox, Pencil, CheckCircle2, AlertCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -137,6 +137,26 @@ export function EmptyState({ message }: { message: string }) {
   );
 }
 
+/** Labels each input of a tip as the user's own data or a rule-of-thumb assumption (text, not colour alone). */
+export function BasisChips({ basis = [] }: { basis?: { kind: "data" | "assumption"; label: string }[] }) {
+  if (!basis.length) return null;
+  return (
+    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Where these numbers come from">
+      {basis.map((item) => (
+        <li
+          key={`${item.kind}-${item.label}`}
+          className={`rounded-full border px-2 py-0.5 text-[11px] ${
+            item.kind === "data" ? "border-primary/30 text-primary" : "border-dashed border-muted-foreground/50 text-muted-foreground"
+          }`}
+        >
+          {item.kind === "data" ? "From your data: " : "Assumption: "}
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function Badge({ children, tone = "muted" }: { children: ReactNode; tone?: "muted" | "primary" | "gold" | "danger" | "success" }) {
   const tones: Record<string, string> = {
     muted: "bg-muted text-muted-foreground",
@@ -145,5 +165,12 @@ export function Badge({ children, tone = "muted" }: { children: ReactNode; tone?
     danger: "bg-danger/10 text-danger",
     success: "bg-success/10 text-success",
   };
-  return <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${tones[tone]}`}>{children}</span>;
+  // Status tones also carry an icon so meaning never rests on colour alone.
+  const StatusIcon = tone === "success" ? CheckCircle2 : tone === "danger" ? AlertCircle : tone === "gold" ? AlertTriangle : null;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${tones[tone]}`}>
+      {StatusIcon ? <StatusIcon className="h-3 w-3" aria-hidden="true" /> : null}
+      {children}
+    </span>
+  );
 }

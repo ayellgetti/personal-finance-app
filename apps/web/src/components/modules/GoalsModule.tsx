@@ -1,6 +1,7 @@
 import { useFinance, newId } from "@/lib/finance/store";
 import {
   analyzeGoal,
+  goalFixes,
   formatCurrency,
   formatPercent,
   goalProjectionSchedule,
@@ -63,6 +64,7 @@ export function GoalsModule() {
           <div className="grid gap-5 md:grid-cols-2">
             {lifeGoals.map((g) => {
               const a = analyzeGoal(data, g);
+              const fixes = goalFixes(data, g);
               const progress = Math.min(100, (g.currentSaved / g.targetAmount) * 100);
               const tone: "success" | "gold" | "danger" =
                 a.status === "On Track" ? "success" : a.status === "At Risk" ? "gold" : "danger";
@@ -124,6 +126,39 @@ export function GoalsModule() {
                       <p className={`font-semibold ${tone === "success" ? "text-success" : tone === "gold" ? "text-accent" : "text-danger"}`}>{a.probability}%</p>
                     </div>
                   </div>
+                  {fixes ? (
+                    <div className="mt-3 rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm">
+                      <p className="font-medium">How to get this back on track</p>
+                      <ul className="mt-1.5 list-disc space-y-1 pl-5 text-muted-foreground">
+                        {fixes.extraMonthlyNeeded > 0 ? (
+                          <li>
+                            Set aside {formatCurrency(fixes.monthlyNeeded, cur)}/month. Your surplus is {formatCurrency(fixes.monthlyAvailable, cur)}, so find{" "}
+                            <span className="font-medium text-foreground">{formatCurrency(fixes.extraMonthlyNeeded, cur)}</span> more.
+                          </li>
+                        ) : (
+                          <li>Set aside {formatCurrency(fixes.monthlyNeeded, cur)}/month. Your surplus already covers it.</li>
+                        )}
+                        {fixes.laterDate ? (
+                          <li>
+                            Or move the date to{" "}
+                            <span className="font-medium text-foreground">
+                              {fixes.laterDate.toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                            </span>{" "}
+                            and your current surplus is enough.
+                          </li>
+                        ) : (
+                          <li>Free up monthly cash first; with no surplus, moving the date does not help.</li>
+                        )}
+                        <li>
+                          Or lower the target to about{" "}
+                          <span className="font-medium text-foreground">{formatCurrency(fixes.affordableTarget, cur, true)}</span> in today&apos;s money.
+                        </li>
+                      </ul>
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Assumes an 11% annual return and {formatPercent(data.profile.inflationRate)} inflation.
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                     <Badge tone={tone}>{a.status}</Badge>
                     <ProjectionScheduleDialog

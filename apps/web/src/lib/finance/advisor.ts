@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { getAccessToken, getRefreshToken } from "@/lib/auth/store";
 import {
   emergencyFundRecommendations,
+  keepOneEmergencyItem,
   financialFreedom,
   formatCurrency,
   generateRecommendations,
@@ -104,7 +105,7 @@ function asCategory(value: string): AdvisorCategory {
 }
 
 export function buildLocalAdvisorReport(data: FinanceData): AdvisorReport {
-  const recs = [...emergencyFundRecommendations(data), ...generateRecommendations(data)];
+  const recs = keepOneEmergencyItem([...emergencyFundRecommendations(data), ...generateRecommendations(data)]);
   const hs = healthScore(data);
   const fi = financialFreedom(data);
   const cur = data.profile.currency;
@@ -194,7 +195,7 @@ export function buildLocalAdvisorReport(data: FinanceData): AdvisorReport {
       "Income, expenses, and EMIs stay at the current monthly levels.",
       "Local rule thresholds: 25% savings rate, 35% DTI, 6–12 month emergency fund.",
     ],
-    disclaimer: "General guidance from the in-app rule engine, not personalised regulated advice. Consult a qualified adviser before acting.",
+    disclaimer: "General guidance based on the numbers you entered. This is not regulated investment advice. Consult a SEBI-registered adviser before acting. Your data is used only to build your plan.",
   };
 }
 

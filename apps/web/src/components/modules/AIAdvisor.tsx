@@ -1,5 +1,5 @@
 import { useFinance } from "@/lib/finance/store";
-import { healthScore } from "@/lib/finance/calculations";
+import { healthScore, type TipAction } from "@/lib/finance/calculations";
 import { useAdvisorReport } from "@/lib/finance/advisor";
 import { AdvisorPlanOfAction } from "./AdvisorOutput";
 import { AdvisorPaywallDialog } from "./AdvisorPaywallDialog";
@@ -8,7 +8,7 @@ import { HealthGauge } from "./HealthGauge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, RefreshCw, Lock } from "lucide-react";
 
-export function AIAdvisor() {
+export function AIAdvisor({ onAction }: { onAction?: (action: TipAction) => void }) {
   const { data } = useFinance();
   const hs = healthScore(data);
   const query = useAdvisorReport(data);
@@ -26,7 +26,7 @@ export function AIAdvisor() {
             <div>
               <h2 className="font-display text-2xl font-bold">AI Financial Advisor</h2>
               <p className="text-sm text-primary-foreground/80">
-                Plan of action from the combined rule engine and OpenAI advisor prompt.
+                Your plan, based on the numbers you entered. General guidance, not regulated investment advice.
               </p>
             </div>
           </div>
@@ -52,13 +52,13 @@ export function AIAdvisor() {
             <HealthGauge score={hs} />
             <div className="mt-4 w-full space-y-3">
               {hs.components.map((c) => (
-                <div key={c.label}>
+                <div key={c.label} className={c.answered ? undefined : "opacity-60"}>
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">{c.label}</span>
-                    <span className="text-muted-foreground">{c.score}/100</span>
+                    <span className="text-muted-foreground">{c.answered ? `${c.score}/100` : "Not scored yet"}</span>
                   </div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-gradient-primary" style={{ width: `${c.score}%` }} />
+                    <div className="h-full rounded-full bg-gradient-primary" style={{ width: `${c.answered ? c.score : 0}%` }} />
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">{c.detail}</p>
                 </div>
@@ -78,7 +78,7 @@ export function AIAdvisor() {
               <p className="text-sm text-muted-foreground">Building your plan of action…</p>
             </Panel>
           )}
-          {advice && <AdvisorPlanOfAction advice={advice} currency={data.profile.currency} />}
+          {advice && <AdvisorPlanOfAction advice={advice} currency={data.profile.currency} onAction={onAction} />}
         </div>
       </div>
 

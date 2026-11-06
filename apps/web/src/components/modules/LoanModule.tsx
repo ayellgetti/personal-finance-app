@@ -86,7 +86,7 @@ export function LoanModule() {
                 onDelete={() => removeItem("loans", l.id)}
               />
             );
-          }) : <EmptyState message="No loans — debt free!" />}
+          }) : <EmptyState message="No loans added yet. If you have an EMI, add it here; if you have none, you can skip this." />}
         </div>
       </Panel>
 

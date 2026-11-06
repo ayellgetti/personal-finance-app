@@ -1,13 +1,14 @@
+import { useState } from "react";
 import { useFinance } from "@/lib/finance/store";
 import {
   formatCurrency, formatPercent, totalAssets, totalLiabilities, netWorth, monthlySavings,
   savingsRate, debtToIncome, monthlyIncome, monthlyExpenses, monthlyEMI, monthlySIP,
   assetAllocation, forecastNetWorth, healthScore, financialFreedom,
   incomeDistribution, expenseDistribution, positionSnapshot, generateRecommendations,
-  scenarioSummary, emergencyFund, creditUtilization, analyzeGoal,
+  scenarioSummary, emergencyFund, creditUtilization, analyzeGoal, dataReadiness, type TipAction,
 } from "@/lib/finance/calculations";
 import { StatCard } from "@/components/StatCard";
-import { Panel, CHART_COLORS, tooltipStyle } from "./shared";
+import { Panel, CHART_COLORS, tooltipStyle, BasisChips } from "./shared";
 import { HealthGauge } from "./HealthGauge";
 import { ViewId } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,19 @@ function CoverBar({
   );
 }
 
-function HealthRow({ label, score, detail }: { label: string; score: number; detail: string }) {
+function HealthRow({ label, score, detail, answered = true }: { label: string; score: number; detail: string; answered?: boolean }) {
+  if (!answered) {
+    return (
+      <div className="opacity-60">
+        <div className="flex items-baseline justify-between gap-3 text-sm">
+          <span className="text-muted-foreground">{label}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">Not scored yet</span>
+        </div>
+        <div className="mt-1 h-1.5 rounded-full bg-muted" />
+        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{detail}</p>
+      </div>
+    );
+  }
   const tone = score >= 70 ? "bg-success" : score >= 35 ? "bg-accent" : "bg-danger";
   return (
     <div>
@@ -61,7 +74,14 @@ function HealthRow({ label, score, detail }: { label: string; score: number; det
   );
 }
 
-export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
+export function Dashboard({
+  onNavigate,
+  onAction,
+}: {
+  onNavigate: (v: ViewId) => void;
+  onAction?: (action: TipAction) => void;
+}) {
+  const [showDetails, setShowDetails] = useState(false);
   const { data } = useFinance();
   const cur = data.profile.currency;
   const nw = netWorth(data);
@@ -86,7 +106,9 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
   const spends = expenseDistribution(data).slice(0, 4);
   const snap = positionSnapshot(data, data.goals.map((goal) => analyzeGoal(data, goal)));
   const ef = emergencyFund(data);
-  const recs = generateRecommendations(data).slice(0, 3);
+  const allRecs = generateRecommendations(data);
+  const recs = allRecs.slice(0, 3);
+  const topRec = allRecs[0];
   const scenarios = scenarioSummary(data);
   const scenarioMax = Math.max(...scenarios.flatMap((row) => [Math.abs(row.y5), Math.abs(row.y10)]), 1);
   const dues = [...data.loans]
@@ -94,6 +116,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
     .sort((a, b) => a.emiDay - b.emiDay)
     .slice(0, 4);
   const util = creditUtilization(data);
+  const readiness = dataReadiness(data);
 
   return (
     <div className="space-y-6">
@@ -101,32 +124,94 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
         <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-primary/30 blur-3xl" />
         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-wider text-primary-foreground/70">Total Net Worth</p>
-            <p className="mt-1 font-display text-4xl font-bold md:text-5xl">{formatCurrency(nw, cur)}</p>
-            <p className="mt-2 text-sm text-primary-foreground/80">
-              {formatCurrency(totalAssets(data), cur, true)} assets · {formatCurrency(totalLiabilities(data), cur, true)} liabilities
-            </p>
-            <p className="mt-3 max-w-xl text-sm text-primary-foreground/75">
-              {nw < 0
-                ? "Liabilities are larger than investments plus emergency cash, so net worth starts below zero."
-                : "Assets already exceed loans and cards. The gap is what you would keep if every debt were settled today."}
-            </p>
+            {readiness.ready ? (
+              <>
+                <p className="text-sm uppercase tracking-wider text-primary-foreground/70">Total Net Worth</p>
+                <p className="mt-1 font-display text-4xl font-bold md:text-5xl">{formatCurrency(nw, cur)}</p>
+                <p className="mt-2 text-sm text-primary-foreground/80">
+                  {formatCurrency(totalAssets(data), cur, true)} assets · {formatCurrency(totalLiabilities(data), cur, true)} liabilities
+                </p>
+                <p className="mt-3 max-w-xl text-sm text-primary-foreground/75">
+                  {nw < 0
+                    ? "Liabilities are larger than investments plus emergency cash, so net worth starts below zero."
+                    : "Assets exceed loans and cards. The gap is what you would keep if every debt were settled today."}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm uppercase tracking-wider text-primary-foreground/70">Where you stand</p>
+                <p className="mt-1 font-display text-3xl font-bold md:text-4xl">Add 3 numbers to see where you stand</p>
+                <p className="mt-3 max-w-xl text-sm text-primary-foreground/75">
+                  Still needed: {readiness.missing.join(", ")}. Your net worth and freedom date appear as soon as income and expenses are in.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {!readiness.hasIncome && (
+                    <Button variant="secondary" className="rounded-xl" onClick={() => onNavigate("income")}>Add income</Button>
+                  )}
+                  {!readiness.hasExpenses && (
+                    <Button variant="secondary" className="rounded-xl" onClick={() => onNavigate("expenses")}>Add expenses</Button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-          <div className="flex flex-col gap-3 rounded-2xl bg-background/10 p-4 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <Rocket className="h-5 w-5" />
-              <div>
-                <p className="text-xs text-primary-foreground/70">Financial Freedom by</p>
-                <p className="font-display text-xl font-bold">{fi.fiDate.getFullYear()} · {fi.yearsRemaining}y left</p>
+          {readiness.ready && (
+            <div className="flex flex-col gap-3 rounded-2xl bg-background/10 p-4 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <Rocket className="h-5 w-5" />
+                <div>
+                  <p className="text-xs text-primary-foreground/70">Financial Freedom by</p>
+                  <p className="font-display text-xl font-bold">{fi.fiDate.getFullYear()} · {fi.yearsRemaining}y left</p>
+                </div>
               </div>
+              <Button variant="secondary" className="rounded-xl" onClick={() => onNavigate("freedom")}>
+                Open Freedom Calculator <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="secondary" className="rounded-xl" onClick={() => onNavigate("freedom")}>
-              Open Freedom Calculator <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </div>
       </div>
 
+      {readiness.ready && (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+            <HealthGauge score={hs} size={110} />
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Financial health</p>
+              <p className="font-display text-3xl font-bold">{hs.total}<span className="text-base font-medium text-muted-foreground"> / 100</span></p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 md:col-span-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Fix this first</p>
+            {topRec ? (
+              <>
+                <p className="mt-1 font-display text-lg font-semibold">{topRec.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{topRec.detail}</p>
+                <BasisChips basis={topRec.basis} />
+                {topRec.action && onAction ? (
+                  <Button className="mt-3 rounded-xl" onClick={() => onAction(topRec.action!)}>
+                    {topRec.action.label} <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                ) : null}
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-muted-foreground">Nothing urgent. Keep your SIPs going and review monthly.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <Button
+        variant="outline"
+        className="w-full rounded-xl"
+        aria-expanded={showDetails}
+        onClick={() => setShowDetails((open) => !open)}
+      >
+        {showDetails ? "Hide details" : "Show all numbers and charts"}
+      </Button>
+
+      {showDetails && (
+      <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard label="Assets" value={formatCurrency(totalAssets(data), cur, true)} icon={Gem} accent="primary" />
         <StatCard label="Liabilities" value={formatCurrency(totalLiabilities(data), cur, true)} icon={Landmark} accent="danger" />
@@ -167,6 +252,11 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
               an investment/loan path, not extra cash you can invest.
             </p>
           ) : null}
+          {!readiness.ready ? (
+            <p className="flex h-[280px] items-center justify-center rounded-xl border border-dashed border-border px-6 text-center text-sm text-muted-foreground">
+              Your projection appears once income and expenses are added.
+            </p>
+          ) : (
           <ResponsiveContainer width="100%" height={280}>
             <ComposedChart data={forecast}>
               <defs>
@@ -189,6 +279,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
               <Line type="monotone" dataKey="assets" stroke="hsl(var(--chart-2))" strokeWidth={1.5} strokeDasharray="5 4" dot={false} name="Assets" />
             </ComposedChart>
           </ResponsiveContainer>
+          )}
         </Panel>
 
         <Panel title="Financial health score">
@@ -200,7 +291,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
             <HealthGauge score={hs} size={140} />
             <div className="mt-4 w-full space-y-3">
               {hs.components.map((c) => (
-                <HealthRow key={c.label} label={c.label} score={c.score} detail={c.detail} />
+                <HealthRow key={c.label} label={c.label} score={c.score} detail={c.detail} answered={c.answered} />
               ))}
             </div>
             <Button variant="outline" className="mt-4 w-full rounded-xl" onClick={() => onNavigate("advisor")}>
@@ -232,6 +323,11 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
           <p className="mb-3 text-xs text-muted-foreground">
             Income vs recurring expenses, EMIs, and what is left (surplus can sit below the line).
           </p>
+          {!readiness.hasIncome && !readiness.hasExpenses ? (
+            <p className="flex h-[240px] items-center justify-center rounded-xl border border-dashed border-border px-6 text-center text-sm text-muted-foreground">
+              Add income and expenses to see your monthly cashflow.
+            </p>
+          ) : (
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={cashflow}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -257,6 +353,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </Panel>
 
         <Panel title="Debt paydown">
@@ -385,6 +482,12 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
                     <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">{rec.impact}</span>
                   </div>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{rec.detail}</p>
+                  <BasisChips basis={rec.basis} />
+                  {rec.action && onAction ? (
+                    <Button size="sm" variant="outline" className="mt-2 rounded-lg" onClick={() => onAction(rec.action!)}>
+                      {rec.action.label}
+                    </Button>
+                  ) : null}
                 </div>
               ))
             ) : (
@@ -449,6 +552,8 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: ViewId) => void }) {
           </div>
         </Panel>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -85,10 +85,10 @@ const setupProfileSchema = z
     familyMembers: z.array(familyMemberDraftSchema).max(20),
   })
   .superRefine((value, ctx) => {
-    if (value.familyMembers.length !== value.dependents) {
+    if (value.familyMembers.length > value.dependents) {
       ctx.addIssue({
         code: "custom",
-        message: "Add details for each dependent",
+        message: "Remove details for extra dependents",
         path: ["familyMembers"],
       });
     }
@@ -237,6 +237,11 @@ export function validateEntityDraft(
   const parsed = ENTITY_SCHEMAS[key].safeParse(values);
   if (parsed.success) return { status: "complete", errors: {} };
   return { status: "incomplete", errors: firstIssue(parsed.error) };
+}
+
+/** Drops dependents whose details are entirely blank; partly filled ones stay so validation can flag them. */
+export function withoutBlankMembers(members: FamilyMemberDraft[]): FamilyMemberDraft[] {
+  return members.filter((m) => m.name.trim() || m.relationship || m.dob || m.gender || m.occupation.trim());
 }
 
 export function toSavedFamilyMembers(members: FamilyMemberDraft[]): FamilyMember[] {
