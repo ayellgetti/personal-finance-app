@@ -14,13 +14,13 @@ import {
   Gem,
   GraduationCap,
   BookMarked,
-  CalendarClock,
   ClipboardList,
-  FileSpreadsheet,
   Calculator,
   Percent,
   CreditCard,
-  MessageSquare,
+  CalendarClock,
+  FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -50,50 +50,75 @@ export type ViewId =
   | "chat"
   | "learn"
   | "course"
-  | "report";
+  | "report"
+  | "progress";
 
 type NavItem = {
   id: ViewId;
   label: string;
   icon: typeof LayoutDashboard;
-  group: string;
   calculatorType?: CalculatorType;
 };
 
-export const NAV: NavItem[] = [
-  { id: "dashboard", label: "Net Worth", icon: LayoutDashboard, group: "Overview" },
-  { id: "setup", label: "Quick Setup", icon: ClipboardList, group: "Overview" },
-  { id: "income", label: "Income", icon: Wallet, group: "Manage" },
-  { id: "expenses", label: "Expenses", icon: Receipt, group: "Manage" },
-  { id: "loans", label: "Loans", icon: Landmark, group: "Manage" },
-  { id: "creditCards", label: "Credit Card", icon: CreditCard, group: "Manage" },
-  { id: "investments", label: "Investments", icon: TrendingUp, group: "Manage" },
-  { id: "insurance", label: "Insurance", icon: ShieldCheck, group: "Manage" },
-  { id: "goals", label: "Goals", icon: Target, group: "Manage" },
-  { id: "advisor", label: "AI Advisor", icon: Sparkles, group: "Plan" },
-  { id: "chat", label: "AI Chat", icon: MessageSquare, group: "Plan" },
-  { id: "course", label: "Course", icon: BookMarked, group: "Plan" },
-  { id: "learn", label: "Learning Hub", icon: GraduationCap, group: "Plan" },
-  { id: "statements", label: "Statement Analyzer", icon: FileSpreadsheet, group: "Plan" },
-  { id: "daily", label: "Budget Tracker", icon: CalendarClock, group: "Plan" },
-  { id: "report", label: "Summary Report", icon: FileText, group: "Report" },
-  { id: "tax", label: "Tax Calculator", icon: Percent, group: "Calculators" },
-  { id: "freedom", label: "Freedom Calculator", icon: Rocket, group: "Calculators" },
-  { id: "calculators", label: "Lumpsum", icon: Calculator, group: "Calculators", calculatorType: "lumpsum" },
-  { id: "calculators", label: "SIP", icon: Calculator, group: "Calculators", calculatorType: "sip" },
-  { id: "calculators", label: "Step Up SIP", icon: Calculator, group: "Calculators", calculatorType: "step_up_sip" },
-  { id: "calculators", label: "EMI", icon: Calculator, group: "Calculators", calculatorType: "emi" },
-  { id: "calculators", label: "Loan", icon: Calculator, group: "Calculators", calculatorType: "loan" },
-  { id: "calculators", label: "Future Value", icon: Calculator, group: "Calculators", calculatorType: "future" },
-  { id: "calculators", label: "Depreciation", icon: Calculator, group: "Calculators", calculatorType: "depreciation" },
-  { id: "calculators", label: "Currency", icon: Calculator, group: "Calculators", calculatorType: "currency" },
-  { id: "calculators", label: "Number to Words", icon: Calculator, group: "Calculators", calculatorType: "number_words" },
-  { id: "calculators", label: "Bond Yield", icon: Calculator, group: "Calculators", calculatorType: "bond_yield" },
-  { id: "calculators", label: "Stock", icon: Calculator, group: "Calculators", calculatorType: "stock" },
-  { id: "calculators", label: "IRR", icon: Calculator, group: "Calculators", calculatorType: "irr" },
-];
+type NavSection = {
+  label: string;
+  icon: typeof LayoutDashboard;
+  items: NavItem[];
+};
 
-const GROUPS = ["Overview", "Manage", "Report", "Plan", "Calculators"];
+// Six top-level sections. Sections with several screens expand in place.
+// AI Chat stays routable but is not listed until it can quote the user's own numbers.
+const NAV_SECTIONS: NavSection[] = [
+  {
+    label: "Home",
+    icon: LayoutDashboard,
+    items: [
+      { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+      { id: "setup", label: "Quick Setup", icon: ClipboardList },
+      { id: "progress", label: "Progress", icon: TrendingUp },
+      { id: "report", label: "Summary Report", icon: FileText },
+    ],
+  },
+  {
+    label: "Money In/Out",
+    icon: Wallet,
+    items: [
+      { id: "income", label: "Income", icon: Wallet },
+      { id: "expenses", label: "Expenses", icon: Receipt },
+      { id: "loans", label: "Loans", icon: Landmark },
+      { id: "creditCards", label: "Credit Card", icon: CreditCard },
+      { id: "investments", label: "Investments", icon: TrendingUp },
+      { id: "insurance", label: "Insurance", icon: ShieldCheck },
+    ],
+  },
+  { label: "Goals", icon: Target, items: [{ id: "goals", label: "Goals", icon: Target }] },
+  { label: "Advisor", icon: Sparkles, items: [{ id: "advisor", label: "AI Advisor", icon: Sparkles }] },
+  {
+    label: "Learn",
+    icon: GraduationCap,
+    items: [
+      { id: "learn", label: "Learning Hub", icon: GraduationCap },
+      { id: "course", label: "Course", icon: BookMarked },
+    ],
+  },
+  {
+    label: "Tools",
+    icon: Calculator,
+    items: [
+      { id: "freedom", label: "Freedom Calculator", icon: Rocket },
+      { id: "tax", label: "Tax", icon: Percent },
+      { id: "daily", label: "Budget Tracker", icon: CalendarClock },
+      { id: "statements", label: "Statement Analyzer", icon: FileSpreadsheet },
+      { id: "calculators", label: "SIP", icon: Calculator, calculatorType: "sip" },
+      { id: "calculators", label: "Step Up SIP", icon: Calculator, calculatorType: "step_up_sip" },
+      { id: "calculators", label: "Lumpsum", icon: Calculator, calculatorType: "lumpsum" },
+      { id: "calculators", label: "EMI", icon: Calculator, calculatorType: "emi" },
+      { id: "calculators", label: "Loan", icon: Calculator, calculatorType: "loan" },
+      { id: "calculators", label: "Future Value", icon: Calculator, calculatorType: "future" },
+      { id: "calculators", label: "IRR", icon: Calculator, calculatorType: "irr" },
+    ],
+  },
+];
 
 function NavList({
   active,
@@ -106,39 +131,65 @@ function NavList({
 }) {
   const { user } = useAuth();
   const hideSetup = user?.quickStep === 1;
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+  const isItemActive = (item: NavItem) =>
+    active === item.id && (!item.calculatorType || item.calculatorType === activeCalculator);
 
   return (
-    <nav className="flex flex-col gap-6 px-3 py-4">
-      {GROUPS.map((group) => {
-        const items = NAV.filter((n) => n.group === group && !(hideSetup && n.id === "setup"));
+    <nav className="flex flex-col gap-1 px-3 py-4" aria-label="Main">
+      {NAV_SECTIONS.map((section) => {
+        const items = section.items.filter((n) => !(hideSetup && n.id === "setup"));
         if (!items.length) return null;
+        const SectionIcon = section.icon;
+        const containsActive = items.some(isItemActive);
+        const buttonClass = (on: boolean) =>
+          cn(
+            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+            on
+              ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
+              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          );
+
+        const [only] = items;
+        if (items.length === 1 && only) {
+          return (
+            <button key={section.label} onClick={() => onSelect(only.id, only.calculatorType)} className={buttonClass(isItemActive(only))}>
+              <SectionIcon className="h-[18px] w-[18px]" />
+              {section.label}
+            </button>
+          );
+        }
+
+        const open = openSections[section.label] ?? containsActive;
         return (
-        <div key={group}>
-          <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{group}</p>
-          <div className="flex flex-col gap-1">
-            {items.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                active === item.id &&
-                (!item.calculatorType || item.calculatorType === activeCalculator);
-              return (
-                <button
-                  key={`${item.id}-${item.calculatorType ?? item.label}`}
-                  onClick={() => onSelect(item.id, item.calculatorType)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  )}
-                >
-                  <Icon className="h-[18px] w-[18px]" />
-                  {item.label}
-                </button>
-              );
-            })}
+          <div key={section.label}>
+            <button
+              aria-expanded={open}
+              onClick={() => setOpenSections((prev) => ({ ...prev, [section.label]: !open }))}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
+                containsActive ? "text-primary" : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              )}
+            >
+              <SectionIcon className="h-[18px] w-[18px]" />
+              <span className="flex-1 text-left">{section.label}</span>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+            </button>
+            {open && (
+              <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-sidebar-border pl-3">
+                {items.map((item) => (
+                  <button
+                    key={`${item.id}-${item.calculatorType ?? item.label}`}
+                    onClick={() => onSelect(item.id, item.calculatorType)}
+                    className={buttonClass(isItemActive(item))}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
         );
       })}
     </nav>
@@ -198,7 +249,7 @@ export function AppLayout({
           <div className="flex min-w-0 items-center gap-3">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="rounded-xl lg:hidden">
+                <Button variant="outline" size="icon" className="rounded-xl lg:hidden" aria-label="Open menu">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
