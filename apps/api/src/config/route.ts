@@ -15,6 +15,8 @@ import { plannerRouter } from "../modules/personal-finance/planner/planner.route
 import { setupRouter } from "../modules/personal-finance/setup/setup.route";
 import { statementRouter } from "../modules/personal-finance/statement/statement.route";
 import { taxRouter } from "../modules/personal-finance/tax/tax.route";
+import { freedomScenarioRouter } from "../modules/personal-finance/freedom-scenario/freedom-scenario.route";
+import { checkInRouter } from "../modules/personal-finance/check-in/check-in.route";
 import { crmRouter } from "../modules/sales-crm/crm.route";
 import { publicEnquiryRouter } from "../modules/sales-crm/public-enquiry/public-enquiry.route";
 import { authRouter } from "../modules/shared/auth/auth.route";
@@ -64,6 +66,8 @@ export class Route {
     app.use("/api/advisor", advisorChatRouter);
     app.use("/api/statements", statementRouter);
     app.use("/api/tax", taxRouter);
+    app.use("/api/check-ins", checkInRouter);
+    app.use("/api/freedom-scenarios", freedomScenarioRouter);
     app.use("/api/crm/public", publicEnquiryRouter);
     app.use("/api/crm", crmRouter);
   }
