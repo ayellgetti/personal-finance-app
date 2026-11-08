@@ -4,8 +4,10 @@ import { SetupWizard } from "@/components/modules/SetupWizard";
 import { ProfileModule } from "@/components/modules/ProfileModule";
 import { Dashboard } from "@/components/modules/Dashboard";
 import { IncomeModule } from "@/components/modules/IncomeModule";
-import { ExpenseModule } from "@/components/modules/ExpenseModule";
+import { ProgressModule } from "@/components/modules/ProgressModule";
+import { ExpenseHub } from "@/components/modules/ExpenseHub";
 import { DailyExpenseModule } from "@/components/modules/DailyExpenseModule";
+import { StatementAnalyzerModule } from "@/components/modules/StatementAnalyzerModule";
 import { LoanModule } from "@/components/modules/LoanModule";
 import { InvestmentModule } from "@/components/modules/InvestmentModule";
 import { InsuranceModule } from "@/components/modules/InsuranceModule";
@@ -16,20 +18,22 @@ import { AdvisorChat } from "@/components/modules/AdvisorChat";
 import { LearningHubModule } from "@/components/modules/LearningHubModule";
 import { CourseModule } from "@/components/modules/CourseModule";
 import { ReportModule } from "@/components/modules/ReportModule";
-import { StatementAnalyzerModule } from "@/components/modules/StatementAnalyzerModule";
 import { TaxPlannerModule } from "@/components/modules/TaxPlannerModule";
 import { CalculatorsModule } from "@/components/modules/CalculatorsModule";
 import { CreditCardModule } from "@/components/modules/CreditCardModule";
 import type { CalculatorType } from "@/lib/finance/calculator-remote";
 import { useAuth } from "@/lib/auth/store";
+import { useFinance } from "@/lib/finance/store";
+import type { TipAction } from "@/lib/finance/calculations";
+import { savedTaxInputs } from "@/lib/finance/tax-inputs";
 import { toast } from "sonner";
 
 const META: Record<ViewId, { title: string; description: string }> = {
-  dashboard: { title: "Net Worth Dashboard", description: "Your complete financial picture at a glance" },
+  dashboard: { title: "Home", description: "Your complete financial picture at a glance" },
   setup: { title: "Quick Setup", description: "Add all your financial details in one guided flow" },
   profile: { title: "Profile", description: "Manage your account and financial persona" },
   income: { title: "Income Management", description: "Track every source of money coming in" },
-  expenses: { title: "Expense Management", description: "Understand where your money goes" },
+  expenses: { title: "Expenses", description: "Monthly bills, daily log and statement import in one place" },
   daily: { title: "Budget Tracker", description: "Log spending and stay on budget every day" },
   loans: { title: "Loan Management", description: "Debt overview, payoff timeline, ratios and strategy" },
   creditCards: { title: "Credit Card", description: "Limits, outstanding balances and utilization" },
@@ -37,18 +41,20 @@ const META: Record<ViewId, { title: string; description: string }> = {
   insurance: { title: "Insurance Management", description: "Coverage adequacy and protection gaps" },
   goals: { title: "Goals", description: "Emergency fund and the milestones you are saving toward" },
   statements: { title: "Statement Analyzer", description: "Bank and phone/UPI statements, categorized automatically" },
-  tax: { title: "Tax Calculator", description: "Country-wise slabs — India old/new regime, plus US and UK estimates" },
+  tax: { title: "Tax", description: "Country-wise slabs — India old/new regime, plus US and UK estimates" },
   calculators: { title: "Financial Calculators", description: "Run, save and revisit financial what-if scenarios" },
   freedom: { title: "Financial Freedom Calculator", description: "When can you retire and live free?" },
   advisor: { title: "AI Financial Advisor", description: "Personalised, actionable recommendations" },
   chat: { title: "AI Financial Chat", description: "Ask your advisor anything and reopen saved conversations" },
   learn: { title: "Financial Learning Hub", description: "Learn concepts, then apply them to your money" },
   course: { title: "Financial Freedom Journey", description: "30 lessons across 3 levels — quiz-gated progress tracking" },
+  progress: { title: "Progress", description: "Monthly check-in, trend and milestones" },
   report: { title: "Summary Report", description: "Full household picture, AI summary, and a one-page PDF" },
 };
 
 const Index = () => {
   const { user, completeQuickSetup } = useAuth();
+  const { data } = useFinance();
   const setupDone = user?.quickStep === 1;
   const [view, setView] = useState<ViewId>(() => (setupDone ? "dashboard" : "setup"));
   const [calculatorType, setCalculatorType] =
@@ -77,6 +83,8 @@ const Index = () => {
     setView(id);
   };
 
+  const openTip = (action: TipAction) => selectView(action.target, action.calculator);
+
   const visibleView = setupDone && view === "setup" ? "dashboard" : view;
 
   return (
@@ -95,11 +103,12 @@ const Index = () => {
         }
         className="animate-fade-in"
       >
-        {visibleView === "dashboard" && <Dashboard onNavigate={selectView} />}
+        {visibleView === "progress" && <ProgressModule />}
+        {visibleView === "dashboard" && <Dashboard onNavigate={selectView} onAction={openTip} />}
         {visibleView === "setup" && <SetupWizard onDone={() => void finishSetup(true)} />}
         {visibleView === "profile" && <ProfileModule />}
         {visibleView === "income" && <IncomeModule />}
-        {visibleView === "expenses" && <ExpenseModule />}
+        {visibleView === "expenses" && <ExpenseHub />}
         {visibleView === "daily" && <DailyExpenseModule />}
         {visibleView === "loans" && <LoanModule />}
         {visibleView === "creditCards" && <CreditCardModule />}
@@ -107,12 +116,12 @@ const Index = () => {
         {visibleView === "insurance" && <InsuranceModule />}
         {visibleView === "goals" && <GoalsModule />}
         {visibleView === "statements" && <StatementAnalyzerModule />}
-        {visibleView === "tax" && <TaxPlannerModule />}
+        {visibleView === "tax" && <TaxPlannerModule saved={savedTaxInputs(data)} />}
         {visibleView === "calculators" && (
           <CalculatorsModule initialType={calculatorType} />
         )}
         {visibleView === "freedom" && <FreedomCalculator />}
-        {visibleView === "advisor" && <AIAdvisor />}
+        {visibleView === "advisor" && <AIAdvisor onAction={openTip} />}
         {visibleView === "chat" && <AdvisorChat />}
         {visibleView === "learn" && <LearningHubModule />}
         {visibleView === "course" && <CourseModule />}

@@ -81,6 +81,7 @@ describe("SetupWizard", () => {
     data.profile.dependents = 0;
     data.profile.familyMembers = [];
     data.incomes = [];
+    data.expenses = [];
   });
 
   it("blocks Next when the profile is incomplete", () => {
@@ -91,12 +92,14 @@ describe("SetupWizard", () => {
     expect(toastError).toHaveBeenCalled();
   });
 
-  it("renders family member forms when dependents is increased", () => {
+  it("needs only a dependents count, with names added later", async () => {
     renderWizard();
     fireEvent.change(screen.getByLabelText("Dependents"), { target: { value: "2" } });
-    expect(screen.getByText("Dependent 1")).toBeInTheDocument();
-    expect(screen.getByText("Dependent 2")).toBeInTheDocument();
-    expect(screen.getAllByLabelText("Name")).toHaveLength(2);
+    expect(screen.getByText(/add each dependent.s name and details later/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Name")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Profile saved"));
+    expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({ dependents: 2, familyMembers: [] }));
   });
 
   it("blocks Next on an unsaved complete income and resets tiles after Save", async () => {
@@ -119,5 +122,35 @@ describe("SetupWizard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Business" }));
     expect(screen.getByLabelText("Monthly amount")).toBeInTheDocument();
+  });
+
+  async function openFirstResult() {
+    renderWizard();
+    fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Profile saved"));
+    fireEvent.click(screen.getByRole("button", { name: /4\. First result/ }));
+  }
+
+  it("asks for missing income and expenses instead of showing a first result", async () => {
+    await openFirstResult();
+    expect(await screen.findByText(/to see your first result/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /See my dashboard now/ })).not.toBeInTheDocument();
+  });
+
+  it("lets the user finish after the first three steps", async () => {
+    data.incomes = [{ id: "i", name: "Job", type: "Salary", monthlyAmount: 100000, growthRate: 0, startDate: "2024-01-01" }];
+    data.expenses = [{ id: "e", name: "Rent", category: "House Rent / EMI", amount: 40000, recurring: true, date: "2024-01-01" }];
+    await openFirstResult();
+    expect(await screen.findByText("Savings rate")).toBeInTheDocument();
+    expect(screen.getByText("60%")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /See my dashboard now/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add more details/ })).toBeInTheDocument();
+  });
+
+  it("gives every profile input a programmatic label", () => {
+    renderWizard();
+    for (const label of ["Full Name", "Age", "Retirement Age", "Employment Type", "Dependents", "Inflation Rate (%)"]) {
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    }
   });
 });

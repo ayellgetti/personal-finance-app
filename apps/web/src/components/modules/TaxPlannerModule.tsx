@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Landmark, Percent, Sparkles, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { StatCard } from "@/components/StatCard";
@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency, formatPercent } from "@/lib/finance/calculations";
+import type { SavedTaxInputs } from "@/lib/finance/tax-inputs";
 import {
   compareTaxPlans,
   currencySymbol,
@@ -78,14 +79,38 @@ const ROW_STYLES: Record<TaxComparisonRowKind, string> = {
   total: "border-t-2 border-border font-display font-bold",
 };
 
-export function TaxPlannerModule() {
+export function TaxPlannerModule({ saved }: { saved?: SavedTaxInputs }) {
   const [countries, setCountries] = useState<TaxCountry[]>([]);
   const [countryCode, setCountryCode] = useState("IN");
   const [financialYear, setFinancialYear] = useState("");
-  const [grossSalary, setGrossSalary] = useState(1_200_000);
-  const [otherIncome, setOtherIncome] = useState(0);
-  const [actual, setActual] = useState<TaxDeductionAmounts>({});
+  const hasSaved = Boolean(saved && saved.grossSalary > 0);
+  const [grossSalary, setGross] = useState(hasSaved ? saved!.grossSalary : 0);
+  const [otherIncome, setOther] = useState(hasSaved ? saved!.otherIncome : 0);
+  const [actual, setActualRaw] = useState<TaxDeductionAmounts>(hasSaved ? saved!.actual : {});
   const [planned, setPlanned] = useState<TaxDeductionAmounts>({});
+  // Once the user types, later-arriving saved data must not overwrite their figures.
+  const edited = useRef(false);
+  const setGrossSalary = (value: number) => {
+    edited.current = true;
+    setGross(value);
+  };
+  const setOtherIncome = (value: number) => {
+    edited.current = true;
+    setOther(value);
+  };
+  const setActual = (update: (current: TaxDeductionAmounts) => TaxDeductionAmounts) => {
+    edited.current = true;
+    setActualRaw(update);
+  };
+  const savedGross = saved?.grossSalary ?? 0;
+  const savedOther = saved?.otherIncome ?? 0;
+  const savedDeductions = JSON.stringify(saved?.actual ?? {});
+  useEffect(() => {
+    if (edited.current || savedGross <= 0) return;
+    setGross(savedGross);
+    setOther(savedOther);
+    setActualRaw(JSON.parse(savedDeductions) as TaxDeductionAmounts);
+  }, [savedGross, savedOther, savedDeductions]);
   const [comparison, setComparison] = useState<TaxComparison | null>(null);
   const [selectedColumn, setSelectedColumn] = useState<TaxComparisonColumnKey | null>(null);
   const [scenarios, setScenarios] = useState<TaxScenario[]>([]);
@@ -162,6 +187,9 @@ export function TaxPlannerModule() {
     );
   }, [comparison, selectedColumn]);
 
+  const headroom80C =
+    (actual.section80C ?? 0) > 0 ? (deductions.find((d) => d.code === "section80C")?.cap ?? null) : null;
+
   const maxOutPlanned = () => {
     const next: TaxDeductionAmounts = { ...planned };
     for (const deduction of deductions) {
@@ -202,7 +230,7 @@ export function TaxPlannerModule() {
     setFinancialYear(scenario.financialYear);
     setGrossSalary(scenario.input.grossSalary ?? 0);
     setOtherIncome(scenario.input.otherIncome ?? 0);
-    setActual(taxDeductionAmountsOf(scenario.input));
+    setActual(() => taxDeductionAmountsOf(scenario.input));
     setPlanned({});
     setSelectedColumn(null);
     setTitle(scenario.title);
@@ -215,6 +243,29 @@ export function TaxPlannerModule() {
 
   return (
     <div className="space-y-6">
+      {comparison && saving > 0 ? (
+        <div className="rounded-2xl border border-success/30 bg-success/5 p-4">
+          <p className="font-display text-lg font-semibold">
+            Switch to {comparison.columns.find((column) => column.key === comparison.bestColumnKey)?.label} and save{" "}
+            {formatCurrency(saving, symbol)}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Compared with {comparison.columns[0]?.label}, using the figures below.
+          </p>
+        </div>
+      ) : null}
+      {hasSaved ? (
+        <p className="text-sm text-muted-foreground">
+          Prefilled from your saved {saved!.sources.join(", ")}. Change any figure to try a what-if.
+          {headroom80C !== null
+            ? ` You have used ${formatCurrency(actual.section80C ?? 0, symbol)} of the ${formatCurrency(headroom80C, symbol)} 80C limit.`
+            : ""}
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Add your income under Money In/Out and it will appear here automatically, or enter figures by hand.
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-3">
         <Panel title="Income" className="lg:col-span-1">
           <div className="space-y-4">

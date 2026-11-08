@@ -26,6 +26,8 @@ const { compareTaxPlans, fetchTaxCatalog, listTaxScenarios } = await import(
   "@/lib/finance/tax-remote"
 );
 
+const saved = { grossSalary: 1_200_000, otherIncome: 0, actual: {}, sources: ["income"] };
+
 const countries: TaxCountry[] = [
   {
     code: "IN",
@@ -160,7 +162,7 @@ describe("TaxPlannerModule", () => {
   });
 
   it("renders the computation sheet with one column per regime", async () => {
-    render(<TaxPlannerModule />);
+    render(<TaxPlannerModule saved={saved} />);
 
     expect(await screen.findByRole("columnheader", { name: /Old Regime/ })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: /With Planner/ })).toBeTruthy();
@@ -170,7 +172,7 @@ describe("TaxPlannerModule", () => {
   });
 
   it("marks a deduction the regime does not allow as not applicable", async () => {
-    render(<TaxPlannerModule />);
+    render(<TaxPlannerModule saved={saved} />);
 
     const row = (await screen.findByText("HRA Exempt Amount")).closest("tr");
     expect(row).toBeTruthy();
@@ -179,7 +181,7 @@ describe("TaxPlannerModule", () => {
   });
 
   it("sends the planner amount separately from the actual amount", async () => {
-    render(<TaxPlannerModule />);
+    render(<TaxPlannerModule saved={saved} />);
 
     fireEvent.change(await screen.findByLabelText("Section 80C / 80CCD(1) actual"), {
       target: { value: "100000" },
@@ -199,7 +201,7 @@ describe("TaxPlannerModule", () => {
   });
 
   it("mirrors the actual amount in the planner column until it is changed", async () => {
-    render(<TaxPlannerModule />);
+    render(<TaxPlannerModule saved={saved} />);
 
     fireEvent.change(await screen.findByLabelText("Section 80C / 80CCD(1) actual"), {
       target: { value: "90000" },
@@ -212,7 +214,7 @@ describe("TaxPlannerModule", () => {
   });
 
   it("fills the planner column up to each statutory cap", async () => {
-    render(<TaxPlannerModule />);
+    render(<TaxPlannerModule saved={saved} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Max out planner" }));
 
@@ -221,5 +223,18 @@ describe("TaxPlannerModule", () => {
         planned: { section80C: 150_000 },
       });
     });
+  });
+
+  it("fills in saved income that arrives after the screen opens, but never over typed figures", async () => {
+    const { rerender } = render(<TaxPlannerModule />);
+    await waitFor(() => expect(screen.getByLabelText("Gross salary")).toBeInTheDocument());
+    expect(screen.getByLabelText("Gross salary")).toHaveValue(0);
+
+    rerender(<TaxPlannerModule saved={{ grossSalary: 900_000, otherIncome: 0, actual: {}, sources: ["income"] }} />);
+    await waitFor(() => expect(screen.getByLabelText("Gross salary")).toHaveValue(900_000));
+
+    fireEvent.change(screen.getByLabelText("Gross salary"), { target: { value: "1500000" } });
+    rerender(<TaxPlannerModule saved={{ grossSalary: 950_000, otherIncome: 0, actual: {}, sources: ["income"] }} />);
+    expect(screen.getByLabelText("Gross salary")).toHaveValue(1_500_000);
   });
 });

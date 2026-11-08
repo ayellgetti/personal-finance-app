@@ -64,10 +64,11 @@ export const upsertFinancialProfileBodySchema = z
     familyMembers: z.array(familyMemberSchema).max(20).default([]),
   })
   .superRefine((value, ctx) => {
-    if (value.familyMembers.length !== value.dependents) {
+    // Details are optional: a user can state a dependents count now and add each person later.
+    if (value.familyMembers.length > value.dependents) {
       ctx.addIssue({
         code: "custom",
-        message: "Family member details must match the dependents count",
+        message: "Family member details cannot exceed the dependents count",
         path: ["familyMembers"],
       });
     }

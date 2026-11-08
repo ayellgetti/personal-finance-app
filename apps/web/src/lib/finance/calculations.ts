@@ -242,6 +242,42 @@ export function loanYearlyInterestChartData(loans: Loan[], from = new Date()): L
   return points;
 }
 
+/** Sum of daily-log spending dated in the current calendar month. */
+export function dailySpentThisMonth(
+  entries: { amount: number; date: string }[],
+  now = new Date(),
+): number {
+  return entries
+    .filter((entry) => {
+      // A bare YYYY-MM-DD is a calendar date, not UTC midnight: read it as local time.
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(entry.date) ? new Date(`${entry.date}T00:00:00`) : new Date(entry.date);
+      return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+    })
+    .reduce((sum, entry) => sum + entry.amount, 0);
+}
+
+/* ---------------- data readiness (gates verdicts on empty data) ---------------- */
+export interface DataReadiness {
+  hasIncome: boolean;
+  hasExpenses: boolean;
+  hasSavings: boolean;
+  /** Income and expenses exist, so ratios and verdicts mean something. */
+  ready: boolean;
+  /** Plain-language list of what is still missing for a first result. */
+  missing: string[];
+}
+
+export function dataReadiness(d: FinanceData): DataReadiness {
+  const hasIncome = monthlyIncome(d) > 0;
+  const hasExpenses = monthlyExpenses(d) > 0 || d.profile.monthlyEssentialExpenses > 0;
+  const hasSavings = d.investments.length > 0 || d.profile.emergencyFund > 0 || d.profile.liquidAssets > 0;
+  const missing: string[] = [];
+  if (!hasIncome) missing.push("your monthly income");
+  if (!hasExpenses) missing.push("your monthly expenses");
+  if (!hasSavings) missing.push("one saving or investment");
+  return { hasIncome, hasExpenses, hasSavings, ready: hasIncome && hasExpenses, missing };
+}
+
 /* ---------------- aggregate metrics ---------------- */
 export function monthlyIncome(d: FinanceData): number {
   return d.incomes.reduce((s, i) => s + i.monthlyAmount, 0);
@@ -454,6 +490,63 @@ export function analyzeGoal(d: FinanceData, goal: Goal, assumedReturn = 11): Goa
   return { goal, yearsLeft, inflationAdjustedTarget, projectedSavedValue, monthlyRequired, fundingGap, probability, status };
 }
 
+export interface GoalFixes {
+  /** Monthly amount that reaches the inflation-adjusted target by the chosen date. */
+  monthlyNeeded: number;
+  /** What the user can set aside today (monthly surplus, never negative). */
+  monthlyAvailable: number;
+  /** Extra monthly cash needed on top of the surplus; 0 when the surplus already covers it. */
+  extraMonthlyNeeded: number;
+  /** Earliest target date the current surplus can reach, or null if none within 40 years. */
+  laterDate: Date | null;
+  /** Today's-rupees target the current surplus can reach by the chosen date. */
+  affordableTarget: number;
+}
+
+const FIX_STEP_YEARS = 0.5;
+const FIX_MAX_YEARS = 40;
+
+/**
+ * Three ways to close a goal gap with the numbers already computed:
+ * find more monthly cash, move the date, or lower the target.
+ * Returns null for the emergency fund (owned by the Goals emergency card) and for goals already on track.
+ */
+export function goalFixes(d: FinanceData, goal: Goal, assumedReturn = 11): GoalFixes | null {
+  if (goal.type === "Emergency Fund") return null;
+  const analysis = analyzeGoal(d, goal, assumedReturn);
+  if (analysis.status === "On Track") return null;
+
+  const monthlyAvailable = Math.max(0, monthlySavings(d));
+  const monthlyNeeded = analysis.monthlyRequired;
+  const requiredFor = (years: number) => {
+    const target = fvLumpSum(goal.targetAmount, d.profile.inflationRate, years);
+    const saved = fvLumpSum(goal.currentSaved, assumedReturn, years);
+    return pmtForFV(Math.max(0, target - saved), assumedReturn, years);
+  };
+
+  let laterDate: Date | null = null;
+  if (monthlyAvailable > 0) {
+    for (let years = analysis.yearsLeft + FIX_STEP_YEARS; years <= FIX_MAX_YEARS; years += FIX_STEP_YEARS) {
+      if (requiredFor(years) <= monthlyAvailable) {
+        laterDate = new Date(Date.now() + years * 365 * 24 * 60 * 60 * 1000);
+        break;
+      }
+    }
+  }
+
+  const reachable =
+    fvLumpSum(goal.currentSaved, assumedReturn, analysis.yearsLeft) + fvSIP(monthlyAvailable, assumedReturn, analysis.yearsLeft);
+  const affordableTarget = reachable / Math.pow(1 + d.profile.inflationRate / 100, analysis.yearsLeft);
+
+  return {
+    monthlyNeeded,
+    monthlyAvailable,
+    extraMonthlyNeeded: Math.max(0, monthlyNeeded - monthlyAvailable),
+    laterDate,
+    affordableTarget: Math.min(goal.targetAmount, affordableTarget),
+  };
+}
+
 export function goalProjectionSchedule(
   d: FinanceData,
   goal: Goal,
@@ -488,9 +581,18 @@ export interface InsuranceAnalysis {
   healthGap: number;
 }
 
+/**
+ * Years of income the family would need replaced. More dependents need more,
+ * and nobody needs more years of cover than they have left before retirement.
+ */
+export function termCoverMultiple(d: FinanceData): number {
+  const byDependents = d.profile.dependents >= 2 ? 15 : d.profile.dependents === 1 ? 10 : 5;
+  return Math.min(byDependents, Math.max(0, d.profile.retirementAge - d.profile.age));
+}
+
 export function analyzeInsurance(d: FinanceData): InsuranceAnalysis {
   const annualIncome = monthlyIncome(d) * 12;
-  const recommendedTermCover = annualIncome * 12 + totalLiabilities(d);
+  const recommendedTermCover = annualIncome * termCoverMultiple(d) + totalLiabilities(d);
   const currentTermCover = d.insurances.filter((i) => i.type === "Term Insurance").reduce((s, i) => s + i.coverage, 0);
   const recommendedHealthCover = Math.max(1000000, (d.profile.dependents + 1) * 750000);
   const currentHealthCover = d.insurances.filter((i) => i.type === "Health Insurance").reduce((s, i) => s + i.coverage, 0);
@@ -743,7 +845,9 @@ export function firePathTargets(d: FinanceData): Record<FireGoalType, number> {
 /* ---------------- health score ---------------- */
 export interface HealthScore {
   total: number;
-  components: { label: string; score: number; weight: number; detail: string }[];
+  /** False until income and expenses exist; the total is not meaningful before then. */
+  ready: boolean;
+  components: { label: string; score: number; weight: number; detail: string; answered: boolean }[];
 }
 
 export function healthScore(d: FinanceData): HealthScore {
@@ -761,15 +865,17 @@ export function healthScore(d: FinanceData): HealthScore {
   const divScore = Math.min(100, (diversification / 6) * 100);
   const insScore = insCover * 100;
 
+  const readiness = dataReadiness(d);
+  const pending = "Needs more of your details";
   const components = [
-    { label: "Emergency Fund", score: Math.round(efScore), weight: 0.25, detail: `${emergencyMonths.toFixed(1)} of ${ef.targetMonths} months covered` },
-    { label: "Savings Rate", score: Math.round(srScore), weight: 0.25, detail: `${sr.toFixed(0)}% of income saved` },
-    { label: "Debt Ratio", score: Math.round(dtiScore), weight: 0.2, detail: `${dti.toFixed(0)}% EMI-to-income` },
-    { label: "Diversification", score: Math.round(divScore), weight: 0.15, detail: `${diversification} asset classes` },
-    { label: "Insurance Coverage", score: Math.round(insScore), weight: 0.15, detail: `${(insCover * 100).toFixed(0)}% of recommended` },
+    { label: "Emergency Fund", score: Math.round(efScore), weight: 0.25, answered: readiness.hasExpenses, detail: readiness.hasExpenses ? `${emergencyMonths.toFixed(1)} of ${ef.targetMonths} months covered` : pending },
+    { label: "Savings Rate", score: Math.round(srScore), weight: 0.25, answered: readiness.hasIncome, detail: readiness.hasIncome ? `${sr.toFixed(0)}% of income saved` : pending },
+    { label: "Debt Ratio", score: Math.round(dtiScore), weight: 0.2, answered: readiness.hasIncome, detail: readiness.hasIncome ? `${dti.toFixed(0)}% EMI-to-income` : pending },
+    { label: "Diversification", score: Math.round(divScore), weight: 0.15, answered: d.investments.length > 0, detail: d.investments.length > 0 ? `${diversification} asset classes` : pending },
+    { label: "Insurance Coverage", score: Math.round(insScore), weight: 0.15, answered: readiness.hasIncome, detail: readiness.hasIncome ? `${(insCover * 100).toFixed(0)}% of recommended` : pending },
   ];
   const total = Math.round(components.reduce((s, c) => s + c.score * c.weight, 0));
-  return { total, components };
+  return { total, ready: readiness.ready, components };
 }
 
 /* ---------------- forecast engine ---------------- */
@@ -810,14 +916,74 @@ export function scenarioSummary(d: FinanceData) {
 }
 
 /* ---------------- AI advisor (rule-based) ---------------- */
+/** Screen a tip can send the user to. A subset of the app's view ids. */
+export type TipTarget = "goals" | "insurance" | "loans" | "investments" | "expenses" | "income" | "calculators";
+
+export interface TipAction {
+  label: string;
+  target: TipTarget;
+  /** Calculator to open when target is "calculators". */
+  calculator?: "sip";
+}
+
+/** Where a number in a tip comes from: the user's saved data, or a rule of thumb. */
+export interface TipBasis {
+  kind: "data" | "assumption";
+  label: string;
+}
+
+const fromData = (label: string): TipBasis => ({ kind: "data", label });
+const assumed = (label: string): TipBasis => ({ kind: "assumption", label });
+
 export interface Recommendation {
   title: string;
   detail: string;
   impact: "High" | "Medium" | "Low";
   category: string;
+  action?: TipAction;
+  basis?: TipBasis[];
+}
+
+/** One button per advisor category, shared by the dashboard and the advisor plan. */
+export function actionForCategory(category: string): TipAction | undefined {
+  switch (category) {
+    case "Emergency Fund":
+    case "Safety":
+    case "Goals":
+      return { label: "Set emergency target", target: "goals" };
+    case "Insurance":
+      return { label: "Review insurance", target: "insurance" };
+    case "Debt":
+      return { label: "Open loans", target: "loans" };
+    case "Expenses":
+      return { label: "Review expenses", target: "expenses" };
+    case "Savings":
+    case "Investments":
+      return { label: "Open SIP calculator", target: "calculators", calculator: "sip" };
+    default:
+      return undefined;
+  }
+}
+
+const IMPACT_RANK: Record<Recommendation["impact"], number> = { High: 0, Medium: 1, Low: 2 };
+
+/** Categories that all describe the same thing: building the emergency fund. */
+export const isEmergencyCategory = (category: string) => category === "Emergency Fund" || category === "Safety";
+
+/**
+ * Emergency-fund advice has one owner (the Goals screen), so a plan lists it once.
+ * Keeps the highest-impact emergency item, in its own position, and drops the rest.
+ */
+export function keepOneEmergencyItem<T extends { category: string; impact: Recommendation["impact"] }>(items: T[]): T[] {
+  const emergency = items.filter((item) => isEmergencyCategory(item.category));
+  if (emergency.length < 2) return items;
+  const keep = emergency.reduce((best, item) => (IMPACT_RANK[item.impact] < IMPACT_RANK[best.impact] ? item : best));
+  return items.filter((item) => !isEmergencyCategory(item.category) || item === keep);
 }
 
 export function generateRecommendations(d: FinanceData): Recommendation[] {
+  // No verdicts until income and expenses exist.
+  if (!dataReadiness(d).ready) return [];
   const recs: Recommendation[] = [];
   const sr = savingsRate(d);
   const dti = debtToIncome(d);
@@ -832,6 +998,8 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `At ${sortedLoans[0].interestRate}% it's your costliest debt. Prepaying it before lower-rate loans like ${sortedLoans[sortedLoans.length - 1].name} could save lakhs in interest.`,
       impact: "High",
       category: "Debt",
+      action: { label: "Open loans", target: "loans" },
+      basis: [fromData("Your loan rates")],
     });
   }
   const discretionary = d.expenses.filter((e) => ["Entertainment", "Dining Out", "Travel"].includes(e.category) && e.recurring).reduce((s, e) => s + e.amount, 0);
@@ -841,6 +1009,8 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `You spend ${formatCurrency(discretionary, d.profile.currency)}/mo on lifestyle. Cutting 15% frees ~${formatCurrency(discretionary * 0.15, d.profile.currency)}/mo to invest.`,
       impact: "Medium",
       category: "Expenses",
+      action: { label: "Review expenses", target: "expenses" },
+      basis: [fromData("Your recurring lifestyle spend"), assumed("15% cut")],
     });
   }
   if (sr < 25) {
@@ -849,6 +1019,8 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `Your savings rate is ${sr.toFixed(0)}%. Aim for 30%+. Automate an additional SIP on every salary credit.`,
       impact: "High",
       category: "Savings",
+      action: { label: "Open SIP calculator", target: "calculators", calculator: "sip" },
+      basis: [fromData(`Your savings rate (${sr.toFixed(0)}%)`), assumed("30%+ target")],
     });
   } else {
     recs.push({
@@ -856,6 +1028,8 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `Your cashflow is healthy. A higher SIP compounds significantly toward your FI number.`,
       impact: "Medium",
       category: "Investments",
+      action: { label: "Open SIP calculator", target: "calculators", calculator: "sip" },
+      basis: [fromData("Your monthly surplus"), assumed("₹10,000 step")],
     });
   }
   if (emergencyMonths < 6) {
@@ -864,6 +1038,8 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `You have ${emergencyMonths.toFixed(1)} months of cover. Build it to 6 months (${formatCurrency((monthlyExpenses(d) + monthlyEMI(d)) * 6, d.profile.currency)}).`,
       impact: "High",
       category: "Safety",
+      action: { label: "Set emergency target", target: "goals" },
+      basis: [fromData("Your emergency fund and expenses"), assumed("6-month target")],
     });
   }
   if (ins.termGap > 0) {
@@ -872,6 +1048,8 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `Your cover has a gap of ${formatCurrency(ins.termGap, d.profile.currency, true)}. Term insurance is cheap — close this gap to protect dependents.`,
       impact: "High",
       category: "Insurance",
+      action: { label: "Add term cover", target: "insurance" },
+      basis: [fromData("Your income and loans"), assumed(`${termCoverMultiple(d)}× annual income, from your dependents`)],
     });
   }
   if (ins.healthGap > 0) {
@@ -880,6 +1058,8 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `Recommended health cover is ${formatCurrency(ins.recommendedHealthCover, d.profile.currency, true)}; you're short by ${formatCurrency(ins.healthGap, d.profile.currency, true)}.`,
       impact: "Medium",
       category: "Insurance",
+      action: { label: "Add health policy", target: "insurance" },
+      basis: [fromData("Your dependents"), assumed("₹7.5 L per person, ₹10 L minimum")],
     });
   }
   if (dti > 35) {
@@ -888,9 +1068,11 @@ export function generateRecommendations(d: FinanceData): Recommendation[] {
       detail: `EMIs consume ${dti.toFixed(0)}% of income (healthy is <35%). Avoid new loans and prioritise prepayment.`,
       impact: "High",
       category: "Debt",
+      action: { label: "Review loans", target: "loans" },
+      basis: [fromData("Your EMIs and income"), assumed("35% EMI limit")],
     });
   }
-  return recs;
+  return recs.sort((a, b) => IMPACT_RANK[a.impact] - IMPACT_RANK[b.impact]);
 }
 
 export function prepaymentStrategy(d: FinanceData): Loan[] {
@@ -1024,7 +1206,7 @@ export function emergencyFund(d: FinanceData): EmergencyFundResult {
   const liquidAssets = d.profile.liquidAssets;
   const totalAvailable = currentBalance + liquidAssets;
   const coverageMonths = monthlyEssential > 0 ? totalAvailable / monthlyEssential : 0;
-  const progress = recommendedTarget > 0 ? Math.min(100, (totalAvailable / recommendedTarget) * 100) : 100;
+  const progress = recommendedTarget > 0 ? Math.min(100, (totalAvailable / recommendedTarget) * 100) : 0;
   const shortfall = Math.max(0, recommendedTarget - totalAvailable);
   const monthlyContribution = d.profile.emergencyMonthlyContribution;
   const monthsToComplete = shortfall > 0 && monthlyContribution > 0 ? Math.ceil(shortfall / monthlyContribution) : 0;
@@ -1089,6 +1271,7 @@ export function emergencyFundRecommendations(d: FinanceData): Recommendation[] {
       detail: `You have only ${ef.coverageMonths.toFixed(1)} months of cover. Pause high-risk investments and redirect cash until you reach at least 3 months.`,
       impact: "High",
       category: "Emergency Fund",
+      basis: [fromData("Your emergency fund and expenses"), assumed("3-month minimum")],
     });
   }
   if (ef.shortfall > 0 && surplus > 0) {
@@ -1098,6 +1281,7 @@ export function emergencyFundRecommendations(d: FinanceData): Recommendation[] {
       detail: `Routing 20% of your monthly surplus toward the emergency fund accelerates progress without straining your budget.`,
       impact: "Medium",
       category: "Emergency Fund",
+      basis: [fromData("Your monthly surplus"), assumed("20% share")],
     });
   }
   if (ef.monthsToComplete > 0) {
@@ -1193,6 +1377,16 @@ export interface CoachInsight {
 
 export function coachInsights(d: FinanceData): CoachInsight[] {
   const out: CoachInsight[] = [];
+  const readiness = dataReadiness(d);
+  if (!readiness.ready) {
+    return [
+      {
+        rule: "Personalised guidance",
+        status: "warning",
+        message: `Add ${readiness.missing.join(" and ")} to unlock guidance based on your own numbers.`,
+      },
+    ];
+  }
   const income = monthlyIncome(d);
   const annualIncome = income * 12;
   const ef = emergencyFund(d);
@@ -1214,7 +1408,7 @@ export function coachInsights(d: FinanceData): CoachInsight[] {
     message:
       ef.coverageMonths >= ef.targetMonths
         ? `Your emergency fund covers ${ef.coverageMonths.toFixed(1)} months — at or above your ${ef.targetMonths}-month target. Well protected.`
-        : `Based on your profile, your emergency fund is only ${ef.coverageMonths.toFixed(1)} months. Your target should be ${ef.targetMonths} months (${formatCurrency(ef.recommendedTarget, d.profile.currency, true)}).`,
+        : `Your emergency fund covers ${ef.coverageMonths.toFixed(1)} of ${ef.targetMonths} months. See Goals for your target and next steps.`,
   });
 
   // Housing / EMI rule
@@ -1237,11 +1431,11 @@ export function coachInsights(d: FinanceData): CoachInsight[] {
   // Life insurance rule
   out.push({
     rule: "Life Insurance Rule",
-    status: ins.currentTermCover >= annualIncome * 15 ? "good" : "bad",
+    status: ins.termGap === 0 ? "good" : "bad",
     message:
-      ins.currentTermCover >= annualIncome * 15
-        ? `Your term cover of ${formatCurrency(ins.currentTermCover, d.profile.currency, true)} meets the 15–20x income guideline.`
-        : `Your term cover should be 15–20x income (${formatCurrency(annualIncome * 15, d.profile.currency, true)}–${formatCurrency(annualIncome * 20, d.profile.currency, true)}). You currently have ${formatCurrency(ins.currentTermCover, d.profile.currency, true)}.`,
+      ins.termGap === 0
+        ? `Your term cover of ${formatCurrency(ins.currentTermCover, d.profile.currency, true)} meets your target of ${formatCurrency(ins.recommendedTermCover, d.profile.currency, true)}.`
+        : `Your term cover target is ${formatCurrency(ins.recommendedTermCover, d.profile.currency, true)} (${termCoverMultiple(d)}× income plus loans). You currently have ${formatCurrency(ins.currentTermCover, d.profile.currency, true)}.`,
   });
 
   // 20X freedom rule

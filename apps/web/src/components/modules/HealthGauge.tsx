@@ -1,6 +1,20 @@
 import { HealthScore } from "@/lib/finance/calculations";
 
 export function HealthGauge({ score, size = 180 }: { score: HealthScore; size?: number }) {
+  if (!score.ready) {
+    return (
+      <div className="flex flex-col items-center text-center" style={{ width: size }}>
+        <div
+          className="flex items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/30"
+          style={{ width: size, height: size }}
+        >
+          <span className="px-3 text-xs text-muted-foreground">
+            Score unlocks after income, expenses and one saving
+          </span>
+        </div>
+      </div>
+    );
+  }
   const stroke = size < 150 ? 8 : 12;
   const radius = size / 2 - stroke - 2;
   const circ = 2 * Math.PI * radius;

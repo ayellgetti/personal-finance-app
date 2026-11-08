@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isEntityDraftEmpty,
   resizeFamilyMembers,
+  withoutBlankMembers,
   validateEntityDraft,
   validateSetupProfile,
 } from "./setup-validation";
@@ -29,7 +30,16 @@ describe("validateSetupProfile", () => {
     expect(validateSetupProfile(base).ok).toBe(true);
   });
 
-  it("requires one complete family member per dependent", () => {
+  it("allows a dependents count with no member details yet", () => {
+    expect(validateSetupProfile({ ...base, dependents: 2, familyMembers: [] }).ok).toBe(true);
+  });
+
+  it("rejects more member details than dependents", () => {
+    const member = { name: "Priya", relationship: "Spouse" as const, dob: "1994-03-12", gender: "female" as const, occupation: "Teacher" };
+    expect(validateSetupProfile({ ...base, dependents: 0, familyMembers: [member] }).ok).toBe(false);
+  });
+
+  it("requires each member that is provided to be complete", () => {
     const incomplete = validateSetupProfile({
       ...base,
       dependents: 1,
@@ -99,5 +109,15 @@ describe("validateEntityDraft", () => {
       startDate: "2026-01-01",
     });
     expect(result.status).toBe("complete");
+  });
+});
+
+describe("withoutBlankMembers", () => {
+  it("drops only rows with nothing filled in", () => {
+    const rows = resizeFamilyMembers([], 3);
+    rows[1] = { ...rows[1]!, name: "Priya" };
+    const kept = withoutBlankMembers(rows);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.name).toBe("Priya");
   });
 });

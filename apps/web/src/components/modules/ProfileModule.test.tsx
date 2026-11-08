@@ -69,9 +69,17 @@ describe("ProfileModule", () => {
     );
   });
 
-  it("does not save when dependent details are missing", () => {
+  it("saves a dependents count with no details yet, so unrelated edits are not blocked", () => {
+    render(<ProfileModule />);
+    fireEvent.change(screen.getByLabelText("Dependents"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save financial profile" }));
+    expect(updateProfile).toHaveBeenCalledWith(expect.objectContaining({ dependents: 2, familyMembers: [] }));
+  });
+
+  it("does not save a dependent that is only partly filled in", () => {
     render(<ProfileModule />);
     fireEvent.change(screen.getByLabelText("Dependents"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Priya" } });
     fireEvent.click(screen.getByRole("button", { name: "Save financial profile" }));
     expect(updateProfile).not.toHaveBeenCalled();
     expect(screen.getByText("Dependent 1")).toBeInTheDocument();

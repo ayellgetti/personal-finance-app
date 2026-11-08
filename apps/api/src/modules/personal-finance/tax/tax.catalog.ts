@@ -251,6 +251,30 @@ const IN_OLD_FY_2025_26: TaxRegime = {
   ],
 };
 
+// FY 2026-27 (Tax Year 2026-27 under the Income-tax Act, 2025). Slabs, rebate and
+// deduction limits are carried forward from FY 2025-26; section references should
+// be confirmed by a CA against the new Act before relying on them.
+const CARRY_FORWARD_NOTE =
+  "Slabs and limits carried forward from FY 2025-26. Section references follow the older Act; confirm with a CA.";
+
+const IN_NEW_FY_2026_27: TaxRegime = {
+  ...IN_NEW_FY_2025_26,
+  code: "in_new_fy2026_27",
+  label: "India — New regime (FY 2026-27)",
+  financialYear: "2026-27",
+  assessmentYear: "2027-28",
+  notes: [...IN_NEW_FY_2025_26.notes, CARRY_FORWARD_NOTE],
+};
+
+const IN_OLD_FY_2026_27: TaxRegime = {
+  ...IN_OLD_FY_2025_26,
+  code: "in_old_fy2026_27",
+  label: "India — Old regime (FY 2026-27)",
+  financialYear: "2026-27",
+  assessmentYear: "2027-28",
+  notes: [...IN_OLD_FY_2025_26.notes, CARRY_FORWARD_NOTE],
+};
+
 const IN_OLD_FY_2024_25: TaxRegime = {
   code: "in_old_fy2024_25",
   countryCode: "IN",
@@ -359,6 +383,8 @@ export const TAX_COUNTRIES: TaxCountry[] = [
     name: "India",
     currency: "INR",
     regimes: [
+      IN_NEW_FY_2026_27,
+      IN_OLD_FY_2026_27,
       IN_NEW_FY_2025_26,
       IN_OLD_FY_2025_26,
       IN_NEW_FY_2024_25,

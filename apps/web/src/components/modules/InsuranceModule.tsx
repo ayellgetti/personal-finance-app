@@ -1,5 +1,5 @@
 import { useFinance, newId } from "@/lib/finance/store";
-import { formatCurrency, analyzeInsurance } from "@/lib/finance/calculations";
+import { formatCurrency, analyzeInsurance, dataReadiness, termCoverMultiple } from "@/lib/finance/calculations";
 import { Insurance, InsuranceType } from "@/types/finance";
 import { EntityDialog, FieldDef } from "@/components/EntityDialog";
 import { Panel, ItemRow, EmptyState, Badge, EditButton } from "./shared";
@@ -24,7 +24,9 @@ export function InsuranceModule() {
   const { data, addItem, updateItem, removeItem } = useFinance();
   const cur = data.profile.currency;
   const a = analyzeInsurance(data);
-  const termPct = a.recommendedTermCover ? Math.min(100, (a.currentTermCover / a.recommendedTermCover) * 100) : 0;
+  const hasIncomeForTerm = dataReadiness(data).hasIncome;
+  const termRecommended = hasIncomeForTerm ? a.recommendedTermCover : 0;
+  const termPct = termRecommended ? Math.min(100, (a.currentTermCover / termRecommended) * 100) : 0;
   const healthPct = a.recommendedHealthCover ? Math.min(100, (a.currentHealthCover / a.recommendedHealthCover) * 100) : 0;
 
   const addPolicy = (
@@ -37,13 +39,20 @@ export function InsuranceModule() {
     </QuickAddDialog>
   );
 
-  const AdequacyCard = ({ title, pct, current, recommended, gap }: { title: string; pct: number; current: number; recommended: number; gap: number }) => (
+  const hasIncome = dataReadiness(data).hasIncome;
+
+  const AdequacyCard = ({ title, note, pct, current, recommended, gap }: { title: string; note: string; pct: number; current: number; recommended: number; gap: number }) => (
     <Panel title={title}>
       <div className="mb-3 flex items-center gap-2">
-        {gap > 0 ? <ShieldAlert className="h-5 w-5 text-danger" /> : <ShieldCheck className="h-5 w-5 text-success" />}
-        <Badge tone={gap > 0 ? "danger" : "success"}>{gap > 0 ? "Coverage Gap" : "Adequately Covered"}</Badge>
+        {recommended <= 0 ? <ShieldAlert className="h-5 w-5 text-muted-foreground" /> : gap > 0 ? <ShieldAlert className="h-5 w-5 text-danger" /> : <ShieldCheck className="h-5 w-5 text-success" />}
+        {recommended <= 0 ? (
+          <Badge tone="primary">Needs income to calculate</Badge>
+        ) : (
+          <Badge tone={gap > 0 ? "danger" : "success"}>{gap > 0 ? "Coverage Gap" : "Adequately Covered"}</Badge>
+        )}
       </div>
       <Progress value={pct} className="h-2.5" />
+      <p className="mt-2 text-xs text-muted-foreground">{note}</p>
       <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
         <div><p className="text-muted-foreground">Current</p><p className="font-semibold">{formatCurrency(current, cur, true)}</p></div>
         <div><p className="text-muted-foreground">Recommended</p><p className="font-semibold">{formatCurrency(recommended, cur, true)}</p></div>
@@ -55,8 +64,8 @@ export function InsuranceModule() {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
-        <AdequacyCard title="Term / Life Adequacy" pct={termPct} current={a.currentTermCover} recommended={a.recommendedTermCover} gap={a.termGap} />
-        <AdequacyCard title="Health Adequacy" pct={healthPct} current={a.currentHealthCover} recommended={a.recommendedHealthCover} gap={a.healthGap} />
+        <AdequacyCard title="Term / Life Adequacy" note={`Assumption: ${termCoverMultiple(data)}× your annual income (set by ${data.profile.dependents} dependent${data.profile.dependents === 1 ? "" : "s"} and ${Math.max(0, data.profile.retirementAge - data.profile.age)} years to retirement) plus loans.`} pct={termPct} current={a.currentTermCover} recommended={hasIncome ? a.recommendedTermCover : 0} gap={hasIncome ? a.termGap : 0} />
+        <AdequacyCard title="Health Adequacy" note="Assumption: ₹7.5 L per person (you plus dependents), at least ₹10 L." pct={healthPct} current={a.currentHealthCover} recommended={a.recommendedHealthCover} gap={a.healthGap} />
       </div>
 
       <Panel title="Policies" action={addPolicy}>

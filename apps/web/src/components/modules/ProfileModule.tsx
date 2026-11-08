@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth/store";
 import { useFinance } from "@/lib/finance/store";
 import { EmploymentType } from "@/types/finance";
 import { ageFromDob } from "@/lib/finance/profile";
-import { resizeFamilyMembers, toSavedFamilyMembers, validateSetupProfile, type FieldErrors } from "@/lib/finance/setup-validation";
+import { resizeFamilyMembers, toSavedFamilyMembers, validateSetupProfile, withoutBlankMembers, type FieldErrors } from "@/lib/finance/setup-validation";
 import { FamilyMemberFields } from "./FamilyMemberFields";
 import { Panel } from "./shared";
 import { Button } from "@/components/ui/button";
@@ -126,12 +126,13 @@ export function ProfileModule() {
       inflationRate: Number(profile.inflationRate) || 0,
       dependents,
       employmentType: profile.employmentType,
-      familyMembers: resizeFamilyMembers(profile.familyMembers, dependents),
+      // Details are optional: blank rows are dropped, partly filled rows are still flagged.
+      familyMembers: withoutBlankMembers(resizeFamilyMembers(profile.familyMembers, dependents)),
     };
     const result = validateSetupProfile(next);
     if ("errors" in result) {
       setProfileErrors(result.errors);
-      toast.error("Complete family member details for each dependent");
+      toast.error("Finish the dependent details you started, or clear them");
       return;
     }
     setProfileErrors({});

@@ -244,6 +244,52 @@ export const openApiDocument = {
           occupation: { type: "string", minLength: 1, maxLength: 80, example: "Teacher" },
         },
       },
+      FreedomScenarioRequest: {
+        type: "object",
+        required: ["title", "mode", "input", "result"],
+        properties: {
+          title: { type: "string", minLength: 1, maxLength: 60, example: "Retire at 55" },
+          mode: { type: "string", enum: ["Lean FIRE", "FIRE", "Coast FIRE", "Fat FIRE"] },
+          input: {
+            type: "object",
+            required: ["monthlyExpenses", "currentAge", "retirementAge", "inflationRate", "coastAge", "expectedReturn"],
+            properties: {
+              monthlyExpenses: { type: "number", minimum: 0 },
+              currentAge: { type: "number" },
+              retirementAge: { type: "number" },
+              inflationRate: { type: "number", minimum: 0, maximum: 30 },
+              coastAge: { type: "number" },
+              expectedReturn: { type: "number", minimum: 0, maximum: 40 },
+            },
+          },
+          result: {
+            type: "object",
+            required: ["target", "targetAge", "yearsToTarget", "projectedCorpus", "shortfall", "requiredMonthlyInvestment", "progressPct"],
+            properties: {
+              target: { type: "number" },
+              targetAge: { type: "number" },
+              yearsToTarget: { type: "number" },
+              projectedCorpus: { type: "number" },
+              shortfall: { type: "number" },
+              requiredMonthlyInvestment: { type: "number" },
+              progressPct: { type: "number" },
+            },
+          },
+        },
+      },
+      CheckInRequest: {
+        type: "object",
+        required: ["month", "netWorth", "assets", "liabilities", "monthlyIncome", "monthlyExpense", "healthScore"],
+        properties: {
+          month: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$", description: "Calendar month. Cannot be in the future.", example: "2026-11" },
+          netWorth: { type: "number", description: "Must equal assets minus liabilities (within 2 for rounding). May be negative.", example: 250000 },
+          assets: { type: "number", minimum: 0, example: 900000 },
+          liabilities: { type: "number", minimum: 0, example: 650000 },
+          monthlyIncome: { type: "number", minimum: 0, example: 120000 },
+          monthlyExpense: { type: "number", minimum: 0, example: 70000 },
+          healthScore: { type: "integer", minimum: 0, maximum: 100, example: 62 },
+        },
+      },
       FinancialProfileRequest: {
         type: "object",
         required: ["retirementAge", "dependents", "inflationRate", "employmentType", "currency"],
@@ -254,7 +300,7 @@ export const openApiDocument = {
             type: "array",
             maxItems: 20,
             items: { $ref: "#/components/schemas/FamilyMember" },
-            description: "One completed member object per dependent. Empty when dependents is 0.",
+            description: "Optional completed member objects, at most one per dependent (never more than the dependents count). May be empty or shorter than dependents while details are still being added.",
           },
           inflationRate: { type: "number", minimum: 0, maximum: 30, example: 6 },
           employmentType: {
@@ -3168,6 +3214,100 @@ export const openApiDocument = {
           },
           "401": { $ref: "#/components/responses/Unauthorized" },
           "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/check-ins": {
+      get: {
+        tags: ["Check-ins"],
+        summary: "List monthly check-ins, newest first",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 120, default: 24 } },
+        ],
+        responses: {
+          "200": {
+            description: "Check-ins for the signed-in user",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      put: {
+        tags: ["Check-ins"],
+        summary: "Save this month's check-in (replaces an existing one for the same month)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CheckInRequest" } } },
+        },
+        responses: {
+          "200": {
+            description: "Check-in saved",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/freedom-scenarios": {
+      get: {
+        tags: ["Freedom Calculator"],
+        summary: "List saved Freedom Calculator what-ifs (at most three)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        responses: {
+          "200": {
+            description: "Saved what-ifs for the signed-in user",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Freedom Calculator"],
+        summary: "Save a what-if (409 when three are already saved)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/FreedomScenarioRequest" } } },
+        },
+        responses: {
+          "201": {
+            description: "What-if saved",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "409": { description: "Three what-ifs are already saved" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/freedom-scenarios/remove": {
+      post: {
+        tags: ["Freedom Calculator"],
+        summary: "Remove a saved what-if",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { type: "object", required: ["id"], properties: { id: { type: "string", format: "uuid" } } },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "What-if removed",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { description: "Saved what-if not found" },
         },
       },
     },

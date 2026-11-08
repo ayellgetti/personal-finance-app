@@ -33,6 +33,14 @@ export {
   taxScenarioModel,
 } from "./personal-finance/tax-scenario.model";
 export {
+  CheckInModel,
+  checkInModel,
+} from "./personal-finance/check-in.model";
+export {
+  FreedomScenarioModel,
+  freedomScenarioModel,
+} from "./personal-finance/freedom-scenario.model";
+export {
   CalculatorScenarioModel,
   calculatorScenarioModel,
 } from "./personal-finance/calculator-scenario.model";

@@ -54,6 +54,8 @@ model User {
   statementImports           StatementImport[]
   statementLines             StatementLine[]
   taxScenarios               TaxScenario[]
+  checkIns                   CheckIn[]
+  freedomScenarios           FreedomScenario[]
   calculatorScenarios        CalculatorScenario[]
   advisorChats               AdvisorChat[]
   advisorChatMessages        AdvisorChatMessage[]
@@ -473,6 +475,53 @@ model TaxScenario {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([userId, isActive])
+}
+
+/// One row per user per month: the five numbers a monthly check-in records.
+model CheckIn {
+  id             String    @id @default(uuid())
+  userId         String
+  /// Calendar month in YYYY-MM form.
+  month          String
+  netWorth       Float
+  assets         Float
+  liabilities    Float
+  monthlyIncome  Float
+  monthlyExpense Float
+  healthScore    Int
+  isActive       Int       @default(1)
+  createdBy      String?
+  createdAt      DateTime  @default(now())
+  updatedBy      String?
+  updatedAt      DateTime  @updatedAt
+  deletedBy      String?
+  deletedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+  @@index([userId, isActive])
+}
+
+/// A saved Freedom Calculator what-if. At most three active rows per user.
+model FreedomScenario {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  mode      String
+  input     Json
+  result    Json
+  isActive  Int       @default(1)
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedBy String?
+  updatedAt DateTime  @updatedAt
+  deletedBy String?
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, isActive])
 }
 

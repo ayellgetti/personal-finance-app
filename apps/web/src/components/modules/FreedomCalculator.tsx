@@ -10,6 +10,8 @@ import {
   type FreedomMode,
 } from "@/types/finance";
 import { Panel, tooltipStyle } from "./shared";
+import { FreedomScenarios } from "./FreedomScenarios";
+import { IndiaRetirement } from "./IndiaRetirement";
 import { StatCard } from "@/components/StatCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,7 +155,9 @@ export function FreedomCalculator() {
             </div>
             <p className="mt-1 font-display text-2xl font-bold">{formatCurrency(view.projectedCorpus, cur, true)}</p>
             <p className="text-xs text-muted-foreground">
-              {view.shortfall === 0
+              {view.target <= 0
+                ? `Add your monthly expenses to see your ${mode} number.`
+                : view.shortfall === 0
                 ? `On track to beat your ${mode} number 🎉`
                 : `Shortfall of ${formatCurrency(view.shortfall, cur, true)} — invest ${formatCurrency(view.requiredMonthlyInvestment, cur)}/month at ${formatPercent(input.expectedReturn)} to close it`}
             </p>
@@ -183,6 +187,10 @@ export function FreedomCalculator() {
           </div>
         </Panel>
       </div>
+
+      <IndiaRetirement data={data} input={input} mode={mode} />
+
+      <FreedomScenarios mode={mode} input={input} view={view} currency={cur} />
     </div>
   );
 }
