@@ -470,7 +470,7 @@ Never store plaintext passwords.
 
 Never log credentials, OTPs, or tokens.
 
-Finance routes use `requireAuth`. CRM routes use `requireAuth` plus `requirePermission` (not on finance), except `POST /api/crm/public/enquiries` (unauthenticated banquet or travel intake).
+Finance routes use `requireAuth`, except `GET /api/shared/plans/:token`: an unauthenticated, token-gated read of one stored plan snapshot (see Track B, Phase B9). Its token is 32 random bytes, only the SHA-256 hash is stored, it expires, and it can be revoked. Do not add other unauthenticated finance routes. CRM routes use `requireAuth` plus `requirePermission` (not on finance), except `POST /api/crm/public/enquiries` (unauthenticated banquet or travel intake).
 
 ---
 
