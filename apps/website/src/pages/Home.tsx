@@ -46,7 +46,7 @@ const entryCards = [
 ];
 
 const trustStatements = [
-  "This website does not store your finances; your records are kept in your signed-in account.",
+  "This website does not store your finances; your records are kept in your signed-in account, though insurance and some extras may still live on your device.",
   "Forecasts are educational, not personal financial advice.",
   "No brokerage, no e-filing, no scheme distribution.",
 ];

@@ -68,4 +68,17 @@ describe("Guide", () => {
     expect(text).toMatch(/educational/i);
     expect(text).not.toMatch(/openai|json|rule engine|internal brief|HDFC|\bLIC\b/i);
   });
+
+  it("uses unique ids inside main", () => {
+    const { container } = renderPage();
+    const ids = Array.from(container.querySelectorAll("main [id]")).map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("states the sample annual income as ₹30.3 L", () => {
+    const { container } = renderPage();
+    const text = container.querySelector("main")?.textContent ?? "";
+    expect(text).toContain("₹30.3 L");
+    expect(text).not.toContain("₹3.03 Cr");
+  });
 });

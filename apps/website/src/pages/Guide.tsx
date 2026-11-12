@@ -175,11 +175,11 @@ const problems = {
     },
     {
       title: "One loan was much costlier",
-      body: "Personal loan at 13.5% on ₹2.20 L. The home loan at 8.5% is cheaper than the 12% return planned for equity, so paying off the home loan is not the first move.",
+      body: "Personal loan at 13.5% on ₹2.20 L. The home loan at 8.5% is cheaper than the 12% return assumed for equity, so paying off the home loan is not the first move.",
     },
     {
       title: "Cover did not match income",
-      body: "Two dependents, ₹3.03 Cr annual income, ₹49 L debt. ₹1.50 Cr term and ₹10 L health leave a gap if income stops.",
+      body: "Two dependents, ₹30.3 L annual income, ₹49 L debt. ₹1.50 Cr term and ₹10 L health leave a gap if income stops.",
     },
     {
       title: "Emergency fund was incomplete",

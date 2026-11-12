@@ -82,7 +82,7 @@ describe("Course", () => {
     const { container } = renderPage();
     const text = container.querySelector("main")?.textContent ?? "";
     expect(text).not.toMatch(
-      /planned education module|we will build|do not isolate|do not ask the user|from the spec|internal|outline|planned|not live|will contain|static reads|next lesson/i,
+      /planned education module|we will build|do not isolate|do not ask the user|from the spec|internal|outline|planned|not live|will contain|static reads|next lesson|pulls your|reuse the numbers|watch the gap close|from your household/i,
     );
   });
 
@@ -94,5 +94,11 @@ describe("Course", () => {
     expect(cells(29)).toEqual(
       expect.arrayContaining(["Advisor + goals + forecast", "Leave with priorities, actions, and a projection"]),
     );
+  });
+
+  it("uses unique ids inside main", () => {
+    const { container } = renderPage();
+    const ids = Array.from(container.querySelectorAll("main [id]")).map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });

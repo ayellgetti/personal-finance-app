@@ -34,7 +34,7 @@ const problem = {
   causes:
     "Without that view, surplus, emergency months, insurance adequacy, and the retirement year stay guesses. A new job, EMI, dependent, or goal does not automatically update the plan.",
   notFirst:
-    "Freedom Planner does not start with live bank login, KYC, tax filing, or a marketplace. The first job is a trusted financial picture that helps you decide better.",
+    "Freedom Planner is not a live bank login, KYC, or tax-filing product. Its job is a trusted financial picture that helps you decide better.",
 };
 
 const objective = {
@@ -63,7 +63,7 @@ const today = {
     { title: "Manage", body: "Income, expenses, loans, credit cards, investments, insurance, and goals." },
     { title: "Plan", body: "Statement analyser, budget tracker, AI advisor, and learning hub." },
   ],
-  flow: "You sign up with an OTP, complete Quick Setup, then move through Overview, Manage, Plan, Calculators, and Report. The Guide page walks through a sample household.",
+  flow: "You sign up with an OTP, complete Quick Setup, then explore Home, Money In/Out, Goals, Advisor, Learn, and Tools. The Guide page walks through a sample household.",
 };
 
 const trust = {
@@ -129,7 +129,7 @@ export default function Why() {
             <p className="mt-6 text-muted-foreground">{problem.summary}</p>
             <h3 className="mt-8 font-display text-xl font-semibold">What that causes</h3>
             <p className="mt-2 text-muted-foreground">{problem.causes}</p>
-            <h3 className="mt-8 font-display text-xl font-semibold">What we are not solving first</h3>
+            <h3 className="mt-8 font-display text-xl font-semibold">What Freedom Planner is not</h3>
             <p className="mt-2 text-muted-foreground">{problem.notFirst}</p>
           </section>
 

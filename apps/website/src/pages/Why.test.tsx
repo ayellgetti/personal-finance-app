@@ -56,4 +56,10 @@ describe("Why", () => {
     expect(text).not.toMatch(/stays in your account/i);
     expect(text).toContain("This website does not store your finances.");
   });
+
+  it("uses unique ids inside main", () => {
+    const { container } = renderPage();
+    const ids = Array.from(container.querySelectorAll("main [id]")).map((el) => el.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
 });

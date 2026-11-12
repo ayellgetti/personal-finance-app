@@ -40,7 +40,7 @@ describe("Home", () => {
     );
 
     expect(
-      screen.getByText("This website does not store your finances; your records are kept in your signed-in account."),
+      screen.getByText("This website does not store your finances; your records are kept in your signed-in account, though insurance and some extras may still live on your device."),
     ).toBeInTheDocument();
     expect(screen.getByText("Forecasts are educational, not personal financial advice.")).toBeInTheDocument();
     expect(screen.getByText("No brokerage, no e-filing, no scheme distribution.")).toBeInTheDocument();

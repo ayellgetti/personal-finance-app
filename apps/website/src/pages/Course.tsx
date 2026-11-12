@@ -36,15 +36,15 @@ interface Level {
 }
 
 const loop = {
-  lead: "Every lesson follows the same five steps: learn the concept, understand it, look at your own finances, use a Freedom Planner tool, take action, and track the improvement before moving to the next concept. You do not have to take lessons 1 to 30 in order. Each lesson ends with a short check, and your progress is saved as you go.",
+  lead: "Every lesson follows the same five steps: learn the concept, understand it, look at your own finances, use a Freedom Planner tool, take action, and track the improvement before moving to the next concept. You do not have to take lessons 1 to 30 in order. Each lesson ends with a short check, and your progress is saved in your browser.",
   steps: [
     { title: "Learn", body: "A 5–8 minute concept." },
     { title: "Check", body: "A short understanding check." },
-    { title: "Apply", body: "Use the income, EMIs and SIPs you already entered." },
+    { title: "Apply", body: "Follow the lesson's “Try it in Freedom Planner” steps on your own entries." },
     { title: "Act", body: "Create a goal or change a plan." },
-    { title: "Track", body: "Watch the gap close in the app." },
+    { title: "Track", body: "Pass the quiz to mark the lesson done; your course progress is saved in your browser." },
   ],
-  note: "Lessons sit inside the app rather than in a separate course site. They use Financial Health, cash flow, loans, insurance, SIPs, goals, retirement, FIRE, the Freedom Score, calculators, and the AI advisor, and they reuse the numbers you have already entered, so you do not enter them again.",
+  note: "Lessons sit inside the app rather than in a separate course site. They use Financial Health, cash flow, loans, insurance, SIPs, goals, retirement, FIRE, the Freedom Score, calculators, and the AI advisor. Each lesson names the screen to open and the steps to take there, so you work on the entries you already have rather than retyping them.",
 };
 
 const levels: Level[] = [
@@ -164,10 +164,10 @@ const example = {
     { title: "Check", body: "A quick question, for example how many months of essential expenses a fund generally covers." },
     {
       title: "Apply",
-      body: "The app pulls your essential expenses from your household and shows target vs current vs gap. For example, a target of ₹3,60,000 with ₹1,20,000 saved leaves a gap of ₹2,40,000.",
+      body: "The lesson’s “Try it in Freedom Planner” steps send you to Goals, where you add an Emergency Fund goal: the app calculates the target from your monthly essential expenses and you enter what you have saved. For example, a target of ₹3,60,000 with ₹1,20,000 saved leaves a gap of ₹2,40,000.",
     },
-    { title: "Act", body: "Create the goal “Build ₹2,40,000 emergency fund” from that gap." },
-    { title: "Track", body: "Your progress is saved as you complete each lesson check, and you can take lessons in any order." },
+    { title: "Act", body: "Add the goal “Build ₹2,40,000 emergency fund” in Goals and set a monthly contribution." },
+    { title: "Track", body: "Your course progress is saved in your browser, and you can take lessons in any order." },
   ],
   disclaimer:
     "The course is educational, not personal financial advice, and the figures above are an example, not a promise of any result.",
@@ -240,7 +240,7 @@ export default function Course() {
       <PageHero
         eyebrow="Financial Freedom Journey"
         title="Thirty lessons that teach money, then send you back into your own numbers"
-        lead="Each lesson in Freedom Planner explains a concept, checks your understanding, applies it to the household already in the app, and ends with an action: a goal, a budget change, or a debt plan. It is built into the app, not a video campus on the side."
+        lead="Each lesson in Freedom Planner explains a concept, checks your understanding, shows where to apply it in the app, and ends with an action: a goal, a budget change, or a debt plan. It is built into the app, not a video campus on the side."
       >
         <a
           href={appUrl("/login")}
