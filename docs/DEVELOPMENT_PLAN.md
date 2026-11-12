@@ -363,6 +363,15 @@ Open P0 work (needs a human or backend): CA review of section references against
 - Review fixes (code review of P0 to P2): check-in list query now parsed in the controller (Express 5 re-reads `req.query`, so the validation middleware's coercion is lost; other list endpoints only work because Prisma-free paging coerces strings, so the middleware should be fixed separately); Profile saves with a dependents count and no details; Tax prefill follows late-loading data without overwriting typed figures; bare-date daily-log entries read as local dates; the three what-if limit is held under a per-user advisory lock; healthcare inflation never below general inflation; check-in month rebuilt at save time, rejected when in the future, and net worth must equal assets minus liabilities; what-if load failure blocks saving; insurance term bar follows the gated target; `Progress` now exposes `aria-valuenow`.
 - Not started: a due-this-month nudge on the dashboard and salary-day / tax-deadline reminders.
 
+### Phase B9 — Shareable plan link (review P3)
+
+**Status: IN PROGRESS** (branch `feat/shareable-plan-link`)
+
+- Done: owner creates a read-only link from Summary Report ("Share this plan"): label, 7/30/90-day expiry, up to five live links, revocable, view counts. New `PlanShare` table (migration `plan_share`). `GET/POST /api/plan-shares`, `POST /api/plan-shares/remove` (signed in) and `GET /api/shared/plans/:token` (public). The viewer page is `/shared/:token`.
+- Snapshot, not live: the link shows totals, scores, goals (by name) and up to five next steps as of the day it was created. It never carries name, email, date of birth, employer or the names of individual loans, cards, investments or policies. Tip text is redacted for known account names, and the API rejects unknown keys.
+- Security: token is 32 random bytes (43 characters); only its SHA-256 hash is stored; unknown, expired and revoked tokens all return the same 404; responses are `no-store` and `noindex`; the page sends no referrer; expected 4xx answers on the public route are not written to `FailureLog` (otherwise random URLs could grow that table). **The repo has no rate limiting**; guessing a 256-bit token is not feasible, but request volume is unbounded. This is the one finance route without `requireAuth`, recorded in CLAUDE.md section 24 for approval.
+- Not done: editing a link after creation, per-link view-only PDF, email or WhatsApp sending, mobile Freedom Planner (`apps/mobile-fp`) sharing.
+
 # Track C — Engineering platform (optional)
 
 **Status: NOT STARTED** (entire track)
@@ -551,3 +560,12 @@ Staff can send email, SMS, and in-app notifications from a saved template or by 
 
 **Validate:** `pnpm --filter api test` (communications and RBAC), `pnpm --filter api typecheck`, `pnpm --filter crm typecheck`, `pnpm --filter mobile typecheck`.
 
+### Phase W1 — Website overhaul
+
+**Status: COMPLETED** (frontend only; no API, Prisma, OpenAPI, envelope, or dependency changes)
+
+`apps/website` grows from one page to four public routes: `/`, `/why`, `/guide` (the Arjun Mehta walkthrough), and `/course` (the 30-lesson map). Shared `PageHero`, `TableOfContents`, and `CtaBand` components and a `usePageMeta` hook (per-route title and description) back the new pages. The header gains Why, Guide, and Course links and a phone menu, and Home gains entry points and a trust strip.
+
+Decisions: the Why page is a deliberately public-safe version (no commercial model, partner economics, or distribution vision). `apps/web` is untouched and keeps its own in-app copies; the website imports nothing from it. Copy was checked against `Home.tsx` and the in-app course so it makes no claims the app does not support. No package.json or lockfile changes.
+
+**Validate (2026-11-12):** `pnpm --filter website test` — 7 files, 41 tests, exit 0. `pnpm --filter website typecheck` — exit 0. `pnpm --filter website lint` — 0 errors, 0 warnings, exit 0. `pnpm --filter website build` — exit 0 (`dist/index.html` produced). Dev-server curl of `/`, `/why`, `/guide`, `/course`, and an unknown path returned 200 each (SPA fallback). Phone/desktop visual checks, the menu, and the 1024px two-column Guide layout were not visually verified.

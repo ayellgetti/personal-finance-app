@@ -41,6 +41,10 @@ export {
   freedomScenarioModel,
 } from "./personal-finance/freedom-scenario.model";
 export {
+  PlanShareModel,
+  planShareModel,
+} from "./personal-finance/plan-share.model";
+export {
   CalculatorScenarioModel,
   calculatorScenarioModel,
 } from "./personal-finance/calculator-scenario.model";
