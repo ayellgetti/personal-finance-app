@@ -30,6 +30,7 @@ import {
 import { generateReport } from "@/lib/finance/pdfReport";
 import { useAdvisorReport } from "@/lib/finance/advisor";
 import { AdvisorPlanOfAction, AdvisorSummary } from "./AdvisorOutput";
+import { SharePlanPanel } from "./SharePlanPanel";
 import { AdvisorPaywallDialog } from "./AdvisorPaywallDialog";
 import { ReportPositionSnapshot } from "./ReportPositionSnapshot";
 import { Panel, Badge } from "./shared";
@@ -368,6 +369,8 @@ export function ReportModule() {
       )}
 
       {query.data && <AdvisorPlanOfAction advice={query.data.advice} currency={cur} />}
+
+      <SharePlanPanel />
 
       <Panel title="Debt Payoff Sequence">
         <div className="space-y-2">

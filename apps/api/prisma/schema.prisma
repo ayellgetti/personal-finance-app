@@ -56,6 +56,7 @@ model User {
   taxScenarios               TaxScenario[]
   checkIns                   CheckIn[]
   freedomScenarios           FreedomScenario[]
+  planShares                 PlanShare[]
   calculatorScenarios        CalculatorScenario[]
   advisorChats               AdvisorChat[]
   advisorChatMessages        AdvisorChatMessage[]
@@ -519,6 +520,30 @@ model FreedomScenario {
   updatedAt DateTime  @updatedAt
   deletedBy String?
   deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+}
+
+/// A read-only snapshot of a user's plan, opened with an unguessable link.
+/// Only the SHA-256 hash of the token is stored; the token itself is shown once on creation.
+model PlanShare {
+  id           String    @id @default(uuid())
+  userId       String
+  label        String
+  tokenHash    String    @unique
+  snapshot     Json
+  expiresAt    DateTime
+  viewCount    Int       @default(0)
+  lastViewedAt DateTime?
+  isActive     Int       @default(1)
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedBy    String?
+  updatedAt    DateTime  @updatedAt
+  deletedBy    String?
+  deletedAt    DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
