@@ -19,4 +19,30 @@ describe("Home", () => {
       expect.stringContaining("/login"),
     );
   });
+
+  it("links to the Why, Guide and Course pages", () => {
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: /why it exists/i })).toHaveAttribute("href", "/why");
+    expect(screen.getByRole("link", { name: /see a real household/i })).toHaveAttribute("href", "/guide");
+    expect(screen.getByRole("link", { name: /learn the course/i })).toHaveAttribute("href", "/course");
+  });
+
+  it("shows the trust strip statements", () => {
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByText("This website does not store your finances; your records are kept in your signed-in account."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Forecasts are educational, not personal financial advice.")).toBeInTheDocument();
+    expect(screen.getByText("No brokerage, no e-filing, no scheme distribution.")).toBeInTheDocument();
+  });
 });
