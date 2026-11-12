@@ -143,7 +143,7 @@ apps/web/src/
 
 Do not reshape into `src/features/*` in an unrelated PR.
 
-Marketing site (`apps/website`) is a second Vite app: `src/pages`, `src/components`. It has no auth store and must not import `apps/web`.
+Marketing site (`apps/website`) is a second Vite app: `src/pages`, `src/components`. It has no auth store and must not import `apps/web`. It serves four public routes: `/`, `/why`, `/guide`, and `/course` (any other path renders the not-found page). `PageShell` provides the header, with a menu on phones, and the footer. `PageHero`, `TableOfContents`, and `CtaBand` in `src/components` are shared by the three content pages, and `usePageMeta` in `src/lib` sets a per-route document title and description. These pages are the public copies: `apps/web` keeps its own in-app Why, Guide, and Course (`why.html`, `guide.html`, `course.html`, with course progress stored under `fp-course-progress`), and the website must not import or change them. The public Why page is deliberately public-safe: it has no commercial model, partner economics, or distribution vision. Public copy is checked against `Home.tsx` and the in-app course so it claims nothing the app does not support.
 
 Sales CRM (`apps/crm`) copies the web auth/API/shadcn pattern. LocalStorage keys are prefixed `crm-`. Do not import `apps/web` source.
 

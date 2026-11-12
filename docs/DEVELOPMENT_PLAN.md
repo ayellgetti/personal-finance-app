@@ -560,3 +560,12 @@ Staff can send email, SMS, and in-app notifications from a saved template or by 
 
 **Validate:** `pnpm --filter api test` (communications and RBAC), `pnpm --filter api typecheck`, `pnpm --filter crm typecheck`, `pnpm --filter mobile typecheck`.
 
+### Phase W1 — Website overhaul
+
+**Status: COMPLETED** (frontend only; no API, Prisma, OpenAPI, envelope, or dependency changes)
+
+`apps/website` grows from one page to four public routes: `/`, `/why`, `/guide` (the Arjun Mehta walkthrough), and `/course` (the 30-lesson map). Shared `PageHero`, `TableOfContents`, and `CtaBand` components and a `usePageMeta` hook (per-route title and description) back the new pages. The header gains Why, Guide, and Course links and a phone menu, and Home gains entry points and a trust strip.
+
+Decisions: the Why page is a deliberately public-safe version (no commercial model, partner economics, or distribution vision). `apps/web` is untouched and keeps its own in-app copies; the website imports nothing from it. Copy was checked against `Home.tsx` and the in-app course so it makes no claims the app does not support. No package.json or lockfile changes.
+
+**Validate (2026-11-12):** `pnpm --filter website test` — 7 files, 41 tests, exit 0. `pnpm --filter website typecheck` — exit 0. `pnpm --filter website lint` — 0 errors, 0 warnings, exit 0. `pnpm --filter website build` — exit 0 (`dist/index.html` produced). Dev-server curl of `/`, `/why`, `/guide`, `/course`, and an unknown path returned 200 each (SPA fallback). Phone/desktop visual checks, the menu, and the 1024px two-column Guide layout were not visually verified.
