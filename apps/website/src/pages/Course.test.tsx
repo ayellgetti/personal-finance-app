@@ -82,7 +82,17 @@ describe("Course", () => {
     const { container } = renderPage();
     const text = container.querySelector("main")?.textContent ?? "";
     expect(text).not.toMatch(
-      /planned education module|we will build|do not isolate|do not ask the user|from the spec|internal/i,
+      /planned education module|we will build|do not isolate|do not ask the user|from the spec|internal|outline|planned|not live|will contain|static reads|next lesson/i,
+    );
+  });
+
+  it("spot-checks the tool and action cells for the first and last lessons", () => {
+    const { container } = renderPage();
+    const rows = Array.from(container.querySelectorAll("#levels tbody tr"));
+    const cells = (i: number) => Array.from(rows[i]?.querySelectorAll("td") ?? []).map((c) => c.textContent);
+    expect(cells(0)).toEqual(expect.arrayContaining(["Financial Freedom Score", "Define a freedom goal"]));
+    expect(cells(29)).toEqual(
+      expect.arrayContaining(["Advisor + goals + forecast", "Leave with priorities, actions, and a projection"]),
     );
   });
 });

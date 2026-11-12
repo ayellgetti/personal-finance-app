@@ -69,7 +69,7 @@ const arjun = {
     },
     {
       title: "What was messy",
-      body: "Salary, rent, SIPs, three loans, LIC, and school fees lived in memory. He could not see the trade-offs.",
+      body: "Salary, rent, SIPs, three loans, a life insurance policy, and school fees lived in memory. He could not see the trade-offs.",
     },
   ] satisfies TitledText[],
 };

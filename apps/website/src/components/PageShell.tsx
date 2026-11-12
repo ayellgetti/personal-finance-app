@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Gem, Menu, X } from "lucide-react";
 import { appUrl } from "@/lib/utils";
@@ -156,11 +156,15 @@ export function SiteFooter() {
 
 export function PageShell({ children }: { children: ReactNode }) {
   const { pathname, hash } = useLocation();
+  const firstRender = useRef(true);
   useEffect(() => {
+    // Leave the first mount alone so a browser reload keeps its own scroll restoration.
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
     if (!hash) window.scrollTo(0, 0);
-    // Only a route change should reset scroll.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, hash]);
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />

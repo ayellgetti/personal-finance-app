@@ -66,6 +66,6 @@ describe("Guide", () => {
     const text = container.querySelector("main")?.textContent ?? "";
     expect(text).toMatch(/fictional/i);
     expect(text).toMatch(/educational/i);
-    expect(text).not.toMatch(/openai|json|rule engine|internal brief|HDFC/i);
+    expect(text).not.toMatch(/openai|json|rule engine|internal brief|HDFC|\bLIC\b/i);
   });
 });

@@ -35,7 +35,13 @@ describe("PageShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open menu" }));
     const close = screen.getByRole("button", { name: "Close menu" });
     expect(close).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("navigation", { name: "Mobile" })).toBeInTheDocument();
+    const mobile = screen.getByRole("navigation", { name: "Mobile" });
+    expect(mobile).toBeInTheDocument();
+    expect(mobile).toHaveAttribute("id", "mobile-nav");
+    expect(document.getElementById("mobile-nav")).not.toBeNull();
+    fireEvent.click(within(mobile).getByRole("link", { name: "Why" }));
+    expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument();
+    expect(document.getElementById("mobile-nav")).toBeNull();
   });
 
   it("footer no longer links the guide into the app", () => {
@@ -47,16 +53,16 @@ describe("PageShell", () => {
 
   it("scrolls to top when the route changes, but not with a hash", () => {
     const spy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-    renderAt(
-      "/why",
-      <>
-        <Link to="/guide">go guide</Link>
-        <Link to="/guide#x">go hash</Link>
-      </>,
-    );
+    renderAt("/why", <Link to="/guide">go guide</Link>);
     spy.mockClear();
     fireEvent.click(screen.getByText("go guide"));
     expect(spy).toHaveBeenCalledWith(0, 0);
+  });
+
+  it("does not scroll on first render", () => {
+    const spy = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+    renderAt("/why");
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it("does not scroll when the URL has a hash", () => {

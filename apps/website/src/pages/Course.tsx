@@ -36,7 +36,7 @@ interface Level {
 }
 
 const loop = {
-  lead: "Every lesson follows the same five steps: learn the concept, understand it, look at your own finances, use a Freedom Planner tool, take action, and track the improvement before moving to the next concept. You do not have to take lessons 1 to 30 in order. The app can point you to the next lesson from real gaps in your numbers, such as high-interest debt before investing, or an empty emergency fund before FIRE.",
+  lead: "Every lesson follows the same five steps: learn the concept, understand it, look at your own finances, use a Freedom Planner tool, take action, and track the improvement before moving to the next concept. You do not have to take lessons 1 to 30 in order. Each lesson ends with a short check, and your progress is saved as you go.",
   steps: [
     { title: "Learn", body: "A 5–8 minute concept." },
     { title: "Check", body: "A short understanding check." },
@@ -167,7 +167,7 @@ const example = {
       body: "The app pulls your essential expenses from your household and shows target vs current vs gap. For example, a target of ₹3,60,000 with ₹1,20,000 saved leaves a gap of ₹2,40,000.",
     },
     { title: "Act", body: "Create the goal “Build ₹2,40,000 emergency fund” from that gap." },
-    { title: "Track", body: "Progress shows on Goals and Overview, then the app suggests your next lesson." },
+    { title: "Track", body: "Your progress is saved as you complete each lesson check, and you can take lessons in any order." },
   ],
   disclaimer:
     "The course is educational, not personal financial advice, and the figures above are an example, not a promise of any result.",
