@@ -70,12 +70,12 @@ const trust = {
   lead: "A planning tool is only useful if you can rely on the numbers and know what happens to them.",
   points: [
     {
-      title: "Your data stays in your account",
-      body: "Your figures live in your signed-in Freedom Planner account. This marketing site does not store your finances.",
+      title: "Where your numbers live",
+      body: "This website does not store your finances. Your records are kept in your signed-in Freedom Planner account, although insurance and some extras may still live on your device until they are fully moved to the account.",
     },
     {
-      title: "The math is visible and repeatable",
-      body: "Planner math is the source of the picture: the same inputs give the same forecast. The AI advisor fills a structured report on top of that math, and does not invent surplus, EMI, coverage, or investment values.",
+      title: "A deterministic planner under the advice",
+      body: "Forecasts come from a deterministic planner working on your own entries. The AI advisor report is built from that same planner snapshot rather than from a generic article.",
     },
     {
       title: "Forecasts are educational",

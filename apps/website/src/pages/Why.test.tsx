@@ -47,6 +47,13 @@ describe("Why", () => {
     const { container } = renderPage();
     const text = container.querySelector("main")?.textContent ?? "";
     expect(text.length).toBeGreaterThan(500);
-    expect(text).not.toMatch(/commission|referral|trail|distribution|flywheel|moat|internal brief|partner/i);
+    expect(text).not.toMatch(/commission|referral|trail|distribution|flywheel|moat|internal brief|partner|platform|revenue|monetis/i);
+  });
+
+  it("does not overclaim where data lives", () => {
+    const { container } = renderPage();
+    const text = container.querySelector("main")?.textContent ?? "";
+    expect(text).not.toMatch(/stays in your account/i);
+    expect(text).toContain("This website does not store your finances.");
   });
 });
