@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import {
+  BookOpen,
   Calculator,
   FileSpreadsheet,
   GraduationCap,
@@ -11,10 +13,43 @@ import {
   Sparkles,
   Target,
   Umbrella,
+  Users,
   Wallet,
 } from "lucide-react";
 import { PageShell } from "@/components/PageShell";
+import { usePageMeta } from "@/lib/usePageMeta";
 import { appUrl } from "@/lib/utils";
+
+const PAGE_TITLE = "Freedom Planner — Personalised financial planning for India";
+const PAGE_DESCRIPTION =
+  "See surplus, debt, coverage, and a path to financial independence. Track income, EMIs, SIPs, insurance, and life goals — then get a structured AI advisor report. We do not sell mutual funds.";
+
+const entryCards = [
+  {
+    title: "Why it exists",
+    body: "The problem with scattered money details, and what Freedom Planner is for.",
+    to: "/why",
+    icon: Target,
+  },
+  {
+    title: "See a real household",
+    body: "A walkthrough using a fictional sample household, Arjun Mehta.",
+    to: "/guide",
+    icon: Users,
+  },
+  {
+    title: "Learn the course",
+    body: "30 lessons that send you back to your own numbers.",
+    to: "/course",
+    icon: BookOpen,
+  },
+];
+
+const trustStatements = [
+  "This website does not store your finances; your records are kept in your signed-in account, though insurance and some extras may still live on your device.",
+  "Forecasts are educational, not personal financial advice.",
+  "No brokerage, no e-filing, no scheme distribution.",
+];
 
 const pillars = [
   {
@@ -158,6 +193,8 @@ const snapshotRows = [
 ];
 
 export default function Home() {
+  usePageMeta(PAGE_TITLE, PAGE_DESCRIPTION);
+
   return (
     <PageShell>
       <section className="relative overflow-hidden">
@@ -229,6 +266,33 @@ export default function Home() {
             </ul>
           </div>
         </div>
+      </section>
+
+      <section aria-labelledby="start-here" className="container py-12">
+        <h2 id="start-here" className="font-display text-2xl font-bold text-foreground">
+          Start here
+        </h2>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          {entryCards.map((card) => (
+            <Link
+              key={card.to}
+              to={card.to}
+              className="rounded-xl border border-border bg-card p-5 shadow-sm transition hover:shadow-elevated"
+            >
+              <card.icon className="h-5 w-5 text-primary" aria-hidden />
+              <span className="mt-3 block font-display text-lg font-semibold text-foreground">{card.title}</span>
+              <span className="mt-1 block text-sm text-muted-foreground">{card.body}</span>
+            </Link>
+          ))}
+        </div>
+        <ul className="mt-6 grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+          {trustStatements.map((statement) => (
+            <li key={statement} className="flex gap-2">
+              <Shield className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+              <span>{statement}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="border-b border-border bg-card py-6">

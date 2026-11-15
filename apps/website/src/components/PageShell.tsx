@@ -1,9 +1,39 @@
-import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
-import { Gem } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { Gem, Menu, X } from "lucide-react";
 import { appUrl } from "@/lib/utils";
 
+const pageLinks = [
+  { to: "/why", label: "Why" },
+  { to: "/guide", label: "Guide" },
+  { to: "/course", label: "Course" },
+];
+
+const linkClass = "hover:text-foreground aria-[current=page]:text-foreground";
+
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <>
+      {pageLinks.map((l) => (
+        <NavLink key={l.to} to={l.to} onClick={onNavigate} className={linkClass}>
+          {l.label}
+        </NavLink>
+      ))}
+      <a href="/#product" onClick={onNavigate} className={linkClass}>
+        Product
+      </a>
+      <a href="/#faq" onClick={onNavigate} className={linkClass}>
+        FAQ
+      </a>
+      <a href={appUrl("/login")} className={linkClass}>
+        Sign in
+      </a>
+    </>
+  );
+}
+
 export function SiteHeader() {
+  const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur">
       <div className="container flex h-16 items-center justify-between gap-4">
@@ -13,33 +43,40 @@ export function SiteHeader() {
           </span>
           Freedom Planner
         </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex">
-          <a href="/#product" className="hover:text-foreground">
-            Product
-          </a>
-          <a href="/#goals" className="hover:text-foreground">
-            Goals
-          </a>
-          <a href="/#how" className="hover:text-foreground">
-            How it works
-          </a>
-          <a href="/#tools" className="hover:text-foreground">
-            Tools
-          </a>
-          <a href="/#faq" className="hover:text-foreground">
-            FAQ
-          </a>
-          <a href={appUrl("/login")} className="hover:text-foreground">
-            Sign in
-          </a>
-        </nav>
-        <a
-          href={appUrl("/login")}
-          className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card hover:opacity-95"
+        <nav
+          aria-label="Main"
+          className="hidden items-center gap-6 text-sm font-medium text-muted-foreground lg:flex"
         >
-          Open the app
-        </a>
+          <NavLinks />
+        </nav>
+        <div className="flex items-center gap-2">
+          <a
+            href={appUrl("/login")}
+            className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-card hover:opacity-95"
+          >
+            Open the app
+          </a>
+          <button
+            type="button"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border lg:hidden"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
+          </button>
+        </div>
       </div>
+      {open ? (
+        <nav
+          id="mobile-nav"
+          aria-label="Mobile"
+          className="container flex flex-col gap-4 border-t border-border/80 py-4 text-sm font-medium text-muted-foreground lg:hidden"
+        >
+          <NavLinks onNavigate={() => setOpen(false)} />
+        </nav>
+      ) : null}
     </header>
   );
 }
@@ -57,6 +94,13 @@ export function SiteFooter() {
         <div>
           <p className="text-sm font-semibold text-foreground">On this site</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            {pageLinks.map((l) => (
+              <li key={l.to}>
+                <Link to={l.to} className="hover:text-foreground">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
             <li>
               <a href="/#product" className="hover:text-foreground">
                 Product
@@ -88,11 +132,6 @@ export function SiteFooter() {
               </a>
             </li>
             <li>
-              <a href={appUrl("/guide")} className="hover:text-foreground">
-                Product walkthrough
-              </a>
-            </li>
-            <li>
               <a href="/#faq" className="hover:text-foreground">
                 FAQ
               </a>
@@ -116,6 +155,16 @@ export function SiteFooter() {
 }
 
 export function PageShell({ children }: { children: ReactNode }) {
+  const { pathname, hash } = useLocation();
+  const firstRender = useRef(true);
+  useEffect(() => {
+    // Leave the first mount alone so a browser reload keeps its own scroll restoration.
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    if (!hash) window.scrollTo(0, 0);
+  }, [pathname, hash]);
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
