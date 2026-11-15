@@ -57,6 +57,9 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,webmanifest}"],
         globIgnores: ["**/env.js"],
+        // Workbox refuses to precache a file over 2 MiB and fails the production
+        // build. The app shell chunk is just over that (about 2.1 MB).
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         navigateFallback: "index.html",
         navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/env\.js$/],
       },
