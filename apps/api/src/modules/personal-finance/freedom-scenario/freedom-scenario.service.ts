@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { freedomScenarioModel, type FreedomScenarioModel } from "../../../models/index";
-import { prisma } from "../../../utils/prisma.util";
+import { advisoryUserLock, type UserLock } from "../../../utils/user-lock.util";
 import { HttpError } from "../../../utils/http-error.util";
 import {
   MAX_FREEDOM_SCENARIOS,
@@ -8,19 +8,12 @@ import {
   type RemoveFreedomScenarioBody,
 } from "./freedom-scenario.request";
 
-/** Runs `fn` while holding a per-user lock, so two saves cannot both pass the limit check. */
-export type UserLock = <T>(userId: string, fn: () => Promise<T>) => Promise<T>;
-
-const advisoryUserLock: UserLock = (userId, fn) =>
-  prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`freedom-scenario:${userId}`}))`;
-    return fn();
-  });
+const freedomScenarioLock = advisoryUserLock("freedom-scenario");
 
 export class FreedomScenarioService {
   constructor(
     private readonly model: FreedomScenarioModel = freedomScenarioModel,
-    private readonly withUserLock: UserLock = advisoryUserLock,
+    private readonly withUserLock: UserLock = freedomScenarioLock,
   ) {}
 
   async list(userId: string) {

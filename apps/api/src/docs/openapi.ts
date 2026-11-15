@@ -244,6 +244,37 @@ export const openApiDocument = {
           occupation: { type: "string", minLength: 1, maxLength: 80, example: "Teacher" },
         },
       },
+      CreatePlanShareRequest: {
+        type: "object",
+        required: ["label", "expiresInDays", "snapshot"],
+        properties: {
+          label: { type: "string", minLength: 1, maxLength: 60, example: "For my CA" },
+          expiresInDays: { type: "integer", enum: [7, 30, 90] },
+          snapshot: {
+            type: "object",
+            description:
+              "Totals, scores, goals and next steps only. No name, email, date of birth, employer or individual loan, account or policy details. Unknown keys are rejected. Up to 20 goals and 5 next steps.",
+            additionalProperties: false,
+            required: ["generatedAt", "currency", "netWorth", "assets", "liabilities", "monthlyIncome", "monthlyBills", "savingsRate", "healthScore", "emergency", "freedom", "goals", "nextSteps", "cover"],
+            properties: {
+              generatedAt: { type: "string", format: "date-time" },
+              currency: { type: "string", example: "₹" },
+              netWorth: { type: "number" },
+              assets: { type: "number" },
+              liabilities: { type: "number" },
+              monthlyIncome: { type: "number" },
+              monthlyBills: { type: "number" },
+              savingsRate: { type: "number" },
+              healthScore: { type: "object" },
+              emergency: { type: "object" },
+              freedom: { type: "object", nullable: true },
+              goals: { type: "array", maxItems: 20, items: { type: "object" } },
+              nextSteps: { type: "array", maxItems: 5, items: { type: "object" } },
+              cover: { type: "object" },
+            },
+          },
+        },
+      },
       FreedomScenarioRequest: {
         type: "object",
         required: ["title", "mode", "input", "result"],
@@ -3250,6 +3281,86 @@ export const openApiDocument = {
           },
           "401": { $ref: "#/components/responses/Unauthorized" },
           "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/plan-shares": {
+      get: {
+        tags: ["Plan sharing"],
+        summary: "List your live share links (no tokens or snapshots)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        responses: {
+          "200": {
+            description: "Live links with view counts",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+        },
+      },
+      post: {
+        tags: ["Plan sharing"],
+        summary: "Create a read-only share link from a snapshot",
+        description:
+          "Returns the token once, in the response only. Only its SHA-256 hash is stored, so a lost link cannot be recovered, only revoked. At most five live links per user (409 beyond that).",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/CreatePlanShareRequest" } } },
+        },
+        responses: {
+          "201": {
+            description: "Link created",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "409": { description: "Five live share links already exist" },
+          "422": { $ref: "#/components/responses/ValidationFailed" },
+        },
+      },
+    },
+    "/api/plan-shares/remove": {
+      post: {
+        tags: ["Plan sharing"],
+        summary: "Revoke a share link",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/RequestId" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { type: "object", required: ["id"], properties: { id: { type: "string", format: "uuid" } } },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Link revoked",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "401": { $ref: "#/components/responses/Unauthorized" },
+          "404": { description: "Share link not found" },
+        },
+      },
+    },
+    "/api/shared/plans/{token}": {
+      get: {
+        tags: ["Plan sharing"],
+        summary: "Open a shared plan (public, no sign-in)",
+        description:
+          "The only finance endpoint without authentication. The 43-character token is the credential and grants read access to one stored snapshot only. Unknown, expired and revoked tokens all return the same 404. Responses are sent with Cache-Control: no-store and X-Robots-Tag: noindex. Expected 4xx answers are not written to the failure log.",
+        parameters: [
+          { $ref: "#/components/parameters/RequestId" },
+          { name: "token", in: "path", required: true, schema: { type: "string", pattern: "^[A-Za-z0-9_-]{43}$" } },
+        ],
+        responses: {
+          "200": {
+            description: "The shared snapshot",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Envelope" } } },
+          },
+          "404": { description: "This link is no longer available" },
+          "422": { description: "Malformed token" },
         },
       },
     },

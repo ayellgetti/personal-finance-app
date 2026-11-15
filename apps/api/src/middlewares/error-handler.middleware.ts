@@ -16,12 +16,17 @@ export const errorHandler: ErrorRequestHandler = async (err, req, res, next) => 
   const details = isHttpError ? err.details : undefined;
   const stack = err instanceof Error ? err.stack : undefined;
 
-  await failureLogService.record(req, {
-    statusCode,
-    message: err instanceof Error ? err.message : String(err),
-    stack,
-    details,
-  });
+  // Public, unauthenticated routes opt out of logging expected 4xx answers: otherwise anyone
+  // could grow the FailureLog table by requesting random URLs. Server errors are always recorded.
+  const skipLog = res.locals.skipFailureLogFor4xx === true && statusCode < 500;
+  if (!skipLog) {
+    await failureLogService.record(req, {
+      statusCode,
+      message: err instanceof Error ? err.message : String(err),
+      stack,
+      details,
+    });
+  }
 
   Api.error(
     req,
