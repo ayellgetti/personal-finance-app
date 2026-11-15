@@ -4,6 +4,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Freedom Planner — Personalised financial planning for India</title>
+    <script>
+      (function () {
+        var FLAG = "fp-site-reset";
+        if (!navigator.serviceWorker || !navigator.serviceWorker.getRegistrations) return;
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          if (!regs.length) {
+            try { sessionStorage.removeItem(FLAG); } catch (e) {}
+            return;
+          }
+          var jobs = regs.map(function (reg) { return reg.unregister(); });
+          if (window.caches && caches.keys) {
+            jobs.push(
+              caches.keys().then(function (keys) {
+                return Promise.all(keys.map(function (key) { return caches.delete(key); }));
+              }),
+            );
+          }
+          return Promise.all(jobs).then(function () {
+            var again = false;
+            try { again = sessionStorage.getItem(FLAG) === "1"; } catch (e) {}
+            if (again) return;
+            try { sessionStorage.setItem(FLAG, "1"); } catch (e) {}
+            window.location.reload();
+          });
+        });
+      })();
+    </script>
     <meta
       name="description"
       content="See surplus, debt, coverage, and a path to financial independence. Track income, EMIs, SIPs, insurance, and life goals — then get a structured AI advisor report. We do not sell mutual funds."

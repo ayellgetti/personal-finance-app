@@ -94,7 +94,7 @@ Then `./deploy.sh`.
 
 ## Caching and container restarts
 
-`deploy/nginx.conf` handles two things that break naive SPA deploys:
+`containers/nginx/nginx.website.conf` handles two things that break naive SPA deploys:
 
-- `index.html` is served `no-store` while `/assets/*` (hashed by Vite) is `immutable` for a year. Without this, browsers keep loading the previous deploy's JavaScript.
+- `index.html` and `/sw.js` are served `no-store`, while `/assets/*` (hashed by Vite) is `immutable` for a year. A missing hashed file returns 404. Without this, browsers keep loading the previous deploy's JavaScript. The marketing origin also ships `apps/website/public/sw.js`, which clears a service worker left over from when the product app was served on that host. Restarting the container does not clear that worker; the browser keeps the cached shell until this script runs.
 - The `/api` proxy resolves the `api` hostname through Docker's DNS (`127.0.0.11`) with a variable in `proxy_pass`, so rebuilding the API container does not leave nginx pinned to a dead IP. Verified: the API moved to a new address mid-flight and nginx kept serving without a reload.

@@ -1,8 +1,11 @@
 // The product app used to be served on this origin and registered a service
 // worker here. Browsers keep that worker, and the cached shell, until a
-// script at /sw.js replaces it. This one clears those caches and uninstalls.
-self.addEventListener("install", () => {
-  self.skipWaiting();
+// script at /sw.js replaces it. This one drops those caches, takes control
+// of open tabs, reloads them from the network, and only then uninstalls.
+// Unregistering before the reload leaves the previous worker in control, so
+// a container restart still shows the old site.
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
@@ -10,8 +13,9 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
-      .then(() => self.registration.unregister())
+      .then(() => self.clients.claim())
       .then(() => self.clients.matchAll({ type: "window" }))
-      .then((clients) => Promise.all(clients.map((client) => client.navigate(client.url)))),
+      .then((clients) => Promise.all(clients.map((client) => client.navigate(client.url))))
+      .then(() => self.registration.unregister()),
   );
 });
