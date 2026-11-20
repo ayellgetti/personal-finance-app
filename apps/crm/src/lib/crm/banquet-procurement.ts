@@ -1,3 +1,5 @@
+import { PROCUREMENT_DISPLAY_NAMES } from "./banquet-procurement-names";
+
 export type ProcurementItem = {
   id: string;
   name: string;
@@ -161,6 +163,7 @@ export const PROCUREMENT_ITEMS: ProcurementItem[] = [
     ["Makhana", "kg"],
     ["Dry Berries (Cranberry/Blueberry)", "kg"],
     ["Mixed Dry Fruits", "kg"],
+    ["Magaj Tari", "kg"],
   ]),
   ...category("Grains & Cereals", [
     ["Rice", "kg"],
@@ -173,6 +176,10 @@ export const PROCUREMENT_ITEMS: ProcurementItem[] = [
     ["Poha Patla", "kg"],
     ["Poha Jada", "kg"],
     ["Vermicelli (Sewai)", "kg"],
+    ["Sabudana", "kg"],
+    ["Singhdana", "kg"],
+    ["Papad", "kg"],
+    ["Noodles", "kg"],
   ]),
   ...category("Pulses & Legumes", [
     ["Toor Dal (Tuvar / Arhar)", "kg"],
@@ -256,12 +263,20 @@ export const PROCUREMENT_ITEMS: ProcurementItem[] = [
     ["Food colors", "pack"],
     ["Ajinomoto (MSG)", "kg"],
     ["Flavouring agents", "pack"],
+    ["Sabji Masala", "kg"],
+    ["Chicken Masala", "kg"],
+    ["Mutton Masala", "kg"],
+    ["Vinegar", "ltr"],
+    ["Red Chilli Sauce", "bottle"],
+    ["Tomato Sauce", "bottle"],
+    ["Soya Sauce", "bottle"],
   ]),
   ...category("Oils & Fats", [
     ["Sunflower Oil", "ltr"],
     ["Groundnut Oil", "ltr"],
     ["Mustard Oil", "ltr"],
     ["Vanaspati", "kg"],
+    ["Cooking Oil (Tel)", "tin"],
     ["Ghee", "kg"],
   ]),
   ...category("Bakery & Dessert Ingredients", [
@@ -272,6 +287,7 @@ export const PROCUREMENT_ITEMS: ProcurementItem[] = [
     ["Corn Flour", "kg"],
     ["Jelly Mix", "pack"],
     ["Dry Fruits", "kg"],
+    ["Eno", "pack"],
   ]),
   ...category("Frozen & Processed Foods", [
     ["Frozen Peas", "kg"],
@@ -314,6 +330,7 @@ export const PROCUREMENT_ITEMS: ProcurementItem[] = [
     ["Hair Nets", "pack"],
     ["Aprons", "pcs"],
     ["Garbage Bags", "pack"],
+    ["Nirma (Detergent Powder)", "bag"],
   ]),
   ...category("Waste Management", [
     ["Wet Waste Bins", "pcs"],
@@ -347,3 +364,7 @@ export const procurementItemsByCategory = (name: string): ProcurementItem[] =>
 
 export const procurementItemById = (id: string): ProcurementItem | undefined =>
   PROCUREMENT_ITEMS.find((entry) => entry.id === id);
+
+/** English / Hinglish (हिंदी) label; falls back to the plain name. */
+export const procurementDisplayName = (entry: ProcurementItem): string =>
+  PROCUREMENT_DISPLAY_NAMES[entry.name] ?? entry.name;

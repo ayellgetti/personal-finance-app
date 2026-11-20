@@ -219,7 +219,15 @@
     color: #44403c !important;
   }
 
+  /* No borders on the printed sheet: cards, tables and the filled-in values. */
+  .banquet-checklist,
+  .banquet-checklist * {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
   .banquet-checklist th {
+    font-weight: 700;
     font-size: 8.5px !important;
     letter-spacing: 0.06em;
     text-transform: uppercase;

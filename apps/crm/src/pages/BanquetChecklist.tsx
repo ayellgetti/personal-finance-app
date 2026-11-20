@@ -26,6 +26,7 @@ import {
 } from "@/lib/crm/banquet-prices";
 import {
   PROCUREMENT_CATEGORIES,
+  procurementDisplayName,
   procurementItemById,
   procurementItemsByCategory,
 } from "@/lib/crm/banquet-procurement";
@@ -167,17 +168,15 @@ function emptyOrderRow(): OrderRow {
   return { id: `order-${nextRowId}`, category: "", itemId: "", quantity: "", remarks: "" };
 }
 
-function orderItemGroups(category: string, usedIds: ReadonlySet<string>): SearchableGroup[] {
-  return [
-    {
-      name: "",
-      options: procurementItemsByCategory(category).map((entry) => ({
-        value: entry.id,
-        label: `${entry.name} (${entry.unit})`,
-        disabled: usedIds.has(entry.id),
-      })),
-    },
-  ];
+/** Products to search; all categories. The same product may be ordered many times. */
+function orderItemGroups(): SearchableGroup[] {
+  return PROCUREMENT_CATEGORIES.map((name) => ({
+    name,
+    options: procurementItemsByCategory(name).map((entry) => ({
+      value: entry.id,
+      label: `${procurementDisplayName(entry)} · ${entry.unit}`,
+    })),
+  }));
 }
 
 function rowHasContent(row: ItemRow): boolean {
@@ -444,7 +443,7 @@ export default function BanquetChecklist() {
       const best = bestPrice(prices, row.itemId);
       return {
         category: row.category,
-        item: entry?.name ?? "",
+        item: entry ? procurementDisplayName(entry) : "",
         quantity: row.quantity,
         unit: entry?.unit ?? "",
         ...(best ? { price: best.price, vendor: best.vendor } : {}),
@@ -1019,43 +1018,34 @@ export default function BanquetChecklist() {
               <tbody>
                 {orders.map((row, index) => {
                   const entry = procurementItemById(row.itemId);
-                  const usedIds = new Set(
-                    orders.filter((other) => other.id !== row.id && other.itemId).map((o) => o.itemId),
-                  );
                   return (
                     <tr key={row.id}>
                       <td className={cellClass}>
-                        <NativeSelect
+                        <span
                           id={`order-${index + 1}-category`}
-                          value={row.category}
-                          onChange={(value) =>
-                            updateOrder(row.id, { category: value, itemId: "" })
-                          }
-                          className={selectClass}
                           aria-label={`Order row ${index + 1} category`}
+                          className="block text-xs text-stone-600"
                         >
-                          <option value="">Select category...</option>
-                          {PROCUREMENT_CATEGORIES.map((name) => (
-                            <option key={name} value={name}>
-                              {name}
-                            </option>
-                          ))}
-                        </NativeSelect>
-                        <PrintValue value={row.category} />
+                          {entry?.category ?? "Auto-filled"}
+                        </span>
                       </td>
                       <td className={cellClass}>
                         <SearchableSelect
                           id={`order-${index + 1}-item`}
                           value={row.itemId}
-                          onChange={(value) => updateOrder(row.id, { itemId: value })}
+                          onChange={(value) =>
+                            updateOrder(row.id, {
+                              itemId: value,
+                              category: procurementItemById(value)?.category ?? "",
+                            })
+                          }
                           className={selectClass}
                           aria-label={`Order row ${index + 1} product`}
-                          disabled={!row.category}
-                          placeholder={row.category ? "Search product..." : "Select category first"}
+                          placeholder="Search product..."
                           emptyLabel="No matching product"
-                          groups={row.category ? orderItemGroups(row.category, usedIds) : []}
+                          groups={orderItemGroups()}
                         />
-                        <PrintValue value={entry?.name ?? ""} />
+                        <PrintValue value={entry ? procurementDisplayName(entry) : ""} />
                       </td>
                       <td className={cellClass}>
                         <Input

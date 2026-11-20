@@ -7,7 +7,7 @@ describe("vendor price import", () => {
     expect(rows[0]).toEqual([
       "Category", "Item", "Unit", "Kisan Connect", "Country Delight", "Blinkit", "Zepto", "Jumbotail",
     ]);
-    expect(rows.length).toBe(262);
+    expect(rows.length).toBe(277);
   });
 
   it("reads prices by category and item, ignoring blanks and unknown rows", () => {

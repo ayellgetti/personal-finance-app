@@ -411,14 +411,11 @@ describe("Banquet public handover checklist", () => {
     render(<BanquetChecklist />);
     expect(screen.getByRole("heading", { name: "Order Products" })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Order row 1 category"), {
-      target: { value: "Dairy Products" },
-    });
     const input = screen.getByLabelText("Order row 1 product");
     fireEvent.click(input);
     const list = document.getElementById(input.getAttribute("aria-controls") ?? "");
     if (!list) throw new Error("Product list is not open");
-    fireEvent.click(within(list).getByRole("option", { name: "Paneer (kg)" }));
+    fireEvent.click(within(list).getByRole("option", { name: "Paneer (पनीर) · kg" }));
     fireEvent.change(screen.getByLabelText("Order row 1 quantity"), { target: { value: "12" } });
     fireEvent.change(screen.getByLabelText("Order row 1 remarks"), {
       target: { value: "deliver by 7 AM" },
@@ -429,7 +426,7 @@ describe("Banquet public handover checklist", () => {
       "WhatsApp message",
     ) as HTMLTextAreaElement;
     expect(message.value).toContain("*Order Products*");
-    expect(message.value).toContain("• Paneer — 12 kg (deliver by 7 AM)");
+    expect(message.value).toContain("• Paneer (पनीर) — 12 kg (deliver by 7 AM)");
   });
 
   it("imports vendor prices and shows the cheapest price and amount per product", async () => {
@@ -445,14 +442,11 @@ describe("Banquet public handover checklist", () => {
     Object.defineProperty(file, "arrayBuffer", { value: async () => bytes });
 
     render(<BanquetChecklist />);
-    fireEvent.change(screen.getByLabelText("Order row 1 category"), {
-      target: { value: "Dairy Products" },
-    });
     const input = screen.getByLabelText("Order row 1 product");
     fireEvent.click(input);
     const list = document.getElementById(input.getAttribute("aria-controls") ?? "");
     if (!list) throw new Error("Product list is not open");
-    fireEvent.click(within(list).getByRole("option", { name: "Paneer (kg)" }));
+    fireEvent.click(within(list).getByRole("option", { name: "Paneer (पनीर) · kg" }));
     fireEvent.change(screen.getByLabelText("Order row 1 quantity"), { target: { value: "10" } });
 
     fireEvent.change(screen.getByLabelText("Vendor price file"), { target: { files: [file] } });

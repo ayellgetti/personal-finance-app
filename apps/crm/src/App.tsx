@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword.tsx";
 import Banquet from "./pages/Banquet.tsx";
 import BanquetEnquiry from "./pages/BanquetEnquiry.tsx";
 import BanquetChecklist from "./pages/BanquetChecklist.tsx";
+import BanquetOrder from "./pages/BanquetOrder.tsx";
 import TravelEnquiry from "./pages/TravelEnquiry.tsx";
 import RealEstate from "./pages/RealEstate.tsx";
 import Freedom from "./pages/Freedom.tsx";
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/banquet.html" element={<Banquet />} />
               <Route path="/banquet-enquiry" element={<BanquetEnquiry />} />
               <Route path="/banquet-checklist" element={<BanquetChecklist />} />
+              <Route path="/banquet-order" element={<BanquetOrder />} />
               <Route path="/travel-enquiry" element={<TravelEnquiry />} />
               <Route path="/real-estate" element={<RealEstate />} />
               <Route path="/real-estate.html" element={<RealEstate />} />
