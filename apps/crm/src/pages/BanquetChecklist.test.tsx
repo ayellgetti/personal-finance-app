@@ -117,7 +117,7 @@ describe("Banquet public handover checklist", () => {
     expect(screen.getByLabelText("Row 1 item")).toBeDisabled();
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(["Menu Selection", "Decoration", "Instruction", "Payment", "Staff"]);
+    ).toEqual(["Menu Selection", "Decoration", "Instruction", "Payment", "Staff", "Order Products"]);
     expect(screen.getByRole("heading", { name: "Staff" })).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Staff row \d+ role/)).toHaveLength(BANQUET_STAFF_ROLES.length);
     BANQUET_STAFF_ROLES.forEach((role, index) => {
@@ -405,6 +405,61 @@ describe("Banquet public handover checklist", () => {
     expect(screen.getByRole("textbox", { name: "Instruction" })).toHaveValue(
       "Jain thali for 12 guests",
     );
+  });
+
+  it("records products to order and includes them in the WhatsApp message", () => {
+    render(<BanquetChecklist />);
+    expect(screen.getByRole("heading", { name: "Order Products" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Order row 1 category"), {
+      target: { value: "Dairy Products" },
+    });
+    const input = screen.getByLabelText("Order row 1 product");
+    fireEvent.click(input);
+    const list = document.getElementById(input.getAttribute("aria-controls") ?? "");
+    if (!list) throw new Error("Product list is not open");
+    fireEvent.click(within(list).getByRole("option", { name: "Paneer (kg)" }));
+    fireEvent.change(screen.getByLabelText("Order row 1 quantity"), { target: { value: "12" } });
+    fireEvent.change(screen.getByLabelText("Order row 1 remarks"), {
+      target: { value: "deliver by 7 AM" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "WhatsApp message" }));
+    const message = within(screen.getByRole("dialog")).getByLabelText(
+      "WhatsApp message",
+    ) as HTMLTextAreaElement;
+    expect(message.value).toContain("*Order Products*");
+    expect(message.value).toContain("• Paneer — 12 kg (deliver by 7 AM)");
+  });
+
+  it("imports vendor prices and shows the cheapest price and amount per product", async () => {
+    const XLSX = await import("xlsx");
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ["Category", "Item", "Unit", "Blinkit", "Jumbotail"],
+      ["Dairy Products", "Paneer", "kg", 420, 395],
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, "Prices");
+    const bytes = XLSX.write(workbook, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
+    const file = new File([bytes], "prices.xlsx");
+    Object.defineProperty(file, "arrayBuffer", { value: async () => bytes });
+
+    render(<BanquetChecklist />);
+    fireEvent.change(screen.getByLabelText("Order row 1 category"), {
+      target: { value: "Dairy Products" },
+    });
+    const input = screen.getByLabelText("Order row 1 product");
+    fireEvent.click(input);
+    const list = document.getElementById(input.getAttribute("aria-controls") ?? "");
+    if (!list) throw new Error("Product list is not open");
+    fireEvent.click(within(list).getByRole("option", { name: "Paneer (kg)" }));
+    fireEvent.change(screen.getByLabelText("Order row 1 quantity"), { target: { value: "10" } });
+
+    fireEvent.change(screen.getByLabelText("Vendor price file"), { target: { files: [file] } });
+
+    expect(await screen.findByText("Jumbotail")).toBeInTheDocument();
+    expect(screen.getByText("₹3950")).toBeInTheDocument();
+    expect(screen.getByText("Estimated total: ₹3950")).toBeInTheDocument();
   });
 
   it("opens a WhatsApp handover message in a dialog", async () => {

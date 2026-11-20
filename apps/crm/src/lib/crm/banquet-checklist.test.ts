@@ -18,6 +18,7 @@ const emptyDraft: WhatsAppHandoverDraft = {
   decoration: "",
   payments: [],
   staff: [],
+  orders: [],
   instruction: "",
   remarks: "",
 };
@@ -71,5 +72,19 @@ describe("WhatsApp handover message", () => {
       "https://wa.me/919876543210?text=Hello",
     );
     expect(whatsAppHandoverUrl("", "Hello")).toBe("https://wa.me/?text=Hello");
+  });
+});
+
+describe("WhatsApp order products", () => {
+  it("lists ordered products with quantity, unit and remarks and skips blank rows", () => {
+    const message = buildWhatsAppHandoverMessage({
+      ...emptyDraft,
+      orders: [
+        { category: "Dairy Products", item: "Milk", quantity: "20", unit: "ltr", remarks: "" },
+        { category: "", item: "", quantity: "5", unit: "", remarks: "" },
+      ],
+    });
+    expect(message).toContain("*Order Products*\n• Milk — 20 ltr");
+    expect(message).not.toContain("5");
   });
 });

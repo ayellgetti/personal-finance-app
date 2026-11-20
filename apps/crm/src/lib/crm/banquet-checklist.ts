@@ -112,6 +112,17 @@ export type WhatsAppStaffLine = {
   names: string;
 };
 
+export type WhatsAppOrderLine = {
+  category: string;
+  item: string;
+  quantity: string;
+  unit: string;
+  /** Cheapest known vendor price per unit, when prices are loaded. */
+  price?: number;
+  vendor?: string;
+  remarks: string;
+};
+
 export type WhatsAppHandoverDraft = {
   clientName: string;
   mobileNo: string;
@@ -124,6 +135,7 @@ export type WhatsAppHandoverDraft = {
   decoration: string;
   payments: readonly WhatsAppPaymentLine[];
   staff: readonly WhatsAppStaffLine[];
+  orders: readonly WhatsAppOrderLine[];
   instruction: string;
   remarks: string;
 };
@@ -195,6 +207,20 @@ function staffLines(staff: readonly WhatsAppStaffLine[]): string[] {
   return lines;
 }
 
+function orderLines(orders: readonly WhatsAppOrderLine[]): string[] {
+  const lines: string[] = [];
+  for (const row of orders) {
+    const item = trimmed(row.item);
+    if (!item) continue;
+    const quantity = trimmed(row.quantity);
+    const amount = quantity ? ` — ${quantity}${trimmed(row.unit) ? ` ${trimmed(row.unit)}` : ""}` : "";
+    const remarks = trimmed(row.remarks);
+    const price = row.price !== undefined ? ` @ ₹${row.price}${row.vendor ? ` ${row.vendor}` : ""}` : "";
+    lines.push(`• ${item}${amount}${price}${remarks ? ` (${remarks})` : ""}`);
+  }
+  return lines;
+}
+
 function section(title: string, body: string | readonly string[]): string | undefined {
   const lines = typeof body === "string" ? (trimmed(body) ? [trimmed(body)] : []) : [...body];
   if (lines.length === 0) return undefined;
@@ -219,6 +245,7 @@ export function buildWhatsAppHandoverMessage(draft: WhatsAppHandoverDraft): stri
     section("Decoration", draft.decoration),
     section("Payment", paymentLines(draft.payments)),
     section("Staff", staffLines(draft.staff)),
+    section("Order Products", orderLines(draft.orders)),
     section("Instructions", draft.instruction),
     section("Remarks", draft.remarks),
   ].filter((block): block is string => Boolean(block));

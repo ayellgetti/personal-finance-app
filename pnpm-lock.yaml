@@ -159,6 +159,9 @@ importers:
       workbox-window:
         specifier: ^7.4.1
         version: 7.4.1
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
     devDependencies:
       '@eslint/js':
         specifier: ^9.32.0

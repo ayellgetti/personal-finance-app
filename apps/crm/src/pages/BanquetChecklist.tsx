@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,19 @@ import { NativeSelect, SearchableSelect, type SearchableGroup } from "@/componen
 import { copyToClipboard } from "@/lib/clipboard";
 import { formatDate } from "@/lib/crm/display";
 import { BANQUET_EVENT_TYPES } from "@/lib/crm/banquet-enquiry";
+import {
+  PROCUREMENT_VENDORS,
+  bestPrice,
+  downloadPriceTemplate,
+  orderAmount,
+  readPriceFile,
+  type VendorPrices,
+} from "@/lib/crm/banquet-prices";
+import {
+  PROCUREMENT_CATEGORIES,
+  procurementItemById,
+  procurementItemsByCategory,
+} from "@/lib/crm/banquet-procurement";
 import {
   BANQUET_CHECKLIST_CATEGORIES,
   BANQUET_EVENT_TIMES,
@@ -40,6 +53,14 @@ type ItemRow = {
   categorySlug: string;
   item: string;
   requirement: string;
+};
+
+type OrderRow = {
+  id: string;
+  category: string;
+  itemId: string;
+  quantity: string;
+  remarks: string;
 };
 
 type EventInfo = {
@@ -139,6 +160,24 @@ function emptyPaymentRow(): PaymentRow {
 
 function initialPayments(): PaymentRow[] {
   return [emptyPaymentRow()];
+}
+
+function emptyOrderRow(): OrderRow {
+  nextRowId += 1;
+  return { id: `order-${nextRowId}`, category: "", itemId: "", quantity: "", remarks: "" };
+}
+
+function orderItemGroups(category: string, usedIds: ReadonlySet<string>): SearchableGroup[] {
+  return [
+    {
+      name: "",
+      options: procurementItemsByCategory(category).map((entry) => ({
+        value: entry.id,
+        label: `${entry.name} (${entry.unit})`,
+        disabled: usedIds.has(entry.id),
+      })),
+    },
+  ];
 }
 
 function rowHasContent(row: ItemRow): boolean {
@@ -266,6 +305,9 @@ export default function BanquetChecklist() {
   const [staff, setStaff] = useState<Record<string, StaffRow>>(emptyStaff);
   const [decoration, setDecoration] = useState("");
   const [payments, setPayments] = useState<PaymentRow[]>(initialPayments);
+  const [prices, setPrices] = useState<VendorPrices>({});
+  const priceFileRef = useRef<HTMLInputElement>(null);
+  const [orders, setOrders] = useState<OrderRow[]>(() => [emptyOrderRow()]);
   const [instruction, setInstruction] = useState("");
   const [remarks, setRemarks] = useState("");
   const [signature, setSignature] = useState("");
@@ -318,12 +360,49 @@ export default function BanquetChecklist() {
     );
   };
 
+  const updateOrder = (id: string, patch: Partial<Omit<OrderRow, "id">>) => {
+    setOrders((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  };
+
+  const addOrder = () => {
+    setOrders((current) => [...current, emptyOrderRow()]);
+  };
+
+  const removeOrder = (id: string) => {
+    setOrders((current) => (current.length <= 1 ? current : current.filter((row) => row.id !== id)));
+  };
+
+  const importPrices = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const result = await readPriceFile(file);
+      if (result.matched === 0) {
+        toast.error("No prices found. Use the price template (Category, Item and vendor columns).");
+        return;
+      }
+      setPrices(result.prices);
+      toast.success(
+        `Loaded prices for ${result.matched} items${
+          result.unmatched ? ` (${result.unmatched} rows did not match an item)` : ""
+        }`,
+      );
+    } catch {
+      toast.error("Unable to read the price file");
+    }
+  };
+
+  const orderTotal = orders.reduce(
+    (sum, row) => sum + (orderAmount(prices, row.itemId, row.quantity) ?? 0),
+    0,
+  );
+
   const resetState = () => {
     setEventInfo(EMPTY_EVENT);
     setRows(initialRows());
     setStaff(emptyStaff());
     setDecoration("");
     setPayments(initialPayments());
+    setOrders([emptyOrderRow()]);
     setInstruction("");
     setRemarks("");
     setSignature("");
@@ -360,6 +439,18 @@ export default function BanquetChecklist() {
       quantity: staff[role.slug]?.quantity ?? "",
       names: staff[role.slug]?.names ?? "",
     })),
+    orders: orders.map((row) => {
+      const entry = procurementItemById(row.itemId);
+      const best = bestPrice(prices, row.itemId);
+      return {
+        category: row.category,
+        item: entry?.name ?? "",
+        quantity: row.quantity,
+        unit: entry?.unit ?? "",
+        ...(best ? { price: best.price, vendor: best.vendor } : {}),
+        remarks: row.remarks,
+      };
+    }),
     instruction,
     remarks,
   });
@@ -851,6 +942,203 @@ export default function BanquetChecklist() {
                 })}
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <section
+          aria-labelledby="order-heading"
+          className="mt-3 rounded-lg border border-amber-100 bg-stone-50/70 p-3 print:border-black print:bg-white print:shadow-none"
+        >
+          <h2 id="order-heading" className="font-display text-sm font-semibold text-amber-800">
+            Order Products
+          </h2>
+          <div className="mt-2 flex flex-wrap items-center gap-2 print:hidden">
+            <input
+              ref={priceFileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="sr-only"
+              aria-label="Vendor price file"
+              onChange={(event) => {
+                void importPrices(event.target.files?.[0]);
+                event.target.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full border-stone-200 px-3 text-xs"
+              onClick={() => priceFileRef.current?.click()}
+            >
+              Import vendor prices
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs text-amber-800"
+              onClick={() => void downloadPriceTemplate()}
+            >
+              Download price template
+            </Button>
+            <span className="text-xs text-stone-500">
+              {PROCUREMENT_VENDORS.join(" · ")} — price per unit, cheapest is picked.
+            </span>
+          </div>
+          <div className="mt-2 overflow-x-auto print:overflow-visible">
+            <table className="w-full min-w-[40rem] border-collapse text-sm print:min-w-0">
+              <thead>
+                <tr>
+                  <th scope="col" className={headCellClass}>
+                    Category
+                  </th>
+                  <th scope="col" className={headCellClass}>
+                    Product
+                  </th>
+                  <th scope="col" className={`${headCellClass} w-28`}>
+                    Qty
+                  </th>
+                  <th scope="col" className={`${headCellClass} w-16`}>
+                    Unit
+                  </th>
+                  <th scope="col" className={headCellClass}>
+                    Best price
+                  </th>
+                  <th scope="col" className={`${headCellClass} w-24 text-right`}>
+                    Amount
+                  </th>
+                  <th scope="col" className={headCellClass}>
+                    Remarks
+                  </th>
+                  <th scope="col" className={`${headCellClass} w-12 print:hidden`}>
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((row, index) => {
+                  const entry = procurementItemById(row.itemId);
+                  const usedIds = new Set(
+                    orders.filter((other) => other.id !== row.id && other.itemId).map((o) => o.itemId),
+                  );
+                  return (
+                    <tr key={row.id}>
+                      <td className={cellClass}>
+                        <NativeSelect
+                          id={`order-${index + 1}-category`}
+                          value={row.category}
+                          onChange={(value) =>
+                            updateOrder(row.id, { category: value, itemId: "" })
+                          }
+                          className={selectClass}
+                          aria-label={`Order row ${index + 1} category`}
+                        >
+                          <option value="">Select category...</option>
+                          {PROCUREMENT_CATEGORIES.map((name) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
+                        </NativeSelect>
+                        <PrintValue value={row.category} />
+                      </td>
+                      <td className={cellClass}>
+                        <SearchableSelect
+                          id={`order-${index + 1}-item`}
+                          value={row.itemId}
+                          onChange={(value) => updateOrder(row.id, { itemId: value })}
+                          className={selectClass}
+                          aria-label={`Order row ${index + 1} product`}
+                          disabled={!row.category}
+                          placeholder={row.category ? "Search product..." : "Select category first"}
+                          emptyLabel="No matching product"
+                          groups={row.category ? orderItemGroups(row.category, usedIds) : []}
+                        />
+                        <PrintValue value={entry?.name ?? ""} />
+                      </td>
+                      <td className={cellClass}>
+                        <Input
+                          id={`order-${index + 1}-quantity`}
+                          type="number"
+                          min={0}
+                          value={row.quantity}
+                          onChange={(event) => updateOrder(row.id, { quantity: event.target.value })}
+                          placeholder="Qty"
+                          aria-label={`Order row ${index + 1} quantity`}
+                          className={`${rowInputClass} text-right`}
+                        />
+                        <PrintValue value={row.quantity} className="text-right" />
+                      </td>
+                      <td className={`${cellClass} text-xs text-stone-600`}>{entry?.unit ?? ""}</td>
+                      <td className={`${cellClass} text-xs text-stone-700`}>
+                        {(() => {
+                          const best = bestPrice(prices, row.itemId);
+                          if (!best) return null;
+                          const others = PROCUREMENT_VENDORS.filter(
+                            (vendor) => prices[row.itemId]?.[vendor] !== undefined,
+                          )
+                            .map((vendor) => `${vendor} ₹${prices[row.itemId]?.[vendor]}`)
+                            .join(", ");
+                          return (
+                            <span title={others}>
+                              <strong>₹{best.price}</strong> {best.vendor}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td className={`${cellClass} text-right text-xs text-stone-800`}>
+                        {(() => {
+                          const amount = orderAmount(prices, row.itemId, row.quantity);
+                          return amount === undefined ? "" : `₹${amount}`;
+                        })()}
+                      </td>
+                      <td className={cellClass}>
+                        <Input
+                          id={`order-${index + 1}-remarks`}
+                          value={row.remarks}
+                          onChange={(event) => updateOrder(row.id, { remarks: event.target.value })}
+                          placeholder="Brand, delivery time..."
+                          aria-label={`Order row ${index + 1} remarks`}
+                          className={rowInputClass}
+                        />
+                        <PrintValue value={row.remarks} />
+                      </td>
+                      <td className={`${cellClass} print:hidden`}>
+                        {orders.length > 1 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 text-base text-red-700 hover:text-red-800"
+                            aria-label="Remove order"
+                            onClick={() => removeOrder(row.id)}
+                          >
+                            ×
+                          </Button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {orderTotal > 0 ? (
+            <p className="mt-2 text-right text-sm font-semibold text-stone-800">
+              Estimated total: ₹{Math.round(orderTotal * 100) / 100}
+            </p>
+          ) : null}
+          <div className="mt-2 flex flex-wrap items-center justify-end gap-1 print:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full border-stone-200 px-3 text-xs"
+              onClick={addOrder}
+            >
+              + Add product
+            </Button>
           </div>
         </section>
 
