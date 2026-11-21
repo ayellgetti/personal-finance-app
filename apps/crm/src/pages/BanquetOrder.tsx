@@ -24,12 +24,12 @@ import {
   procurementItemsByCategory,
 } from "@/lib/crm/banquet-procurement";
 
-type OrderRow = { id: string; category: string; itemId: string; quantity: string; remarks: string };
+type OrderRow = { id: string; category: string; itemId: string; quantity: string; price: string; remarks: string };
 
 let nextRowId = 0;
 function emptyRow(): OrderRow {
   nextRowId += 1;
-  return { id: `order-${nextRowId}`, category: "", itemId: "", quantity: "", remarks: "" };
+  return { id: `order-${nextRowId}`, category: "", itemId: "", quantity: "", price: "", remarks: "" };
 }
 
 /** Search across all categories; a product can be added any number of times. */
@@ -41,6 +41,14 @@ function productGroups(): SearchableGroup[] {
       label: `${procurementDisplayName(entry)} · ${entry.unit}`,
     })),
   }));
+}
+
+/** Quantity x price per unit, rounded to paise; 0 when either is missing. */
+function rowTotal(row: Pick<OrderRow, "quantity" | "price">): number {
+  const qty = Number(row.quantity);
+  const price = Number(row.price);
+  if (!Number.isFinite(qty) || !Number.isFinite(price) || qty <= 0 || price <= 0) return 0;
+  return Math.round(qty * price * 100) / 100;
 }
 
 const inputClass =
@@ -67,6 +75,8 @@ export default function BanquetOrder() {
   const [rows, setRows] = useState<OrderRow[]>(() => [emptyRow()]);
   const [whatsAppOpen, setWhatsAppOpen] = useState(false);
   const [whatsAppDraft, setWhatsAppDraft] = useState("");
+
+  const grandTotal = rows.reduce((sum, row) => sum + rowTotal(row), 0);
 
   const updateRow = (id: string, patch: Partial<Omit<OrderRow, "id">>) =>
     setRows((current) => current.map((row) => (row.id === id ? { ...row, ...patch } : row)));
@@ -174,7 +184,7 @@ export default function BanquetOrder() {
             Products
           </h2>
           <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full min-w-[36rem] border-collapse text-sm print:min-w-0">
+            <table className="print-grid w-full min-w-[44rem] border-collapse text-sm print:min-w-0">
               <thead>
                 <tr>
                   <th scope="col" className={`${headCellClass} w-10`}>
@@ -191,6 +201,12 @@ export default function BanquetOrder() {
                   </th>
                   <th scope="col" className={`${headCellClass} w-16`}>
                     Unit
+                  </th>
+                  <th scope="col" className={`${headCellClass} w-28 text-right`}>
+                    Price / unit (₹)
+                  </th>
+                  <th scope="col" className={`${headCellClass} w-24 text-right`}>
+                    Total (₹)
                   </th>
                   <th scope="col" className={headCellClass}>
                     Remarks
@@ -248,6 +264,21 @@ export default function BanquetOrder() {
                       <td className={`${cellClass} text-xs text-stone-600`}>{entry?.unit ?? ""}</td>
                       <td className={cellClass}>
                         <Input
+                          type="number"
+                          min={0}
+                          value={row.price}
+                          onChange={(event) => updateRow(row.id, { price: event.target.value })}
+                          placeholder="Price"
+                          aria-label={`Order row ${index + 1} price per unit`}
+                          className={`${rowInputClass} text-right`}
+                        />
+                        <PrintValue value={row.price} className="text-right" />
+                      </td>
+                      <td className={`${cellClass} text-right text-xs text-stone-800`}>
+                        {rowTotal(row) || ""}
+                      </td>
+                      <td className={cellClass}>
+                        <Input
                           value={row.remarks}
                           onChange={(event) => updateRow(row.id, { remarks: event.target.value })}
                           placeholder="Brand, delivery time..."
@@ -276,6 +307,11 @@ export default function BanquetOrder() {
               </tbody>
             </table>
           </div>
+          {grandTotal > 0 ? (
+            <p className="mt-2 text-right text-sm font-semibold text-stone-800">
+              Total: ₹{Math.round(grandTotal * 100) / 100}
+            </p>
+          ) : null}
           <div className="mt-2 flex justify-end print:hidden">
             <Button
               type="button"

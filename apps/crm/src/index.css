@@ -226,6 +226,13 @@
     box-shadow: none !important;
   }
 
+  /* The product table keeps a full grid so quantities and prices can be read and written in cells. */
+  .banquet-checklist table.print-grid,
+  .banquet-checklist table.print-grid th,
+  .banquet-checklist table.print-grid td {
+    border: 1px solid #000 !important;
+  }
+
   .banquet-checklist th {
     font-weight: 700;
     font-size: 8.5px !important;

@@ -27,4 +27,15 @@ describe("BanquetOrder", () => {
     expect(message.value).toContain("1. Paneer (पनीर) — 5 kg");
     expect(message.value).toContain("2. Paneer (पनीर) — 3 kg");
   });
+
+  it("totals each row as quantity x price per unit", () => {
+    render(<BanquetOrder />);
+    pick(1, "Paneer (पनीर) · kg");
+    fireEvent.change(screen.getByLabelText("Order row 1 quantity"), { target: { value: "5" } });
+    fireEvent.change(screen.getByLabelText("Order row 1 price per unit"), {
+      target: { value: "400" },
+    });
+    expect(screen.getAllByText("2000").length).toBeGreaterThan(0);
+    expect(screen.getByText("Total: ₹2000")).toBeInTheDocument();
+  });
 });
